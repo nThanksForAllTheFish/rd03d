@@ -22,6 +22,8 @@ static void print_frame(const rd03d_frame_t *f)
 {
     char line[128];
     size_t off = 0;
+
+    line[0] = '\0';
     for (int i = 0; i < RD03D_NUM_TARGETS; i++) {
         const rd03d_target_t *t = &f->targets[i];
         const char *sep = (i < RD03D_NUM_TARGETS - 1) ? " | " : "";
