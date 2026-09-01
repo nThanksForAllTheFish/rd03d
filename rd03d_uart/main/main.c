@@ -8,7 +8,7 @@
 
 #include "rd03d.h"
 
-/* XIAO ESP32-C6: D6 = GPIO16 (UART1 TX), D7 = GPIO17 (UART1 RX). */
+/* XIAO ESP32-C6, ESP side: D6 = GPIO16 (UART1 TX), D7 = GPIO17 (UART1 RX). */
 #define RADAR_UART_NUM   UART_NUM_1
 #define RADAR_PIN_TX     16
 #define RADAR_PIN_RX     17
