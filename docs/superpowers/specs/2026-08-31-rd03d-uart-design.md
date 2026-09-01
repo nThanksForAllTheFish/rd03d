@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-31
 **Target:** Seeed Studio XIAO ESP32-C6
-**Framework:** ESP-IDF v5.3.5 (existing workspace toolchain)
+**Framework:** ESP-IDF v5.5 (`~/esp/esp-idf-v5.5`; the v5.3.5 install referenced by .vscode/settings.json no longer exists on this machine)
 
 ## Goal
 
@@ -75,7 +75,7 @@ An all-zero block means no target in that slot.
 
 ## Testing / Verification
 
-- Build and flash with the workspace ESP-IDF v5.3.5 setup
+- Build and flash with ESP-IDF v5.5 (`source ~/esp/esp-idf-v5.5/export.sh`)
   (`idf.py set-target esp32c6`, `idf.py flash monitor`, port
   `/dev/cu.usbmodem101`).
 - Verify parsed target lines appear when a person moves in front of the radar,
