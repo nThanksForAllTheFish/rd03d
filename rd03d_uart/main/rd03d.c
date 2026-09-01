@@ -40,6 +40,9 @@ bool rd03d_parser_feed(rd03d_parser_t *p, uint8_t byte, rd03d_frame_t *frame)
     }
     p->pos = 0;
 
+    /* A bad-tail buffer is discarded without rescanning it for an embedded
+     * header, so a false sync can cost one real frame; the parser realigns
+     * by the next clean frame. */
     if (p->buf[28] != 0x55 || p->buf[29] != 0xCC) {
         p->bad_frames++;
         return false;

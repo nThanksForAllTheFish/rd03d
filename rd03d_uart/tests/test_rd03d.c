@@ -88,12 +88,42 @@ static void test_bad_tail_counted_then_recovers(void)
     assert(feed_all(&p, GOOD_FRAME, sizeof(GOOD_FRAME), &f) == 1);
 }
 
+static void test_resync_on_duplicate_header_byte(void)
+{
+    rd03d_parser_t p;
+    rd03d_frame_t f;
+    rd03d_parser_init(&p);
+
+    /* AA AA FF 03 00 ... : the first 0xAA is a false start. */
+    const uint8_t dup = 0xAA;
+    assert(feed_all(&p, &dup, 1, &f) == 0);
+    assert(feed_all(&p, GOOD_FRAME, sizeof(GOOD_FRAME), &f) == 1);
+    assert(f.targets[0].x_mm == 258);
+    assert(p.dropped_bytes == 1);
+}
+
+static void test_resync_on_partial_header(void)
+{
+    rd03d_parser_t p;
+    rd03d_frame_t f;
+    rd03d_parser_init(&p);
+
+    /* AA FF 03 then a real frame: partial header discarded, frame parses. */
+    const uint8_t partial[] = {0xAA, 0xFF, 0x03};
+    assert(feed_all(&p, partial, sizeof(partial), &f) == 0);
+    assert(feed_all(&p, GOOD_FRAME, sizeof(GOOD_FRAME), &f) == 1);
+    assert(f.targets[0].x_mm == 258);
+    assert(p.dropped_bytes == 3);
+}
+
 int main(void)
 {
     test_decode_sign_mag();
     test_parse_good_frame();
     test_resync_after_garbage();
     test_bad_tail_counted_then_recovers();
+    test_resync_on_duplicate_header_byte();
+    test_resync_on_partial_header();
     printf("all tests passed\n");
     return 0;
 }
