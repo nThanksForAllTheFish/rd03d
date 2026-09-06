@@ -18,6 +18,13 @@
 
 static const char *TAG = "rd03d";
 
+/* Ai-Thinker multi-target detection mode command. The RD-03D powers up in
+ * multi-target mode; sending this makes the mode explicit and removes the
+ * sketch's need to send it (spec: firmware owns radar config). */
+static const uint8_t RD03D_CMD_MULTI_TARGET[] = {
+    0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x90, 0x00, 0x04, 0x03, 0x02, 0x01,
+};
+
 static void print_frame(const rd03d_frame_t *f)
 {
     char line[128];
@@ -62,6 +69,11 @@ void app_main(void)
 
     ESP_LOGI(TAG, "RD-03D reader: UART%d RX=GPIO%d TX=GPIO%d @ %d baud",
              RADAR_UART_NUM, RADAR_PIN_RX, RADAR_PIN_TX, RADAR_BAUD);
+
+    uart_write_bytes(RADAR_UART_NUM, RD03D_CMD_MULTI_TARGET,
+                     sizeof(RD03D_CMD_MULTI_TARGET));
+    vTaskDelay(pdMS_TO_TICKS(200));
+    ESP_LOGI(TAG, "multi-target mode command sent");
 
     rd03d_parser_t parser;
     rd03d_parser_init(&parser);
