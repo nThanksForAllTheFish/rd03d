@@ -11,6 +11,7 @@
 #include "sdkconfig.h"
 
 static const char *TAG = "wifi_link";
+static volatile bool s_has_ip;
 
 /* strlcpy silently truncates; catch oversize credentials at compile time.
  * (sizeof includes the NUL; the driver fields are 32 and 64 bytes.) */
@@ -25,10 +26,12 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id,
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
+        s_has_ip = false;
         ESP_LOGW(TAG, "disconnected, retrying");
         esp_wifi_connect();
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *e = (ip_event_got_ip_t *)data;
+        s_has_ip = true;
         ESP_LOGI(TAG, "got ip " IPSTR, IP2STR(&e->ip_info.ip));
     }
 }
@@ -79,4 +82,9 @@ void wifi_link_start(void)
     ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
 
     ESP_LOGI(TAG, "mdns hostname set: rd03d.local");
+}
+
+bool wifi_link_has_ip(void)
+{
+    return s_has_ip;
 }

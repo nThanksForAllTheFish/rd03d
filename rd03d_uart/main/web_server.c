@@ -112,6 +112,11 @@ void web_server_start(void)
     ESP_LOGI(TAG, "http server listening on port %d", cfg.server_port);
 }
 
+httpd_handle_t web_server_handle(void)
+{
+    return s_server;
+}
+
 void web_server_send_frame(const rd03d_frame_t *f, uint32_t dropped,
                            uint32_t bad)
 {

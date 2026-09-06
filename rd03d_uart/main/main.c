@@ -5,7 +5,9 @@
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 
+#include "ota_update.h"
 #include "rd03d.h"
 #include "web_server.h"
 #include "wifi_link.h"
@@ -17,6 +19,7 @@
 #define RADAR_BAUD       256000
 #define UART_RX_BUF_SIZE 1024
 #define STATS_PERIOD_MS  5000
+#define OTA_VALID_DEADLINE_MS 90000
 
 static const char *TAG = "rd03d";
 
@@ -53,6 +56,35 @@ static void print_frame(const rd03d_frame_t *f)
     printf("%s\n", line);
 }
 
+/* A freshly-OTA'd image boots pending-verify. Mark it valid only once the
+ * device is provably updatable again (WiFi up + web server running); if that
+ * never happens, restart while still pending so the bootloader rolls back
+ * to the previous firmware. USB-flashed images are never pending: no-op. */
+static void ota_validation_task(void *arg)
+{
+    (void)arg;
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t state;
+    if (esp_ota_get_state_partition(running, &state) != ESP_OK ||
+        state != ESP_OTA_IMG_PENDING_VERIFY) {
+        vTaskDelete(NULL);
+        return;
+    }
+    TickType_t deadline =
+        xTaskGetTickCount() + pdMS_TO_TICKS(OTA_VALID_DEADLINE_MS);
+    while ((int32_t)(deadline - xTaskGetTickCount()) > 0) {
+        if (wifi_link_has_ip() && web_server_handle() != NULL) {
+            ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
+            ESP_LOGI(TAG, "firmware validated (WiFi + web server up)");
+            vTaskDelete(NULL);
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    ESP_LOGE(TAG, "validation deadline missed - restarting to roll back");
+    esp_restart();
+}
+
 void app_main(void)
 {
     const uart_config_t cfg = {
@@ -84,6 +116,8 @@ void app_main(void)
 
     wifi_link_start();
     web_server_start();
+    ota_update_register(web_server_handle());
+    xTaskCreate(ota_validation_task, "ota_valid", 3072, NULL, 5, NULL);
 
     rd03d_parser_t parser;
     rd03d_parser_init(&parser);
