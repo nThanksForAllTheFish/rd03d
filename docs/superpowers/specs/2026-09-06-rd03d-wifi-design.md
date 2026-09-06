@@ -67,7 +67,7 @@ Single dark-theme page, no external resources, mobile-friendly viewport:
 
 - Canvas XY chart echoing the Processing sketch: radar at bottom-center
   origin, +Y forward (up), grid with range rings/labels, fixed plot range
-  (default ±3 m X, 6 m Y).
+  (default ±3 m X, 8 m Y — sensor max range).
 - One color per target (T1/T2/T3), current position dot plus a fading trail
   (recent history kept client-side).
 - HUD: connection state, per-target `x / y / v` readout, frames-received
