@@ -7,6 +7,7 @@
 #include "esp_log.h"
 
 #include "rd03d.h"
+#include "web_server.h"
 #include "wifi_link.h"
 
 /* XIAO ESP32-C6, ESP side: D6 = GPIO16 (UART1 TX), D7 = GPIO17 (UART1 RX). */
@@ -82,6 +83,7 @@ void app_main(void)
     ESP_LOGI(TAG, "multi-target mode command sent");
 
     wifi_link_start();
+    web_server_start();
 
     rd03d_parser_t parser;
     rd03d_parser_init(&parser);
@@ -95,6 +97,8 @@ void app_main(void)
         for (int i = 0; i < n; i++) {
             if (rd03d_parser_feed(&parser, buf[i], &frame)) {
                 print_frame(&frame);
+                web_server_send_frame(&frame, parser.dropped_bytes,
+                                      parser.bad_frames);
             }
         }
         if (xTaskGetTickCount() - last_stats >= pdMS_TO_TICKS(STATS_PERIOD_MS)) {

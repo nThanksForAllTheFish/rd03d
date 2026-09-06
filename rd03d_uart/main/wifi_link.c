@@ -35,12 +35,6 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id,
 
 void wifi_link_start(void)
 {
-    if (CONFIG_RD03D_WIFI_SSID[0] == '\0') {
-        ESP_LOGE(TAG, "WiFi credentials not set - run idf.py menuconfig "
-                      "(RD03D Configuration)");
-        return;
-    }
-
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -51,6 +45,12 @@ void wifi_link_start(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
+
+    if (CONFIG_RD03D_WIFI_SSID[0] == '\0' || CONFIG_RD03D_WIFI_PASSWORD[0] == '\0') {
+        ESP_LOGE(TAG, "WiFi credentials not set - run idf.py menuconfig "
+                      "(RD03D Configuration)");
+        return;
+    }
 
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&init_cfg));
@@ -76,6 +76,7 @@ void wifi_link_start(void)
     ESP_ERROR_CHECK(mdns_init());
     ESP_ERROR_CHECK(mdns_hostname_set("rd03d"));
     ESP_ERROR_CHECK(mdns_instance_name_set("RD-03D radar stream"));
+    ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
 
     ESP_LOGI(TAG, "mdns hostname set: rd03d.local");
 }
