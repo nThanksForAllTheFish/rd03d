@@ -102,9 +102,8 @@ static esp_err_t update_post(httpd_req_t *req)
         err = esp_ota_set_boot_partition(target);
     }
 
-    s_upload_in_progress = false;
-
     if (err != ESP_OK) {
+        s_upload_in_progress = false;
         ESP_LOGW(TAG, "OTA failed: %s", esp_err_to_name(err));
         char msg[96];
         snprintf(msg, sizeof(msg), "update failed: %s\n",
@@ -114,6 +113,9 @@ static esp_err_t update_post(httpd_req_t *req)
         return ESP_OK;
     }
 
+    /* Leave s_upload_in_progress latched: we are rebooting, and any POST
+     * that lands in the restart window must get the 409, not a fresh
+     * esp_ota_begin racing esp_restart. */
     ESP_LOGI(TAG, "OTA ok, rebooting into %s", target->label);
     httpd_resp_sendstr(req, "update ok, rebooting\n");
     xTaskCreate(restart_task, "ota_restart", 2048, NULL, 5, NULL);

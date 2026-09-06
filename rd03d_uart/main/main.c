@@ -81,6 +81,12 @@ static void ota_validation_task(void *arg)
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+    if (wifi_link_has_ip() && web_server_handle() != NULL) {
+        ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
+        ESP_LOGI(TAG, "firmware validated (WiFi + web server up)");
+        vTaskDelete(NULL);
+        return;
+    }
     ESP_LOGE(TAG, "validation deadline missed - restarting to roll back");
     esp_restart();
 }
