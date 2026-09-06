@@ -64,8 +64,8 @@ function drawGrid() {
   const s = scale();
 
   ctx.lineWidth = 1;
-  ctx.strokeStyle = "#2c2c2c";
-  ctx.fillStyle = "#666";
+  ctx.strokeStyle = "#4a4a4a";
+  ctx.fillStyle = "#9a9a9a";
   ctx.font = (12 * dpr) + "px system-ui";
 
   for (let r = 1000; r <= RANGE_Y_MM; r += 1000) {
@@ -75,7 +75,7 @@ function drawGrid() {
     ctx.fillText((r / 1000) + " m", ox + 6 * dpr, oy - r * s - 4 * dpr);
   }
 
-  ctx.strokeStyle = "#3a3a3a";
+  ctx.strokeStyle = "#5f5f5f";
   ctx.beginPath();
   ctx.moveTo(ox, oy); ctx.lineTo(ox, oy - RANGE_Y_MM * s);
   ctx.moveTo(ox - RANGE_X_MM * s, oy); ctx.lineTo(ox + RANGE_X_MM * s, oy);
