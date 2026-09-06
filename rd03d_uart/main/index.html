@@ -27,7 +27,8 @@
 "use strict";
 const RANGE_X_MM = 3000;  // +/-3 m across
 const RANGE_Y_MM = 8000;  // 8 m forward (sensor max range)
-const TRAIL = 120;        // trail points per target
+const PERSIST_MS = 2000;  // marker/trail persistence
+const MAX_TRAIL = 240;    // safety cap on stored trail points
 const COLORS = ["#00b4ff", "#00dc78", "#ffb428"];
 
 const canvas = document.getElementById("chart");
@@ -38,6 +39,7 @@ const statsEl = document.getElementById("stats");
 
 let frames = 0;
 let latest = [null, null, null];
+const lastSeen = [0, 0, 0];
 const trails = [[], [], []];
 
 function resize() {
@@ -85,17 +87,26 @@ function drawGrid() {
 function render() {
   drawGrid();
   const dpr = window.devicePixelRatio || 1;
+  const now = performance.now();
   for (let i = 0; i < 3; i++) {
     ctx.fillStyle = COLORS[i];
     const tr = trails[i];
+    while (tr.length > 0 && now - tr[0].at > PERSIST_MS) {
+      tr.shift();
+    }
     for (let j = 0; j < tr.length; j++) {
       const [px, py] = toPx(tr[j].x, tr[j].y);
-      ctx.globalAlpha = 0.1 + 0.3 * ((j + 1) / tr.length);
+      ctx.globalAlpha = 0.1 + 0.3 * (1 - (now - tr[j].at) / PERSIST_MS);
       ctx.beginPath();
       ctx.arc(px, py, 2.5 * dpr, 0, 7);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+    // Erase the solid dot too if the stream goes quiet (a target that
+    // reports null already clears it on the next message).
+    if (latest[i] && now - lastSeen[i] > PERSIST_MS) {
+      latest[i] = null;
+    }
     if (latest[i]) {
       const [px, py] = toPx(latest[i].x, latest[i].y);
       ctx.beginPath();
@@ -111,10 +122,12 @@ function onMessage(ev) {
   try { msg = JSON.parse(ev.data); } catch (e) { return; }
   frames++;
   latest = msg.t;
+  const now = performance.now();
   for (let i = 0; i < 3; i++) {
     if (msg.t[i]) {
-      trails[i].push({ x: msg.t[i].x, y: msg.t[i].y });
-      if (trails[i].length > TRAIL) trails[i].shift();
+      lastSeen[i] = now;
+      trails[i].push({ x: msg.t[i].x, y: msg.t[i].y, at: now });
+      if (trails[i].length > MAX_TRAIL) trails[i].shift();
     }
   }
   statsEl.textContent =
