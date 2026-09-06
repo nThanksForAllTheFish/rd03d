@@ -37,6 +37,22 @@ I (5210) rd03d: link stats: dropped=0 bad_frames=0
 `bad_frames` counts frames with a corrupt tail. Both should stay flat while a
 monitor is attached.
 
+## WiFi + web UI
+
+The firmware joins the WiFi network configured via `idf.py menuconfig`
+(*RD03D Configuration* → SSID/password; stored only in the untracked
+`sdkconfig`, 2.4 GHz WPA2 networks only) and serves a live radar chart:
+
+- Open **http://rd03d.local** from any browser on the same network (Mac or
+  phone). The page shows targets on an XY chart with trails, plus link stats.
+- Data path: `GET /ws` WebSocket pushes one JSON message per radar frame,
+  e.g. `{"t":[{"x":-551,"y":550,"v":0},null,null],"dropped":0,"bad":0}`
+  (x/y in mm, v in cm/s, absent targets `null`).
+- At boot the firmware puts the radar in multi-target mode itself; viewers
+  never send radar commands.
+- Untethered use: power the XIAO from a USB power bank; the USB console is
+  optional diagnostics only.
+
 ## Host-side parser tests
 
 ```bash

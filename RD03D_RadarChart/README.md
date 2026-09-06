@@ -1,5 +1,9 @@
 # RD-03D Radar Chart Sketch
 
+> **Note:** for WiFi viewing, the `../rd03d_uart` firmware now serves its own
+> live chart at http://rd03d.local — no Processing needed. This sketch remains
+> useful for direct USB-serial connections to the radar.
+
 This Processing sketch reads serial data and renders radar detections on a polar chart.
 
 ## How to use
