@@ -19,3 +19,4 @@ rd03d_uart/build/
 rd03d_uart/sdkconfig
 rd03d_uart/sdkconfig.old
 rd03d_uart/tests/test_rd03d
+rd03d_uart/managed_components/

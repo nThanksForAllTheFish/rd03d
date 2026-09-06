@@ -6,10 +6,18 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
+#include "mdns.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 
 static const char *TAG = "wifi_link";
+
+/* strlcpy silently truncates; catch oversize credentials at compile time.
+ * (sizeof includes the NUL; the driver fields are 32 and 64 bytes.) */
+_Static_assert(sizeof(CONFIG_RD03D_WIFI_SSID) <= 32,
+               "WiFi SSID longer than 31 chars would be truncated");
+_Static_assert(sizeof(CONFIG_RD03D_WIFI_PASSWORD) <= 64,
+               "WiFi password longer than 63 chars would be truncated");
 
 static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id,
                           void *data)
@@ -27,6 +35,12 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id,
 
 void wifi_link_start(void)
 {
+    if (CONFIG_RD03D_WIFI_SSID[0] == '\0') {
+        ESP_LOGE(TAG, "WiFi credentials not set - run idf.py menuconfig "
+                      "(RD03D Configuration)");
+        return;
+    }
+
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -51,9 +65,17 @@ void wifi_link_start(void)
             sizeof(sta_cfg.sta.ssid));
     strlcpy((char *)sta_cfg.sta.password, CONFIG_RD03D_WIFI_PASSWORD,
             sizeof(sta_cfg.sta.password));
+    /* Refuse to associate with an open AP spoofing our SSID. */
+    sta_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_cfg));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "wifi starting, ssid=%s", CONFIG_RD03D_WIFI_SSID);
+
+    ESP_ERROR_CHECK(mdns_init());
+    ESP_ERROR_CHECK(mdns_hostname_set("rd03d"));
+    ESP_ERROR_CHECK(mdns_instance_name_set("RD-03D radar stream"));
+
+    ESP_LOGI(TAG, "mdns hostname set: rd03d.local");
 }
