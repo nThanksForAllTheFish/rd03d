@@ -44,6 +44,9 @@ static esp_err_t ws_get(httpd_req_t *req)
     if (ret != ESP_OK) {
         return ret;
     }
+    if (frame.len > 128) {
+        return ESP_FAIL; /* push-only endpoint; oversized inbound frame */
+    }
     if (frame.len > 0) {
         uint8_t *buf = malloc(frame.len);
         if (buf == NULL) {

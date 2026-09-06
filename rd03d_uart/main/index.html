@@ -1,3 +1,150 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>rd03d</title></head>
-<body><h1>rd03d web server OK</h1><p>Chart UI arrives in the next task.</p></body></html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RD-03D Radar</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #121212; color: #ddd;
+               font: 14px system-ui, sans-serif; overflow: hidden; }
+  #hud { height: 56px; box-sizing: border-box; padding: 8px 12px;
+         display: flex; flex-wrap: wrap; gap: 2px 18px; align-items: baseline; }
+  #status { font-weight: 600; }
+  .ok { color: #4cd47a; }
+  .bad { color: #ff6b6b; }
+  canvas { display: block; width: 100vw; height: calc(100vh - 56px);
+           touch-action: none; }
+</style>
+</head>
+<body>
+<div id="hud">
+  <span id="status" class="bad">connecting&hellip;</span>
+  <span id="targets"></span>
+  <span id="stats"></span>
+</div>
+<canvas id="chart"></canvas>
+<script>
+"use strict";
+const RANGE_X_MM = 3000;  // +/-3 m across
+const RANGE_Y_MM = 6000;  // 6 m forward
+const TRAIL = 120;        // trail points per target
+const COLORS = ["#00b4ff", "#00dc78", "#ffb428"];
+
+const canvas = document.getElementById("chart");
+const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const targetsEl = document.getElementById("targets");
+const statsEl = document.getElementById("stats");
+
+let frames = 0;
+let latest = [null, null, null];
+const trails = [[], [], []];
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(canvas.clientWidth * dpr);
+  canvas.height = Math.round(canvas.clientHeight * dpr);
+}
+window.addEventListener("resize", resize);
+
+// Uniform mm->px scale so range arcs stay circular.
+function scale() {
+  return Math.min(canvas.width / (2 * RANGE_X_MM), canvas.height / RANGE_Y_MM);
+}
+
+function toPx(xMm, yMm) {
+  const s = scale();
+  return [canvas.width / 2 + xMm * s, canvas.height - yMm * s];
+}
+
+function drawGrid() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const dpr = window.devicePixelRatio || 1;
+  const [ox, oy] = toPx(0, 0);
+  const s = scale();
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "#2c2c2c";
+  ctx.fillStyle = "#666";
+  ctx.font = (12 * dpr) + "px system-ui";
+
+  for (let r = 1000; r <= RANGE_Y_MM; r += 1000) {
+    ctx.beginPath();
+    ctx.arc(ox, oy, r * s, Math.PI, 2 * Math.PI);
+    ctx.stroke();
+    ctx.fillText((r / 1000) + " m", ox + 6 * dpr, oy - r * s - 4 * dpr);
+  }
+
+  ctx.strokeStyle = "#3a3a3a";
+  ctx.beginPath();
+  ctx.moveTo(ox, oy); ctx.lineTo(ox, oy - RANGE_Y_MM * s);
+  ctx.moveTo(ox - RANGE_X_MM * s, oy); ctx.lineTo(ox + RANGE_X_MM * s, oy);
+  ctx.stroke();
+}
+
+function render() {
+  drawGrid();
+  const dpr = window.devicePixelRatio || 1;
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = COLORS[i];
+    const tr = trails[i];
+    for (let j = 0; j < tr.length; j++) {
+      const [px, py] = toPx(tr[j].x, tr[j].y);
+      ctx.globalAlpha = 0.1 + 0.3 * ((j + 1) / tr.length);
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5 * dpr, 0, 7);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (latest[i]) {
+      const [px, py] = toPx(latest[i].x, latest[i].y);
+      ctx.beginPath();
+      ctx.arc(px, py, 6 * dpr, 0, 7);
+      ctx.fill();
+    }
+  }
+  requestAnimationFrame(render);
+}
+
+function onMessage(ev) {
+  let msg;
+  try { msg = JSON.parse(ev.data); } catch (e) { return; }
+  frames++;
+  latest = msg.t;
+  for (let i = 0; i < 3; i++) {
+    if (msg.t[i]) {
+      trails[i].push({ x: msg.t[i].x, y: msg.t[i].y });
+      if (trails[i].length > TRAIL) trails[i].shift();
+    }
+  }
+  statsEl.textContent =
+    "frames " + frames + " · dropped " + msg.dropped + " · bad " + msg.bad;
+  targetsEl.innerHTML = msg.t.map(function (t, i) {
+    return t
+      ? '<span style="color:' + COLORS[i] + '">T' + (i + 1) +
+        " x=" + t.x + " y=" + t.y + " v=" + t.v + "</span>"
+      : '<span style="color:#555">T' + (i + 1) + " —</span>";
+  }).join(" ");
+}
+
+function connect() {
+  const ws = new WebSocket("ws://" + location.host + "/ws");
+  ws.onopen = function () {
+    statusEl.textContent = "connected";
+    statusEl.className = "ok";
+  };
+  ws.onclose = function () {
+    statusEl.textContent = "disconnected — retrying";
+    statusEl.className = "bad";
+    setTimeout(connect, 2000);
+  };
+  ws.onerror = function () { ws.close(); };
+  ws.onmessage = onMessage;
+}
+
+resize();
+connect();
+render();
+</script>
+</body>
+</html>
