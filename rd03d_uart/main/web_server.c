@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "esp_app_desc.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 
@@ -59,6 +60,12 @@ static esp_err_t ws_get(httpd_req_t *req)
     return ret;
 }
 
+static esp_err_t version_get(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/plain");
+    return httpd_resp_sendstr(req, esp_app_get_description()->version);
+}
+
 /* Runs on the httpd task via httpd_queue_work. */
 static void ws_send_work(void *arg)
 {
@@ -109,6 +116,12 @@ void web_server_start(void)
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(s_server, &root_uri));
     ESP_ERROR_CHECK(httpd_register_uri_handler(s_server, &ws_uri));
+    static const httpd_uri_t version_uri = {
+        .uri = "/version",
+        .method = HTTP_GET,
+        .handler = version_get,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(s_server, &version_uri));
     ESP_LOGI(TAG, "http server listening on port %d", cfg.server_port);
 }
 

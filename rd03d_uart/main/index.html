@@ -21,6 +21,7 @@
   <span id="status" class="bad">connecting&hellip;</span>
   <span id="targets"></span>
   <span id="stats"></span>
+  <span id="ver" style="color:#777"></span>
 </div>
 <canvas id="chart"></canvas>
 <script>
@@ -154,6 +155,11 @@ function connect() {
   ws.onerror = function () { ws.close(); };
   ws.onmessage = onMessage;
 }
+
+fetch("/version")
+  .then(function (r) { return r.text(); })
+  .then(function (v) { document.getElementById("ver").textContent = "fw " + v; })
+  .catch(function () {});
 
 resize();
 connect();
