@@ -7,6 +7,7 @@
 #include "esp_log.h"
 
 #include "rd03d.h"
+#include "wifi_link.h"
 
 /* XIAO ESP32-C6, ESP side: D6 = GPIO16 (UART1 TX), D7 = GPIO17 (UART1 RX). */
 #define RADAR_UART_NUM   UART_NUM_1
@@ -70,10 +71,17 @@ void app_main(void)
     ESP_LOGI(TAG, "RD-03D reader: UART%d RX=GPIO%d TX=GPIO%d @ %d baud",
              RADAR_UART_NUM, RADAR_PIN_RX, RADAR_PIN_TX, RADAR_BAUD);
 
-    uart_write_bytes(RADAR_UART_NUM, RD03D_CMD_MULTI_TARGET,
-                     sizeof(RD03D_CMD_MULTI_TARGET));
+    int written = uart_write_bytes(RADAR_UART_NUM, RD03D_CMD_MULTI_TARGET,
+                                   sizeof(RD03D_CMD_MULTI_TARGET));
+    if (written != (int)sizeof(RD03D_CMD_MULTI_TARGET)) {
+        ESP_LOGW(TAG, "multi-target command short write (%d)", written);
+    }
     vTaskDelay(pdMS_TO_TICKS(200));
+    /* Discard the radar's command ACK so it doesn't hit the frame parser. */
+    ESP_ERROR_CHECK(uart_flush_input(RADAR_UART_NUM));
     ESP_LOGI(TAG, "multi-target mode command sent");
+
+    wifi_link_start();
 
     rd03d_parser_t parser;
     rd03d_parser_init(&parser);
