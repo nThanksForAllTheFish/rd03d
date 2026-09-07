@@ -13,7 +13,10 @@ def run(_context: str):
                              ("FrontShell", "rd03d_case_shell.stl")):
         occ = None
         for o in root.occurrences:
-            if o.component.name == comp_name:
+            # prefix match: a rebuilt component can carry a "(1)" suffix
+            # until the doc is saved (deleted components reserve their
+            # names in the document's name registry)
+            if o.component.name.startswith(comp_name):
                 occ = o
         if occ is None:
             raise RuntimeError("missing component " + comp_name)

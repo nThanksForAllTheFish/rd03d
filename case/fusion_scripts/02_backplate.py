@@ -43,7 +43,11 @@ def run(_context: str):
     root = des.rootComponent
 
     for occ in list(root.occurrences):
-        if occ.component.name == "BackPlate":
+        if occ.component.name.startswith("BackPlate"):
+            # rename before deleting: the dead component keeps its name
+            # reserved in the document's name registry (until save), which
+            # would force the rebuilt component to "BackPlate (1)"
+            occ.component.name = "BackPlate_deleted"
             occ.deleteMe()
             print("removed existing BackPlate")
 
@@ -92,17 +96,20 @@ def run(_context: str):
             participants=[plate_body])
     print("snap pockets ok")
 
-    # 4. radar bay: fence ring + crossbars
+    # 4. radar bay: two +/-X side walls + crossbars. (Thin-wall fix
+    # 2026-09-07: the old full perimeter fence ring left 0.6 mm +/-Y wall
+    # segments after the plate-outline trim - unprintable on a 0.6 mm
+    # nozzle. The +/-Y restraint is now two retention ribs inside the
+    # FrontShell (03_shell.py); the plate keeps only the 1.5 mm-thick
+    # +/-X walls, spanning the full old ring extent in Y and still
+    # trimmed by the plate outline in step 6.)
     bayW, bayH = rW + 2 * clear, rH + 2 * clear
+    t = 1.5 * MM
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, rCx, 0, bayW + 2 * 1.5 * MM, bayH + 2 * 1.5 * MM)
-    rect(sk, rCx, 0, bayW, bayH)
-    ring = None
-    for i in range(sk.profiles.count):
-        pr = sk.profiles.item(i)
-        if pr.profileLoops.count == 2:
-            ring = pr
-    extrude(comp, ring, 0, 11 * MM,
+    rect(sk, rCx - bayW / 2 - t / 2, 0, t, bayH + 2 * t)   # -X wall
+    rect(sk, rCx + bayW / 2 + t / 2, 0, t, bayH + 2 * t)   # +X wall
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    extrude(comp, profs, 0, 11 * MM,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -113,7 +120,8 @@ def run(_context: str):
     extrude(comp, profs, 0, board_back_z,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
-    print("radar bay ok, support top z(cm)=", round(board_back_z, 3))
+    print("radar bay ok (X walls + crossbars; Y-restraint is the shell's "
+          "job), support top z(cm)=", round(board_back_z, 3))
 
     # 4b. notch the radar fence +X wall where the XIAO board crosses it
     # (as-built correction found in Task 5: the bay centers put the radar

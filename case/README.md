@@ -24,7 +24,8 @@ chamfer prints cleanly bed-side.
 ## Assembly
 
 1. Wire the boards (radar TX→D7, RX→D6, 5V, GND), seat the RD-03D in its
-   bay patch-side out, the XIAO on its posts with USB-C toward the notch.
+   bay patch-side out, the XIAO on its posts with USB-C toward the notch
+   (the radar is Y-loose until the shell closes).
 2. Snap the shell on (bumps click into the plate grooves). Unclip with a
    fingernail in the USB notch.
 3. Stick 3M VHB tape in the recessed back panel.
@@ -45,9 +46,9 @@ Re-export STLs after edits (File → 3D Print, or re-run
 
 ## Design notes
 
-- The radar bay's thin (0.6 mm) side walls print as a single Arachne
-  perimeter — use a modern slicer (PrusaSlicer 2.5+/Cura 5+/Orca/Bambu) or
-  enable thin-wall detection.
+- All printed walls are ≥1.3 mm (0.6 mm-nozzle friendly). The radar's side
+  (Y) restraint comes from two ribs inside the shell, so the radar sits
+  loose in Y until the lid snaps on — normal.
 - The radar's two TX patches sit under the full 2 mm wall (only the RX
   array end is under the 1.2 mm window). PLA/PETG at 24 GHz makes this a
   minor loss; if range matters, enlarging the window toward -Y is a

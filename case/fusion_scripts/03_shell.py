@@ -43,7 +43,11 @@ def run(_context: str):
     root = des.rootComponent
 
     for occ in list(root.occurrences):
-        if occ.component.name == "FrontShell":
+        if occ.component.name.startswith("FrontShell"):
+            # rename before deleting: the dead component keeps its name
+            # reserved in the document's name registry (until save), which
+            # would force the rebuilt component to "FrontShell (1)"
+            occ.component.name = "FrontShell_deleted"
             occ.deleteMe()
             print("removed existing FrontShell")
 
@@ -92,6 +96,32 @@ def run(_context: str):
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[shell_body])
     print("usb notch ok")
+
+    # 4b: radar retention ribs (thin-wall fix 2026-09-07). The plate's old
+    # 0.6 mm +/-Y fence segments were unprintable on a 0.6 mm nozzle, so
+    # the radar's side (Y) restraint moved here: two ribs joined to the
+    # +/-Y cavity walls over the radar bay. X span = radarCx +/- bayW/2
+    # (-19.3..-3.7 mm), flush with the plate's +/-X fence walls' inner
+    # faces (coplanar touch at most, no overlap). Rib inner faces at
+    # y = +/-(intH/2 - 0.74 mm) = +/-22.26 -> 0.25 mm clearance per side
+    # to the board edges (+/-22.01). z 6..14: top face coplanar with the
+    # interior window-pocket floor (z=14), no volume overlap. The rects
+    # extend 0.5 mm into the walls so the Join reliably merges.
+    rW, clear = p(des, "radarW"), p(des, "boardClear")
+    bayW = rW + 2 * clear
+    ribT = 0.74 * MM
+    ribInY = intH / 2 - ribT          # rib inner face (cm)
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        y0, y1 = ribInY, intH / 2 + 0.5 * MM
+        rect(sk, rCx, sy * (y0 + y1) / 2, bayW, y1 - y0)
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    extrude(comp, profs, 6 * MM, 14 * MM,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    print("radar retention ribs ok (inner faces y=+/-%.2f mm, x %.1f..%.1f, "
+          "z 6..14)" % (ribInY * 10, (rCx - bayW / 2) * 10,
+                        (rCx + bayW / 2) * 10))
 
     # 5: snap bumps on inner +/-X walls at y=+/-12, z centered -1mm
     # (rects extend into the wall so the Join reliably merges with the
