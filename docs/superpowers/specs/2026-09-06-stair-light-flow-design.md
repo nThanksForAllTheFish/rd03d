@@ -62,8 +62,10 @@ identities and are deliberately ignored).
 
 ## Edge Behavior
 
-- Broker or Node-RED restart: no stuck state — the light state re-derives
-  from the next event or times out.
+- Broker or Node-RED restart: state re-derives from the next occupancy
+  event. One known wart: a Deploy/restart during an active hold loses the
+  timer, so a lit light stays lit until the next occupancy episode ends —
+  documented in the README rather than special-cased in the flow.
 - Radar reboot (e.g. OTA): reconnect republish may re-light the stairs if
   someone is in zone — correct.
 - Sensor offline while light is on: trigger's 60 s expiry turns it off.
