@@ -7,7 +7,7 @@ PARAMS = [
     ("boardClear", "0.25 mm", "clearance around boards"),
     ("usbClear", "0.4 mm", "USB cutout clearance"),
     ("tapeRecess", "0.6 mm", "adhesive tape recess depth"),
-    ("backT", "2 mm", "back plate thickness"),
+    ("backT", "8 mm", "back plate thickness"),
     ("intW", "42 mm", "interior width"),
     ("intH", "46 mm", "interior height"),
     ("intD", "14 mm", "interior depth"),
@@ -21,6 +21,10 @@ PARAMS = [
     ("xiaoH", "17.8 mm", "XIAO depth"),
     ("xiaoCx", "8.0 mm", "XIAO bay center X"),
     ("postH", "3 mm", "XIAO post height"),
+    ("legoPitch", "8 mm", "LEGO Technic hole pitch"),
+    ("legoHole", "4.9 mm", "Technic pin hole dia, FDM-calibrated"),
+    ("legoCbDia", "6.4 mm", "Technic counterbore diameter"),
+    ("legoCbDepth", "0.9 mm", "Technic counterbore depth"),
 ]
 
 
@@ -43,6 +47,10 @@ def run(_context: str):
         if p is None:
             ups.add(name, adsk.core.ValueInput.createByString(expr), "mm", comment)
             print("added", name, "=", expr)
+        elif p.expression != expr:
+            old = p.expression
+            p.expression = expr
+            print("updated", name, old, "->", expr)
         else:
             print("exists", name, "=", p.expression)
     print("user params total:", ups.count)

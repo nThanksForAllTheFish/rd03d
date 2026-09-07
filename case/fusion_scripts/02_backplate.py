@@ -165,4 +165,61 @@ def run(_context: str):
             participants=[plate_body])
     print("trimmed to plate outline")
 
+    # 7. LEGO Technic mounting holes (change request 2026-09-07): six
+    # through-holes on the 8mm LEGO pitch — a 1x4 column at x=0.95mm
+    # (y=-12,-4,+4,+12) and a 1x2 column one pitch over at x=8.95mm
+    # (y=-4,+4). Each: legoHole dia through bore (z -backT..0) with a
+    # legoCbDia x legoCbDepth counterbore on BOTH faces so Technic
+    # pin collars/tips seat flush, plus a 0.3mm 45 deg entry chamfer
+    # on the rear opening.
+    pitch = p(des, "legoPitch")
+    holeD = p(des, "legoHole")
+    cbD = p(des, "legoCbDia")
+    cbZ = p(des, "legoCbDepth")
+    x1 = 0.95 * MM               # 1x4 column
+    x2 = x1 + pitch              # 1x2 column (8.95mm)
+    centers = ([(x1, s * pitch / 2) for s in (-3, -1, 1, 3)] +
+               [(x2, s * pitch / 2) for s in (-1, 1)])
+
+    def circles(radius):
+        sk = comp.sketches.add(comp.xYConstructionPlane)
+        for cx, cy in centers:
+            sk.sketchCurves.sketchCircles.addByCenterRadius(
+                adsk.core.Point3D.create(cx, cy, 0), radius)
+        return collection([sk.profiles.item(i)
+                           for i in range(sk.profiles.count)])
+
+    extrude(comp, circles(holeD / 2), -backT, 0,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    extrude(comp, circles(cbD / 2), -backT, -backT + cbZ,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    extrude(comp, circles(cbD / 2), -cbZ, 0,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("technic holes ok:",
+          [(round(cx / MM, 2), round(cy / MM, 2)) for cx, cy in centers])
+
+    # rear entry chamfer: the bore's rear opening edge sits at the rear
+    # counterbore floor, z = -backT + cbZ (circle radius holeD/2)
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for e in plate_body.edges:
+            g = e.geometry
+            if (isinstance(g, adsk.core.Circle3D)
+                    and abs(g.radius - holeD / 2) < 0.005
+                    and abs(g.center.z - (-backT + cbZ)) < 0.005):
+                edges.add(e)
+        if edges.count != 6:
+            raise RuntimeError("expected 6 rear bore edges, found %d"
+                               % edges.count)
+        ch = comp.features.chamferFeatures
+        chi = ch.createInput(edges, False)
+        chi.setToEqualDistance(adsk.core.ValueInput.createByReal(0.3 * MM))
+        ch.add(chi)
+        print("rear entry chamfers ok (0.3mm x 45deg on 6 edges)")
+    except Exception as exc:  # counterbore alone is acceptable
+        print("CHAMFER SKIPPED:", exc)
+
     print("BackPlate bodies:", comp.bRepBodies.count)

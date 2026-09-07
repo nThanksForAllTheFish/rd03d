@@ -6,8 +6,10 @@ The living design is in your Fusion; save it to your own project.
 
 ## Parts
 
-- `rd03d_case_back.stl` — back plate: adhesive face (tape recess) down,
-  radar bay left, XIAO posts right.
+- `rd03d_case_back.stl` — back plate (8 mm thick): radar bay left, XIAO
+  posts right; six LEGO Technic pin holes (8 mm pitch, counterbored both
+  faces) through the back for pin/ball-pin mounting, plus the recessed
+  tape panel on the rear face.
 - `rd03d_case_shell.stl` — front shell: 1.2 mm radar window, USB-C notch,
   four snap bumps engage the plate's edge grooves.
 
@@ -23,12 +25,18 @@ Back plate: print flat (adhesive face down). Shell: print open-side-up.
 2. Snap the shell on (bumps click into the plate grooves). Unclip with a
    fingernail in the USB notch.
 3. Stick 3M VHB tape in the recessed back panel.
+4. Mounting: push Technic pins / ball-pins into the six back holes
+   (8 mm LEGO pitch: 1×4 column + 1×2 column); a ball-and-socket arm
+   gives adjustable aim. The recessed tape panel remains for adhesive
+   mounting.
 
 ## Tweaking fit
 
 Open the design in Fusion → Modify → Change Parameters. `boardClear`,
 `rimGap`, and `snapBump` are the fit-critical ones; `windowT` is the radar
-window thickness (keep ≤1.6 mm, no metal/foil in front of the radar).
+window thickness (keep ≤1.6 mm, no metal/foil in front of the radar);
+`legoHole` is the Technic pin hole diameter (tune ±0.1 mm if pins are
+too tight/loose after a test print).
 Re-export STLs after edits (File → 3D Print, or re-run
 `fusion_scripts/05_export.py` via `run_fusion.py`).
 
