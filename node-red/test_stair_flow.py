@@ -2,7 +2,7 @@
 """Acceptance harness for the stair-light flow. Run AFTER importing the flow
 into Node-RED. Publishes synthetic radar events and watches the light topic.
 
-Usage: python3 test_stair_flow.py [broker-host] [light-topic]
+Usage: python3 test_stair_flow.py [broker-host] [light-topic] [--wait-off]
 Defaults: iotstack.local, cmnd/stairlight/POWER
 
 CAUTION: the real radar publishes to the same topics — run this while the
@@ -10,7 +10,8 @@ radar's view is quiet (or unplugged), otherwise real motion can produce
 extra ONs; real in-zone radar traffic during the run also breaks the
 out-of-zone check and extends the hold (false --wait-off failures) —
 another reason to run with the radar's view quiet. The definitive test is
-walking the stairs.
+walking the stairs. Also wait 60+ s between runs (or use --wait-off): a
+prior run's hold still being active makes the ON check falsely fail.
 """
 import json
 import sys
@@ -59,9 +60,10 @@ failures = 0
 #    trigger's hold masks filter behavior, so order matters.)
 before = len(seen)
 publish({"x": 6000, "y": 7500, "v": 0})
+publish({"gone": True})  # disappearance must also produce no command
 time.sleep(5)
 if len(seen) == before:
-    print("PASS: out-of-zone event produced no light command")
+    print("PASS: out-of-zone and gone events produced no light command")
 else:
     print("FAIL: out-of-zone event produced a command (zone filter broken?)")
     failures += 1
