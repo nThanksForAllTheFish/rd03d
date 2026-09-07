@@ -115,6 +115,24 @@ def run(_context: str):
             participants=[plate_body])
     print("radar bay ok, support top z(cm)=", round(board_back_z, 3))
 
+    # 4b. notch the radar fence +X wall where the XIAO board crosses it
+    # (as-built correction found in Task 5: the bay centers put the radar
+    # fence's +X wall at x -3.7..-2.2mm while the XIAO board's -X edge
+    # reaches x -3.23mm, so the full-height wall would pass through the
+    # board. Remove the wall above the post height over the XIAO footprint
+    # +0.5mm clearance; the stub below z=postH stays and is co-planar with
+    # the posts, and the wall segments beyond y=+/-9.4mm still retain the
+    # radar board laterally.)
+    nx0 = rCx + bayW / 2 - 0.01
+    nx1 = rCx + bayW / 2 + 1.5 * MM + 0.01
+    ny = xH / 2 + clear + 0.25 * MM
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    rect(sk, (nx0 + nx1) / 2, 0, nx1 - nx0, 2 * ny)
+    extrude(comp, sk.profiles.item(0), postH, 11 * MM + 0.01,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("radar fence notched for xiao board")
+
     # 5. xiao bay: 4 posts + 3-sided fence (open toward +X)
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sx in (-1, 1):
