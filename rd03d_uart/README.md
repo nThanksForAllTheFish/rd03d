@@ -76,6 +76,23 @@ OTAs: a full `idf.py flash` resets otadata and boots the USB image, but
 `idf.py app-flash` alone does not — after OTAs, follow `app-flash` with
 `idf.py erase-otadata` (or just use the full `flash`).
 
+## MQTT events
+
+The firmware publishes to the broker configured in `idf.py menuconfig`
+(*RD03D Configuration*, default `iotstack.local:1883`, anonymous):
+
+- `rd03d/target/1..3` — `{"x":-551,"y":550,"v":0}` when that target first
+  appears or has moved ≥ the configured distance (default 200 mm) since the
+  last published position; `{"gone":true}` once when it disappears.
+  QoS 0, not retained.
+- `rd03d/status` — retained `online`/`offline` (Last-Will), so consumers
+  (e.g. Node-RED) always know whether the sensor is alive.
+
+While the broker is unreachable nothing is queued; on (re)connect the device
+republishes `online` and the current position of every present target.
+The broker hostname is resolved (via mDNS for `.local` names) once at boot —
+if the broker's IP changes, reboot the XIAO (or just re-upload firmware).
+
 ## Host-side parser tests
 
 ```bash
