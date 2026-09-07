@@ -44,8 +44,12 @@ broker = one("mqtt-broker")
 if broker["broker"] != "iotstack.local" or str(broker["port"]) != "1883":
     fail("broker must be iotstack.local:1883")
 
+for n in nodes:
+    if n["type"] in ("mqtt in", "mqtt out") and n.get("broker") not in by_id:
+        fail(f"mqtt node {n['id']} references missing broker config")
+
 tgt_in = one("mqtt in", lambda n: n.get("topic") == "rd03d/target/+", "(targets)")
-one("mqtt in", lambda n: n.get("topic") == "rd03d/status", "(status)")
+status_in = one("mqtt in", lambda n: n.get("topic") == "rd03d/status", "(status)")
 
 zone = one("function")
 for needle in ("const ZONE", "JSON.parse", "gone", "xMin", "yMax"):
@@ -54,13 +58,19 @@ for needle in ("const ZONE", "JSON.parse", "gone", "xMin", "yMax"):
 
 trig = one("trigger")
 if not (trig["op1"] == "ON" and trig["op2"] == "OFF" and trig["extend"] is True
-        and str(trig["duration"]) == "60" and trig["units"] == "s"):
-    fail("trigger must be ON, then OFF after 60s, extend on retrigger")
+        and str(trig["duration"]) == "60" and trig["units"] == "s"
+        and trig["bytopic"] == "all"):
+    fail("trigger must be ON, then OFF after 60s, extend on retrigger, bytopic=all")
 
-one("rbe")
+rbe = one("rbe")
+if rbe.get("septopics") is not False:
+    fail("rbe must have septopics=false (single stream across target topics)")
+
 change = one("change")
-if change["rules"][0]["to"] != "cmnd/stairlight/POWER":
-    fail("change node must set topic cmnd/stairlight/POWER")
+rule = change["rules"][0]
+if not (rule["t"] == "set" and rule["p"] == "topic"
+        and rule["to"] == "cmnd/stairlight/POWER"):
+    fail("change node must SET msg.topic to cmnd/stairlight/POWER")
 
 out = one("mqtt out")
 if out.get("topic", "") != "":
@@ -78,12 +88,19 @@ if len(debugs) != 2:
 def wired(a, b):
     return any(b["id"] in out for out in a.get("wires", []))
 
-spine = [tgt_in, zone, trig, one("rbe"), change, out]
+spine = [tgt_in, zone, trig, rbe, change, out]
 for a, b in zip(spine, spine[1:]):
     if not wired(a, b):
         fail(f"{a['type']} not wired to {b['type']}")
 for inj in injects:
     if not wired(inj, change):
         fail("inject buttons must wire into the change node")
+
+dbg_zone = next(n for n in debugs if n["name"] == "in-zone events")
+dbg_stat = next(n for n in debugs if n["name"] == "sensor status")
+if not wired(zone, dbg_zone):
+    fail("zone filter must also wire to the in-zone debug tap")
+if not wired(status_in, dbg_stat):
+    fail("status mqtt in must wire to the sensor status debug")
 
 print("flow validation passed")

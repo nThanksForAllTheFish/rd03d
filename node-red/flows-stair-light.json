@@ -56,7 +56,7 @@
         "type": "function",
         "z": "stairtab1",
         "name": "zone filter (EDIT ZONE)",
-        "func": "// Zone bounds in mm, radar frame: x lateral (+/-), y forward from sensor.\n// EDIT these four numbers after the placement walk test.\nconst ZONE = { xMin: -1500, xMax: 1500, yMin: 300, yMax: 3000 };\n\nlet d;\ntry {\n    d = JSON.parse(msg.payload);\n} catch (e) {\n    return null; // malformed payload\n}\nif (d.gone) {\n    return null; // disappearance = inactivity; the trigger timeout handles it\n}\nif (typeof d.x !== \"number\" || typeof d.y !== \"number\") {\n    return null;\n}\nif (d.x < ZONE.xMin || d.x > ZONE.xMax || d.y < ZONE.yMin || d.y > ZONE.yMax) {\n    return null; // outside the zone\n}\nreturn msg; // in-zone activity\n",
+        "func": "// Zone bounds in mm, radar frame: x lateral (+/-), y forward from sensor.\n// EDIT these four numbers after the placement walk test.\nconst ZONE = { xMin: -1500, xMax: 1500, yMin: 300, yMax: 3000 };\n\nlet d;\ntry {\n    d = JSON.parse(msg.payload);\n} catch (e) {\n    return null; // malformed payload\n}\nif (!d || typeof d !== \"object\") {\n    return null; // not an object payload\n}\nif (d.gone) {\n    return null; // disappearance = inactivity; the trigger timeout handles it\n}\nif (typeof d.x !== \"number\" || typeof d.y !== \"number\") {\n    return null;\n}\nif (d.x < ZONE.xMin || d.x > ZONE.xMax || d.y < ZONE.yMin || d.y > ZONE.yMax) {\n    return null; // outside the zone\n}\nreturn msg; // in-zone activity\n",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
