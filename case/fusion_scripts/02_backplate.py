@@ -57,7 +57,6 @@ def run(_context: str):
 
     intW, intH = p(des, "intW"), p(des, "intH")
     backT, rimGap = p(des, "backT"), p(des, "rimGap")
-    tape = p(des, "tapeRecess")
     rW, rH, rT = p(des, "radarW"), p(des, "radarH"), p(des, "radarT")
     rCx = p(des, "radarCx")
     xW, xH, xCx = p(des, "xiaoW"), p(des, "xiaoH"), p(des, "xiaoCx")
@@ -73,13 +72,12 @@ def run(_context: str):
     plate_body = plate.bodies.item(0)
     print("plate ok")
 
-    # 2. tape recess (cut upward from below)
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, 0, 0, 34 * MM, 38 * MM)
-    extrude(comp, sk.profiles.item(0), -backT, -backT + tape,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[plate_body])
-    print("tape recess ok")
+    # 2. (deleted 2026-09-07) tape recess: with the LEGO Technic holes as
+    # the primary mount, the 34x38x0.6 rear pocket only hurt printability -
+    # back-face-down the first layer touched just the outer rim and then
+    # bridged the whole recess (user print report). The rear face is now
+    # fully flat; adhesive tape sticks directly to it. The rear Technic
+    # counterbores (0.9 deep, step 7) are unchanged.
 
     # 3. snap pockets at plate +/-X edges, y=+/-12 (BLIND: z -1.7..-0.3,
     # leaving material ledges at both z ends so the shell's bumps

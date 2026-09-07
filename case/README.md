@@ -8,16 +8,16 @@ The living design is in your Fusion; save it to your own project.
 
 - `rd03d_case_back.stl` — back plate (8 mm thick): radar bay left, XIAO
   posts right; six LEGO Technic pin holes (8 mm pitch, counterbored both
-  faces) through the back for pin/ball-pin mounting, plus the recessed
-  tape panel on the rear face.
+  faces) through the back for pin/ball-pin mounting. The rear face is
+  otherwise fully flat (great first layer; tape sticks directly to it).
 - `rd03d_case_shell.stl` — front shell: 1.2 mm radar window (pocketed from
   the interior, so the exterior face is smooth), USB-C notch, four snap
   bumps engage the plate's edge grooves.
 
 ## Printing
 
-PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, no supports.
-Back plate: print flat (adhesive face down). Shell: print open-side-up.
+PLA or PETG, 0.4–0.6 mm nozzle, 0.2 mm layers, no supports.
+Back plate: print flat (back face down). Shell: print open-side-up.
 Exterior edges are filleted/chamfered for comfort; the front face's 1 mm
 chamfer prints cleanly bed-side.
 
@@ -28,11 +28,10 @@ chamfer prints cleanly bed-side.
    (the radar is Y-loose until the shell closes).
 2. Snap the shell on (bumps click into the plate grooves). Unclip with a
    fingernail in the USB notch.
-3. Stick 3M VHB tape in the recessed back panel.
-4. Mounting: push Technic pins / ball-pins into the six back holes
+3. Mounting: push Technic pins / ball-pins into the six back holes
    (8 mm LEGO pitch: 1×4 column + 1×2 column); a ball-and-socket arm
-   gives adjustable aim. The recessed tape panel remains for adhesive
-   mounting.
+   gives adjustable aim. Or stick VHB tape directly to the flat back
+   if you prefer adhesive mounting.
 
 ## Tweaking fit
 
@@ -64,6 +63,3 @@ Re-export STLs after edits (File → 3D Print, or re-run
   Fusion's Change Parameters dialog.
 - If the lid snaps on too hard/soft, tune the `snapBump` user parameter
   (0.4-0.6 mm) and reprint the shell only.
-- The plate bridges over the shallow bed-facing tape recess: it prints fine
-  without supports but expect a slightly rough recess floor; enable
-  bridging tuning or paint-on supports there if you care about the finish.

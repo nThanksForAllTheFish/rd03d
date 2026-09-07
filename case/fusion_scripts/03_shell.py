@@ -100,28 +100,77 @@ def run(_context: str):
     # 4b: radar retention ribs (thin-wall fix 2026-09-07). The plate's old
     # 0.6 mm +/-Y fence segments were unprintable on a 0.6 mm nozzle, so
     # the radar's side (Y) restraint moved here: two ribs joined to the
-    # +/-Y cavity walls over the radar bay. X span = radarCx +/- bayW/2
-    # (-19.3..-3.7 mm), flush with the plate's +/-X fence walls' inner
-    # faces (coplanar touch at most, no overlap). Rib inner faces at
-    # y = +/-(intH/2 - 0.74 mm) = +/-22.26 -> 0.25 mm clearance per side
-    # to the board edges (+/-22.01). z 6..14: top face coplanar with the
-    # interior window-pocket floor (z=14), no volume overlap. The rects
-    # extend 0.5 mm into the walls so the Join reliably merges.
+    # +/-Y cavity walls over the radar bay. X span = radarCx +/-
+    # (bayW - 0.6mm)/2 = -19.0..-4.0 mm (print-fix 2026-09-07: 0.3 mm
+    # clearance per end to the plate's +/-X fence walls' inner faces at
+    # -19.3/-3.7 so the lid doesn't force-fit against them; was coplanar).
+    # Rib inner faces at y = +/-(intH/2 - 0.74 mm) = +/-22.26 -> 0.25 mm
+    # clearance per side to the board edges (+/-22.01). z 6..14: top face
+    # coplanar with the interior window-pocket floor (z=14), no volume
+    # overlap. The rects extend 0.5 mm into the walls so the Join
+    # reliably merges.
     rW, clear = p(des, "radarW"), p(des, "boardClear")
     bayW = rW + 2 * clear
+    ribL = bayW - 0.6 * MM            # rib X length (cm), centered on rCx
     ribT = 0.74 * MM
     ribInY = intH / 2 - ribT          # rib inner face (cm)
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sy in (-1, 1):
         y0, y1 = ribInY, intH / 2 + 0.5 * MM
-        rect(sk, rCx, sy * (y0 + y1) / 2, bayW, y1 - y0)
+        rect(sk, rCx, sy * (y0 + y1) / 2, ribL, y1 - y0)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, 6 * MM, 14 * MM,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[shell_body])
     print("radar retention ribs ok (inner faces y=+/-%.2f mm, x %.1f..%.1f, "
-          "z 6..14)" % (ribInY * 10, (rCx - bayW / 2) * 10,
-                        (rCx + bayW / 2) * 10))
+          "z 6..14)" % (ribInY * 10, (rCx - ribL / 2) * 10,
+                        (rCx + ribL / 2) * 10))
+
+    # 4c: rib self-centering lead-in chamfer (print-fix 2026-09-07):
+    # 45 deg on each rib's lower-inner edge (the long X-direction edges
+    # at z=6, y=+/-22.26) so an off-center radar board is nudged into
+    # the bay as the lid closes. The prescribed 0.8 mm is refused by the
+    # kernel (ASM_BL_UNFIN_SHEET): the rib is only 0.74 mm thick, so the
+    # chamfer's horizontal leg overruns the rib's bottom face into the
+    # concave wall corner at y=+/-23. Fallback (same intent, recorded):
+    # 0.6 mm equal-distance, leaving 0.14 mm of bottom face to the wall.
+    # Nice-to-have: if both sizes are refused, continue without.
+    def rib_edges():
+        edges = adsk.core.ObjectCollection.create()
+        for e in shell_body.edges:
+            g = e.geometry
+            if not isinstance(g, adsk.core.Line3D):
+                continue
+            v = g.startPoint.vectorTo(g.endPoint)
+            v.normalize()
+            if abs(abs(v.x) - 1) > 1e-6:
+                continue
+            mz = (g.startPoint.z + g.endPoint.z) / 2
+            my = (g.startPoint.y + g.endPoint.y) / 2
+            if (abs(mz - 6 * MM) < 0.005 and abs(abs(my) - ribInY) < 0.005):
+                edges.add(e)
+        return edges
+
+    applied = None
+    for dist_mm in (0.8, 0.6):
+        try:
+            edges = rib_edges()
+            if edges.count != 2:
+                raise RuntimeError("expected 2 rib lower-inner edges, "
+                                   "found %d" % edges.count)
+            ch = comp.features.chamferFeatures
+            chi = ch.createInput(edges, False)
+            chi.setToEqualDistance(
+                adsk.core.ValueInput.createByReal(dist_mm * MM))
+            ch.add(chi)
+            applied = dist_mm
+            break
+        except Exception as exc:
+            print("rib chamfer %.1fmm refused: %s" % (dist_mm, exc))
+    if applied:
+        print("rib lead-in chamfers ok (%.1fmm x 45deg on 2 edges)" % applied)
+    else:  # nice-to-have; square rib is acceptable
+        print("RIB CHAMFER SKIPPED entirely")
 
     # 5: snap bumps on inner +/-X walls at y=+/-12, z centered -1mm
     # (rects extend into the wall so the Join reliably merges with the
