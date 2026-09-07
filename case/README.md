@@ -55,6 +55,9 @@ Re-export STLs after edits (File → 3D Print, or re-run
 - The radar board rests on its rear connector and can tilt slightly until
   the shell's front wall stops it; harmless, but seat it patch-side out
   before closing.
+- Caution: re-running `fusion_scripts/01_setup.py` resets ALL user
+  parameters to the repo defaults, overwriting any tuning you did in
+  Fusion's Change Parameters dialog.
 - If the lid snaps on too hard/soft, tune the `snapBump` user parameter
   (0.4-0.6 mm) and reprint the shell only.
 - Both parts bridge over shallow bed-facing pockets (the tape recess on the

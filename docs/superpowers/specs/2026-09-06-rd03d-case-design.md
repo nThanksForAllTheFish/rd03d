@@ -35,8 +35,9 @@ feature timeline and Fusion **user parameters**, fully editable in Fusion.
 
 Two printed parts:
 
-1. **Back plate** — flat, ~2 mm, adhesive face with a 0.6 mm recessed tape
-   pocket. Carries the board mounts:
+1. **Back plate** — flat, 8 mm thick (Technic-depth; see Mounting), adhesive
+   face with a 0.6 mm recessed tape pocket and the six Technic holes.
+   Carries the board mounts:
    - RD-03D: edge-rail pocket (board has no mounting holes) holding the stick
      patch-side-forward; small retention nubs; ≥7 mm clearance behind the
      board for its rear connector + jumper wires.
