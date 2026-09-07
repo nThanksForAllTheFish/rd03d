@@ -12,7 +12,7 @@ def rect(sk, cx, cy, w, h):
         adsk.core.Point3D.create(cx + w / 2, cy + h / 2, 0))
 
 
-def extrude(comp, profiles, z0, z1, op):
+def extrude(comp, profiles, z0, z1, op, participants=None):
     ext = comp.features.extrudeFeatures
     inp = ext.createInput(profiles, op)
     start = adsk.fusion.OffsetStartDefinition.create(
@@ -22,6 +22,11 @@ def extrude(comp, profiles, z0, z1, op):
         adsk.fusion.DistanceExtentDefinition.create(
             adsk.core.ValueInput.createByReal(z1 - z0)),
         adsk.fusion.ExtentDirections.PositiveExtentDirection)
+    if participants is not None:
+        # Restrict which bodies this feature can modify; without this a
+        # Cut/Intersect eats every intersecting body in the design (e.g.
+        # the other component's body).
+        inp.participantBodies = participants
     return ext.add(inp)
 
 
@@ -51,15 +56,18 @@ def run(_context: str):
     winT, rCx = p(des, "windowT"), p(des, "radarCx")
     MM = 0.1
 
-    # 1+2: outer box then cavity
+    # 1+2: outer box then cavity (cavity cut MUST be restricted to the shell
+    # body: unrestricted it also hollows out the BackPlate body to nothing)
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, 0, 0, intW + 2 * wall, intH + 2 * wall)
-    extrude(comp, sk.profiles.item(0), -backT, intD + wall,
-            adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    box = extrude(comp, sk.profiles.item(0), -backT, intD + wall,
+                  adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    shell_body = box.bodies.item(0)
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, 0, 0, intW, intH)
     extrude(comp, sk.profiles.item(0), -backT, intD,
-            adsk.fusion.FeatureOperations.CutFeatureOperation)
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
     print("shell box ok")
 
     # 3: radar window pocket on the outer front face over the patch end
@@ -67,14 +75,16 @@ def run(_context: str):
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, rCx, 13 * MM, 19 * MM, 24 * MM)
     extrude(comp, sk.profiles.item(0), intD + winT, intD + wall,
-            adsk.fusion.FeatureOperations.CutFeatureOperation)
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
     print("window ok")
 
     # 4: usb notch through +X wall, back rim z=-backT up to z=8mm
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, intW / 2 + wall / 2, 0, wall + 0.02, 11.3 * MM)
     extrude(comp, sk.profiles.item(0), -backT, 8 * MM,
-            adsk.fusion.FeatureOperations.CutFeatureOperation)
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
     print("usb notch ok")
 
     # 5: snap bumps on inner +/-X walls at y=+/-12, z centered -1mm
@@ -88,6 +98,7 @@ def run(_context: str):
             rect(sk, cx, sy * 12 * MM, snap + wall, 6 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, -1.6 * MM, -0.4 * MM,
-            adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
     print("snap bumps ok")
     print("FrontShell bodies:", comp.bRepBodies.count)

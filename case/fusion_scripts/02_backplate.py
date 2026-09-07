@@ -12,7 +12,7 @@ def rect(sk, cx, cy, w, h):
         adsk.core.Point3D.create(cx + w / 2, cy + h / 2, 0))
 
 
-def extrude(comp, profiles, z0, z1, op):
+def extrude(comp, profiles, z0, z1, op, participants=None):
     ext = comp.features.extrudeFeatures
     inp = ext.createInput(profiles, op)
     start = adsk.fusion.OffsetStartDefinition.create(
@@ -22,6 +22,11 @@ def extrude(comp, profiles, z0, z1, op):
         adsk.fusion.DistanceExtentDefinition.create(
             adsk.core.ValueInput.createByReal(z1 - z0)),
         adsk.fusion.ExtentDirections.PositiveExtentDirection)
+    if participants is not None:
+        # Restrict which bodies this feature can modify; without this a
+        # Cut/Intersect eats every intersecting body in the design (e.g.
+        # the other component's body).
+        inp.participantBodies = participants
     return ext.add(inp)
 
 
@@ -59,18 +64,22 @@ def run(_context: str):
     # 1. plate
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, 0, 0, intW - 2 * rimGap, intH - 2 * rimGap)
-    extrude(comp, sk.profiles.item(0), -backT, 0,
-            adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    plate = extrude(comp, sk.profiles.item(0), -backT, 0,
+                    adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    plate_body = plate.bodies.item(0)
     print("plate ok")
 
     # 2. tape recess (cut upward from below)
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, 0, 0, 34 * MM, 38 * MM)
     extrude(comp, sk.profiles.item(0), -backT, -backT + tape,
-            adsk.fusion.FeatureOperations.CutFeatureOperation)
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
     print("tape recess ok")
 
-    # 3. snap grooves at plate +/-X edges, y=+/-12
+    # 3. snap pockets at plate +/-X edges, y=+/-12 (BLIND: z -1.7..-0.3,
+    # leaving material ledges at both z ends so the shell's bumps
+    # (z -1.6..-0.4) are retained axially with 0.1mm slop per side)
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sx in (-1, 1):
         edge = sx * (intW / 2 - rimGap)
@@ -78,9 +87,10 @@ def run(_context: str):
             # rect centered on the edge, 1.2 wide -> cuts 0.6 deep into plate
             rect(sk, edge, sy * 12 * MM, 0.12, 6.2 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
-    extrude(comp, profs, -backT, 0,
-            adsk.fusion.FeatureOperations.CutFeatureOperation)
-    print("snap grooves ok")
+    extrude(comp, profs, -1.7 * MM, -0.3 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("snap pockets ok")
 
     # 4. radar bay: fence ring + crossbars
     bayW, bayH = rW + 2 * clear, rH + 2 * clear
@@ -93,14 +103,16 @@ def run(_context: str):
         if pr.profileLoops.count == 2:
             ring = pr
     extrude(comp, ring, 0, 11 * MM,
-            adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sy in (-1, 1):
         rect(sk, rCx, sy * 18 * MM, bayW, 4 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     board_back_z = intD - 1 * MM - rT  # patch face lands 1mm behind front wall
     extrude(comp, profs, 0, board_back_z,
-            adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
     print("radar bay ok, support top z(cm)=", round(board_back_z, 3))
 
     # 5. xiao bay: 4 posts + 3-sided fence (open toward +X)
@@ -111,7 +123,8 @@ def run(_context: str):
                  sy * (xH / 2 - 1.5 * MM), 3 * MM, 3 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, 0, postH,
-            adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
     fW, fH = xW + 2 * clear, xH + 2 * clear
     t = 1.5 * MM
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -120,7 +133,8 @@ def run(_context: str):
     rect(sk, xCx, -(fH / 2 + t / 2), fW + 2 * t, t)           # -Y side
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, 0, 5 * MM,
-            adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
     print("xiao bay ok")
 
     # 6. trim everything to the plate outline (the radar fence and the xiao
@@ -129,7 +143,8 @@ def run(_context: str):
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, 0, 0, intW - 2 * rimGap, intH - 2 * rimGap)
     extrude(comp, sk.profiles.item(0), -backT, 11 * MM,
-            adsk.fusion.FeatureOperations.IntersectFeatureOperation)
+            adsk.fusion.FeatureOperations.IntersectFeatureOperation,
+            participants=[plate_body])
     print("trimmed to plate outline")
 
     print("BackPlate bodies:", comp.bRepBodies.count)
