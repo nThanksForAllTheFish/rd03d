@@ -46,7 +46,7 @@ build-time config; NVS holds only RF calibration, which regenerates).
 - `main/ota_update.c/.h` — new module, registered on the existing HTTP server:
   - `ota_update_register(httpd_handle_t server)` — adds the two URI handlers.
   - `GET /update` — small self-contained embedded page (C string, not an
-    EMBED_FILES asset): shows the running firmware version and the idle slot,
+    EMBED_FILES asset): shows the running firmware version and slot,
     file picker + upload button, status/progress text, link back to `/`.
   - `POST /update` — streams the request body in chunks via
     `esp_ota_begin` / `esp_ota_write` into the passive slot; on success
