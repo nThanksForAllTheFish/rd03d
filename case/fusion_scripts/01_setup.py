@@ -25,6 +25,9 @@ PARAMS = [
     ("legoHole", "4.9 mm", "Technic pin hole dia, FDM-calibrated"),
     ("legoCbDia", "6.4 mm", "Technic counterbore diameter"),
     ("legoCbDepth", "0.9 mm", "Technic counterbore depth"),
+    ("cornerFillet", "2.5 mm", "shell vertical corner fillet"),
+    ("frontChamfer", "1 mm", "front-face perimeter chamfer (bed side, prints clean)"),
+    ("softFillet", "0.8 mm", "rim + USB-notch edge soften"),
 ]
 
 

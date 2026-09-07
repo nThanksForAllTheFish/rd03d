@@ -17,6 +17,8 @@ The living design is in your Fusion; save it to your own project.
 
 PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, no supports.
 Back plate: print flat (adhesive face down). Shell: print open-side-up.
+Exterior edges are filleted/chamfered for comfort; the front face's 1 mm
+chamfer prints cleanly bed-side.
 
 ## Assembly
 
