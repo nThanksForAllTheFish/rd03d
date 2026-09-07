@@ -53,6 +53,31 @@ The firmware joins the WiFi network configured via `idf.py menuconfig`
 - Untethered use: power the XIAO from a USB power bank; the USB console is
   optional diagnostics only.
 
+## OTA firmware updates
+
+The device carries two firmware slots with automatic rollback — a bad update
+reverts to the previous firmware by itself (it must join WiFi and start the
+web server within 90 s to become permanent).
+
+Update over WiFi (no USB needed):
+
+```bash
+idf.py build
+curl -X POST --data-binary @build/rd03d_uart.bin http://rd03d.local/update
+```
+
+or open **http://rd03d.local/update** in a browser and upload
+`build/rd03d_uart.bin`. The running version shows at `/version`, on the
+update page, and in the chart HUD.
+
+USB flashing is only needed for first-time setup (partition table changes
+require `idf.py erase-flash flash`).
+
+Note: after any OTA, a plain USB `idf.py flash` writes to `ota_0` but the
+device may keep booting the newer image in `ota_1` (otadata still points
+there). For a USB reflash to take effect after OTAs, use
+`idf.py erase-otadata flash` (or a full `erase-flash flash`).
+
 ## Host-side parser tests
 
 ```bash
