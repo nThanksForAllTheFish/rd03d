@@ -49,3 +49,7 @@ Re-export STLs after edits (File → 3D Print, or re-run
   before closing.
 - If the lid snaps on too hard/soft, tune the `snapBump` user parameter
   (0.4-0.6 mm) and reprint the shell only.
+- Both parts bridge over shallow bed-facing pockets (the tape recess on the
+  plate, the window panel on the shell): they print fine without supports
+  but expect slightly rough pocket floors; enable bridging tuning or
+  paint-on supports there if you care about the finish.
