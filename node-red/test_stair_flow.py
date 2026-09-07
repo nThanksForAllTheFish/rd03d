@@ -7,7 +7,10 @@ Defaults: iotstack.local, cmnd/stairlight/POWER
 
 CAUTION: the real radar publishes to the same topics — run this while the
 radar's view is quiet (or unplugged), otherwise real motion can produce
-extra ONs. The definitive test is walking the stairs.
+extra ONs; real in-zone radar traffic during the run also breaks the
+out-of-zone check and extends the hold (false --wait-off failures) —
+another reason to run with the radar's view quiet. The definitive test is
+walking the stairs.
 """
 import json
 import sys
@@ -15,8 +18,11 @@ import time
 
 import paho.mqtt.client as mqtt
 
-BROKER = sys.argv[1] if len(sys.argv) > 1 else "iotstack.local"
-LIGHT_TOPIC = sys.argv[2] if len(sys.argv) > 2 else "cmnd/stairlight/POWER"
+flags = [a for a in sys.argv[1:] if a.startswith("--")]
+args = [a for a in sys.argv[1:] if not a.startswith("--")]
+BROKER = args[0] if len(args) > 0 else "iotstack.local"
+LIGHT_TOPIC = args[1] if len(args) > 1 else "cmnd/stairlight/POWER"
+WAIT_OFF = "--wait-off" in flags
 TARGET_TOPIC = "rd03d/target/1"
 
 seen = []
@@ -48,7 +54,19 @@ def wait_for(value, timeout):
 
 failures = 0
 
-# 1. In-zone target -> ON
+# 1. Out-of-zone target FIRST, while no hold is active: a broken zone
+#    filter would emit ON here and be caught. (Once the light is ON, the
+#    trigger's hold masks filter behavior, so order matters.)
+before = len(seen)
+publish({"x": 6000, "y": 7500, "v": 0})
+time.sleep(5)
+if len(seen) == before:
+    print("PASS: out-of-zone event produced no light command")
+else:
+    print("FAIL: out-of-zone event produced a command (zone filter broken?)")
+    failures += 1
+
+# 2. In-zone target -> ON
 publish({"x": 0, "y": 1000, "v": -10})
 if wait_for("ON", 5):
     print("PASS: in-zone event turned the light ON")
@@ -56,19 +74,8 @@ else:
     print("FAIL: no ON within 5s - is the flow deployed and the broker right?")
     failures += 1
 
-# 2. Out-of-zone target -> no new command (rbe also swallows repeat ONs,
-#    so we verify no OFF arrives, i.e. nothing unexpected)
-before = len(seen)
-publish({"x": 6000, "y": 7500, "v": 0})
-time.sleep(5)
-if len(seen) == before:
-    print("PASS: out-of-zone event produced no light command")
-else:
-    print("FAIL: out-of-zone event produced a command")
-    failures += 1
-
 # 3. Optional: wait out the hold for OFF
-if "--wait-off" in sys.argv:
+if WAIT_OFF:
     print("waiting up to 75s for the hold to expire...")
     if wait_for("OFF", 75):
         print("PASS: light turned OFF after the hold")
