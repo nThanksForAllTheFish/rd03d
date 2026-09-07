@@ -65,8 +65,11 @@ def main():
                 continue
             try:
                 d = json.loads(c["text"])
+                if not isinstance(d, dict):
+                    print(c["text"])
+                    continue
                 print(d.get("message", c["text"]))
-                if d.get("success") is False:
+                if d.get("success") is False or "error" in d:
                     ok = False
             except json.JSONDecodeError:
                 print(c["text"])
@@ -80,7 +83,8 @@ def main():
         content = call(sid, "fusion_mcp_read", args)
         for c in content:
             if c.get("type") == "image" and c.get("data"):
-                open(out, "wb").write(base64.b64decode(c["data"]))
+                data = base64.b64decode(c["data"])
+                open(out, "wb").write(data)
                 print("saved", out)
                 return
             if c.get("type") == "text":
@@ -88,7 +92,8 @@ def main():
                     d = json.loads(c["text"])
                     img = d.get("imageData") or d.get("data")
                     if img:
-                        open(out, "wb").write(base64.b64decode(img))
+                        data = base64.b64decode(img)
+                        open(out, "wb").write(data)
                         print("saved", out)
                         return
                     print(c["text"][:400])
