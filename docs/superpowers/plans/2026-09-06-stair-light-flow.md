@@ -20,7 +20,7 @@
 - Create: `node-red/validate_flow.py`
 - Create: `node-red/flows-stair-light.json`
 
-- [ ] **Step 1: Write the validator first**
+- [x] **Step 1: Write the validator first**
 
 `node-red/validate_flow.py`:
 
@@ -116,7 +116,7 @@ for inj in injects:
 print("flow validation passed")
 ```
 
-- [ ] **Step 2: Run it to verify it fails (no flow yet)**
+- [x] **Step 2: Run it to verify it fails (no flow yet)**
 
 ```bash
 cd node-red && python3 validate_flow.py
@@ -124,7 +124,7 @@ cd node-red && python3 validate_flow.py
 
 Expected: FAIL — `FileNotFoundError` (flows-stair-light.json missing).
 
-- [ ] **Step 3: Write the flow**
+- [x] **Step 3: Write the flow**
 
 `node-red/flows-stair-light.json`:
 
@@ -364,7 +364,7 @@ Expected: FAIL — `FileNotFoundError` (flows-stair-light.json missing).
 ]
 ```
 
-- [ ] **Step 4: Run the validator to verify it passes**
+- [x] **Step 4: Run the validator to verify it passes**
 
 ```bash
 cd node-red && python3 validate_flow.py
@@ -392,7 +392,7 @@ sys.exit(r.returncode)
 
 Expected: `JS syntax OK` (or the skip message).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add node-red/validate_flow.py node-red/flows-stair-light.json
@@ -409,7 +409,7 @@ End every commit message in this plan with:
 **Files:**
 - Create: `node-red/test_stair_flow.py`
 
-- [ ] **Step 1: Write the harness**
+- [x] **Step 1: Write the harness**
 
 `node-red/test_stair_flow.py`:
 
@@ -499,7 +499,7 @@ print(f"{'ALL CHECKS PASSED' if failures == 0 else f'{failures} FAILURE(S)'}")
 sys.exit(1 if failures else 0)
 ```
 
-- [ ] **Step 2: Plumbing test against the live broker (flow NOT yet deployed)**
+- [x] **Step 2: Plumbing test against the live broker (flow NOT yet deployed)**
 
 ```bash
 SP=/private/tmp/claude-501/-path-to-rd03d/1a58ef3a-b659-4aae-a07a-3f6d1a6f573b/scratchpad
@@ -508,7 +508,7 @@ cd node-red && $SP/venv/bin/python test_stair_flow.py 192.168.1.243
 
 Expected (this is the correct pre-import outcome): connects, publishes, then `FAIL: no ON within 5s - is the flow deployed...`, exit code 1. That failure proves the harness's broker connectivity, publish path, and reporting all work; the PASS outcomes become reachable only after the user imports the flow.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add node-red/test_stair_flow.py
@@ -522,7 +522,7 @@ git commit -m "feat(stair-light): acceptance harness for the Node-RED flow"
 **Files:**
 - Create: `node-red/README.md`
 
-- [ ] **Step 1: Write the README**
+- [x] **Step 1: Write the README**
 
 `node-red/README.md`:
 
@@ -578,7 +578,7 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
   expires and the light turns off on its own.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add node-red/README.md
