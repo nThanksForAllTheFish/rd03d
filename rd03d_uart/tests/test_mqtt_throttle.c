@@ -125,6 +125,40 @@ static void test_extreme_coordinates_no_overflow(void)
     assert(mqtt_throttle_eval(&th, 0, &t) == MQTT_THROTTLE_MOVED);
 }
 
+static void test_threshold_zero_publishes_every_frame(void)
+{
+    mqtt_throttle_t th;
+    mqtt_throttle_init(&th, 0);
+    rd03d_target_t t = at(100, 500);
+    assert(mqtt_throttle_eval(&th, 0, &t) == MQTT_THROTTLE_MOVED);
+    assert(mqtt_throttle_eval(&th, 0, &t) == MQTT_THROTTLE_MOVED);
+}
+
+static void test_flapping_target(void)
+{
+    mqtt_throttle_t th;
+    mqtt_throttle_init(&th, 200);
+    rd03d_target_t t = at(100, 500);
+    rd03d_target_t a = absent();
+    assert(mqtt_throttle_eval(&th, 0, &t) == MQTT_THROTTLE_MOVED);
+    assert(mqtt_throttle_eval(&th, 0, &a) == MQTT_THROTTLE_GONE);
+    assert(mqtt_throttle_eval(&th, 0, &t) == MQTT_THROTTLE_MOVED);
+    assert(mqtt_throttle_eval(&th, 0, &a) == MQTT_THROTTLE_GONE);
+    assert(mqtt_throttle_eval(&th, 0, &a) == MQTT_THROTTLE_NONE);
+}
+
+static void test_reset_while_absent_no_spurious_gone(void)
+{
+    mqtt_throttle_t th;
+    mqtt_throttle_init(&th, 200);
+    rd03d_target_t t = at(100, 500);
+    rd03d_target_t a = absent();
+    mqtt_throttle_eval(&th, 0, &t);
+    mqtt_throttle_eval(&th, 0, &a); /* GONE */
+    mqtt_throttle_reset(&th);
+    assert(mqtt_throttle_eval(&th, 0, &a) == MQTT_THROTTLE_NONE);
+}
+
 int main(void)
 {
     test_first_appearance_publishes();
@@ -137,6 +171,9 @@ int main(void)
     test_reset_republishes_present_target();
     test_slots_are_independent();
     test_extreme_coordinates_no_overflow();
+    test_threshold_zero_publishes_every_frame();
+    test_flapping_target();
+    test_reset_while_absent_no_spurious_gone();
     printf("all tests passed\n");
     return 0;
 }

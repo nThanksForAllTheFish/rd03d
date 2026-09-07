@@ -12,4 +12,18 @@ config RD03D_WIFI_PASSWORD
     help
         WPA2 password for the network. Stored only in the untracked sdkconfig.
 
+config RD03D_MQTT_HOST
+    string "MQTT broker host"
+    default "iotstack.local"
+    help
+        Broker hostname. A .local name is resolved via mDNS by the firmware.
+
+config RD03D_MQTT_PORT
+    int "MQTT broker port"
+    default 1883
+
+config RD03D_MQTT_MOVE_MM
+    int "Minimum movement (mm) between MQTT publishes per target"
+    default 200
+
 endmenu
