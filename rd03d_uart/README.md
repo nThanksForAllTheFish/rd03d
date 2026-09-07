@@ -93,11 +93,12 @@ republishes `online` and the current position of every present target.
 The broker hostname is resolved (via mDNS for `.local` names) once at boot —
 if the broker's IP changes, reboot the XIAO (or just re-upload firmware).
 
-## Host-side parser tests
+## Host-side tests
 
 ```bash
 cd tests
 cc -Wall -Wextra -o test_rd03d test_rd03d.c ../main/rd03d.c && ./test_rd03d
+cc -Wall -Wextra -o test_mqtt_throttle test_mqtt_throttle.c ../main/mqtt_throttle.c && ./test_mqtt_throttle
 ```
 
 Frame format and sign-magnitude decoding match
