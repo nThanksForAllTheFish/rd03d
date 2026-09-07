@@ -16,8 +16,13 @@ feature timeline and Fusion **user parameters**, fully editable in Fusion.
 
 ## Decisions Made
 
-- **Mounting:** flat back for adhesive (3M VHB style), shallow recessed tape
-  area on the back face. No keyholes/tabs.
+- **Mounting (revised 2026-09-07 change request):** LEGO Technic interface —
+  the back plate is 8 mm thick (`backT`) with SIX ⌀4.9 mm through-holes on
+  the exact 8 mm LEGO pitch (a 1×4 column at x=0.95 plus a 1×2 column at
+  x=8.95, rows y=±4 / ±12), counterbored 6.4×0.9 both faces with chamfered
+  entries, so standard pins/ball-pins/socket arms mount the case with
+  adjustable aim. The flat back + 0.6 mm tape recess remain as a secondary
+  adhesive option. Case deepens to 46×50×24 overall.
 - **Assembly:** snap-fit — front shell with four cantilever clips engaging the
   back plate rim. Tool-free open.
 - **Format:** native Fusion design. All key dimensions become Fusion USER
