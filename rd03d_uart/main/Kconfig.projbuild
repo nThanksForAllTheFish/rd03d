@@ -21,9 +21,11 @@ config RD03D_MQTT_HOST
 config RD03D_MQTT_PORT
     int "MQTT broker port"
     default 1883
+    range 1 65535
 
 config RD03D_MQTT_MOVE_MM
     int "Minimum movement (mm) between MQTT publishes per target"
     default 200
+    range 0 30000
 
 endmenu

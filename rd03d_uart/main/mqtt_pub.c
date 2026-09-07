@@ -122,6 +122,10 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
     if (!s_connected) {
         return;
     }
+    esp_mqtt_client_handle_t client = s_client;
+    if (client == NULL) {
+        return;
+    }
     if (s_reset_pending) {
         s_reset_pending = false;
         mqtt_throttle_reset(&s_throttle);
@@ -134,6 +138,7 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
         }
         char topic[24];
         snprintf(topic, sizeof(topic), "rd03d/target/%d", i + 1);
+        int msg_id = -1;
         if (act == MQTT_THROTTLE_MOVED) {
             char payload[64];
             int n = snprintf(payload, sizeof(payload),
@@ -141,11 +146,17 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
                              f->targets[i].x_mm, f->targets[i].y_mm,
                              f->targets[i].speed_cms);
             if (n > 0 && n < (int)sizeof(payload)) {
-                esp_mqtt_client_publish(s_client, topic, payload, n, 0, 0);
+                msg_id = esp_mqtt_client_enqueue(client, topic, payload, n,
+                                                 0, 0, true);
             }
         } else { /* MQTT_THROTTLE_GONE */
-            esp_mqtt_client_publish(s_client, topic, "{\"gone\":true}", 0, 0,
-                                    0);
+            msg_id = esp_mqtt_client_enqueue(client, topic, "{\"gone\":true}",
+                                             0, 0, 0, true);
+        }
+        if (msg_id < 0) {
+            /* Dropped (outbox full / disconnect race). Self-heals: the next
+             * movement or the reconnect reset re-triggers a publish. */
+            ESP_LOGW(TAG, "publish dropped for %s (%d)", topic, msg_id);
         }
     }
 }
