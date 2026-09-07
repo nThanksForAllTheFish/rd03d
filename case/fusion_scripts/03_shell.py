@@ -70,14 +70,20 @@ def run(_context: str):
             participants=[shell_body])
     print("shell box ok")
 
-    # 3: radar window pocket on the outer front face over the patch end
-    # rect x in [rCx-9.5mm, rCx+9.5mm], y in [1mm, 25mm]
+    # 3: radar window pocket on the INTERIOR front face over the patch end
+    # (design review 2026-09-07: flipped from the exterior so the outside
+    # stays perfectly smooth). Cut z from intD up (wall - windowT); the
+    # remaining window panel is windowT thick at z intD+(wall-winT)..intD+wall.
+    # rect x in [rCx-9.5mm, rCx+9.5mm], y in [1mm, 23mm] - the +Y extent is
+    # clamped to the cavity edge intH/2 (the exterior pocket ran to 25/the
+    # outer face; on the interior, cutting past 23 would tunnel through the
+    # solid top wall and open a slot on the outer +Y face).
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, rCx, 13 * MM, 19 * MM, 24 * MM)
-    extrude(comp, sk.profiles.item(0), intD + winT, intD + wall,
+    rect(sk, rCx, 12 * MM, 19 * MM, 22 * MM)
+    extrude(comp, sk.profiles.item(0), intD, intD + (wall - winT),
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[shell_body])
-    print("window ok")
+    print("window pocket (interior) ok")
 
     # 4: usb notch through +X wall, back rim z=-backT up to z=8mm
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -156,11 +162,10 @@ def run(_context: str):
     print("corner fillets ok (r=%.2f mm on 4 edges)" % (corner * 10))
 
     # Outer-perimeter edge selector at a z level: straight edges lying on the
-    # outer faces (|x|=ox or |y|=oy) plus the corner-fillet arcs. Window
-    # pocket edges are inboard and excluded by construction; the USB notch
-    # splits the +X segment at z=z_back (expect 9 there, 8 at z_top... but
-    # the window pocket top edge is coincident with y=oy, splitting the +Y
-    # front segment too - count printed and guarded loosely, recorded).
+    # outer faces (|x|=ox or |y|=oy) plus the corner-fillet arcs. The window
+    # pocket is on the interior face and never touches the outer boundary.
+    # At z_top the boundary is one clean closed loop (4 straights + 4 arcs
+    # = 8 edges); at z_back the USB notch splits the +X segment (9 edges).
     def perimeter_edges(zlev):
         found = []
         for e in shell_body.edges:
@@ -187,51 +192,17 @@ def run(_context: str):
         chi.setToEqualDistance(adsk.core.ValueInput.createByReal(dist))
         return ch.add(chi)
 
-    # 6b. front-face perimeter chamfer (prints clean bed-side). The window
-    # pocket touches the y=+25 outer boundary and its x=-21 wall sits only
-    # 2 mm from the x=-23 corner, so the r=2.5 corner fillet consumes that
-    # whole segment and the perimeter chain ends open against the pocket
-    # wall - a single group chamfer can fail to cap there. Fall back to
-    # per-edge chamfers, skipping (and reporting) any edge the kernel
-    # refuses.
+    # 6b. front-face perimeter chamfer (prints clean bed-side). With the
+    # window pocket on the interior face, the z=16 outer boundary is one
+    # clean closed loop - 4 straights + 4 corner-fillet arcs = 8 edges -
+    # chamfered as a single feature.
     front = perimeter_edges(z_top)
     print("front perimeter edges found:", len(front))
-    if not 8 <= len(front) <= 10:
-        raise RuntimeError("front perimeter edge count out of range: %d"
+    if len(front) != 8:
+        raise RuntimeError("expected 8 front perimeter edges, found %d"
                            % len(front))
-    front_total, front_done = len(front), 0
-    try:
-        add_chamfer(front, cham)
-        front_done = front_total
-    except Exception:
-        # The chain's open end at the top-left corner arc (center
-        # (-20.5, 22.5)) terminates against the window-pocket wall, where
-        # the 1 mm chamfer would dip below the 0.8 mm-deep pocket floor -
-        # the kernel refuses to cap it. Chamfer the other 7 as ONE feature
-        # (arc/line junctions stay interior, no caps needed), then attempt
-        # the pocket-adjacent arc alone; skip it with a record if refused.
-        print("front group chamfer refused; retrying without the "
-              "pocket-adjacent corner arc")
-
-        def is_pocket_arc(e):
-            g = e.geometry
-            return (not isinstance(g, adsk.core.Line3D)
-                    and g.center.x < 0 and g.center.y > 0)
-
-        rest = [e for e in front if not is_pocket_arc(e)]
-        add_chamfer(rest, cham)
-        front_done = len(rest)
-        try:
-            pocket_arc = [e for e in perimeter_edges(z_top)
-                          if is_pocket_arc(e)]
-            if pocket_arc:
-                add_chamfer(pocket_arc, cham)
-                front_done += len(pocket_arc)
-        except Exception as exc2:
-            print("FRONT CHAMFER EDGE SKIPPED (top-left corner arc,"
-                  " center (-20.5, 22.5, 16) mm):", exc2)
-    print("front chamfer: %d/%d edges (%.2f mm)"
-          % (front_done, front_total, cham * 10))
+    add_chamfer(front, cham)
+    print("front chamfer ok (%.2f mm on 8 edges)" % (cham * 10))
 
     # 6c. back rim outer edge fillet.
     rim = perimeter_edges(z_back)

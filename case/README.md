@@ -10,8 +10,9 @@ The living design is in your Fusion; save it to your own project.
   posts right; six LEGO Technic pin holes (8 mm pitch, counterbored both
   faces) through the back for pin/ball-pin mounting, plus the recessed
   tape panel on the rear face.
-- `rd03d_case_shell.stl` — front shell: 1.2 mm radar window, USB-C notch,
-  four snap bumps engage the plate's edge grooves.
+- `rd03d_case_shell.stl` — front shell: 1.2 mm radar window (pocketed from
+  the interior, so the exterior face is smooth), USB-C notch, four snap
+  bumps engage the plate's edge grooves.
 
 ## Printing
 
@@ -62,7 +63,6 @@ Re-export STLs after edits (File → 3D Print, or re-run
   Fusion's Change Parameters dialog.
 - If the lid snaps on too hard/soft, tune the `snapBump` user parameter
   (0.4-0.6 mm) and reprint the shell only.
-- Both parts bridge over shallow bed-facing pockets (the tape recess on the
-  plate, the window panel on the shell): they print fine without supports
-  but expect slightly rough pocket floors; enable bridging tuning or
-  paint-on supports there if you care about the finish.
+- The plate bridges over the shallow bed-facing tape recess: it prints fine
+  without supports but expect a slightly rough recess floor; enable
+  bridging tuning or paint-on supports there if you care about the finish.
