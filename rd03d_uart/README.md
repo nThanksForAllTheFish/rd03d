@@ -71,12 +71,10 @@ or open **http://rd03d.local/update** in a browser and upload
 update page, and in the chart HUD.
 
 USB flashing is only needed for first-time setup (partition table changes
-require `idf.py erase-flash flash`).
-
-Note: after any OTA, a plain USB `idf.py flash` writes to `ota_0` but the
-device may keep booting the newer image in `ota_1` (otadata still points
-there). For a USB reflash to take effect after OTAs, use
-`idf.py erase-otadata flash` (or a full `erase-flash flash`).
+require `idf.py erase-flash flash`). If you ever do reflash over USB after
+OTAs: a full `idf.py flash` resets otadata and boots the USB image, but
+`idf.py app-flash` alone does not — after OTAs, follow `app-flash` with
+`idf.py erase-otadata` (or just use the full `flash`).
 
 ## Host-side parser tests
 
