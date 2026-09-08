@@ -51,7 +51,7 @@ Re-export STLs after edits (File → 3D Print, or re-run
 
 ## Design notes
 
-- All printed walls are ≥1.3 mm (0.6 mm-nozzle friendly). The radar's side
+- All free-standing printed walls are ≥1.5 mm (0.6 mm-nozzle friendly); the shell's radar ribs and snap bumps are thinner but are wall-attached, so they print as local wall thickening. The radar's side
   (Y) restraint comes from two ribs inside the shell, so the radar sits
   loose in Y until the lid snaps on — normal.
 - All six antenna patches now radiate through 1.2 mm of plastic: two

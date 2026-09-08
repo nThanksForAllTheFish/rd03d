@@ -208,17 +208,17 @@ def run(_context: str):
     # boss descends from the shell's front inner face to just above the
     # XIAO's RF shield can, capturing the board when the lid snaps shut.
     #   Measured on the live vendor model: the shield can is a flat plateau
-    #   at z = 6.20 mm spanning about x +0.5..+11.5, y -6..+6; the USB-C
+    #   at z = 6.25 mm spanning about x +0.5..+11.5, y -6..+6; the USB-C
     #   connector is TALLER (z = 7.40) at x +13..+17, so the boss must stay
     #   well clear of it.
     #   Boss: 7 x 7 mm square centered at (x=+6.0, y=0) -> x 2.5..9.5,
     #   y -3.5..+3.5, entirely on the shield plateau and 3.5 mm clear of the
-    #   USB connector. Extruded z 6.40 (0.2 mm above the shield) up to the
+    #   USB connector. Extruded z 6.40 (0.15 mm above the shield) up to the
     #   front inner face at intD = 14.0. It lands on solid front wall: the
     #   radar window pockets span x -21..-2, so there is no overlap.
     BOSS_CX, BOSS_CY = 6.0 * MM, 0.0
     BOSS_W = 7.0 * MM
-    BOSS_Z0 = 6.40 * MM          # RF shield top 6.20 + 0.20 clearance
+    BOSS_Z0 = 6.40 * MM          # RF shield top 6.25 + 0.15 clearance
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, BOSS_CX, BOSS_CY, BOSS_W, BOSS_W)
     extrude(comp, sk.profiles.item(0), BOSS_Z0, intD,
