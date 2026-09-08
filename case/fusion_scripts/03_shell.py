@@ -82,12 +82,28 @@ def run(_context: str):
     # clamped to the cavity edge intH/2 (the exterior pocket ran to 25/the
     # outer face; on the interior, cutting past 23 would tunnel through the
     # solid top wall and open a slot on the outer +Y face).
+    #
+    # Coverage fix 2026-09-07: the RD-03D has SIX antenna patches - a 2x2 RX
+    # array at the +Y end (under the original pocket) AND two TX patches at
+    # roughly y -15..-4 (confirmed against the vendor photo; the STEP does
+    # not model the flat copper, so this is not visible in the CAD). The TX
+    # pair was radiating through the full 2 mm wall. A SECOND pocket, same X
+    # span and same depth, now covers them: y -17..-2.
+    # The ~3 mm of full-thickness wall deliberately left at y -2..+1 (over
+    # the radar IC, between the two pockets) is a stiffening rib for the
+    # otherwise 19 x 40 mm thin panel.
+    # Both rects go in one sketch and are cut as one feature (two profiles).
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, rCx, 12 * MM, 19 * MM, 22 * MM)
-    extrude(comp, sk.profiles.item(0), intD, intD + (wall - winT),
+    rect(sk, rCx, 12 * MM, 19 * MM, 22 * MM)      # RX array: y +1..+23
+    rect(sk, rCx, -9.5 * MM, 19 * MM, 15 * MM)    # TX pair:  y -17..-2
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 2:
+        raise RuntimeError("expected 2 window profiles, found %d"
+                           % profs.count)
+    extrude(comp, profs, intD, intD + (wall - winT),
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[shell_body])
-    print("window pocket (interior) ok")
+    print("window pockets (interior, RX y+1..+23 and TX y-17..-2) ok")
 
     # 4: usb notch through +X wall, back rim z=-backT up to z=8mm
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -186,6 +202,34 @@ def run(_context: str):
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[shell_body])
     print("snap bumps ok")
+
+    # 5b. XIAO hold-down boss (change request 2026-09-07). Nothing held the
+    # XIAO down on its four 3 mm posts; the board could lift off them. This
+    # boss descends from the shell's front inner face to just above the
+    # XIAO's RF shield can, capturing the board when the lid snaps shut.
+    #   Measured on the live vendor model: the shield can is a flat plateau
+    #   at z = 6.20 mm spanning about x +0.5..+11.5, y -6..+6; the USB-C
+    #   connector is TALLER (z = 7.40) at x +13..+17, so the boss must stay
+    #   well clear of it.
+    #   Boss: 7 x 7 mm square centered at (x=+6.0, y=0) -> x 2.5..9.5,
+    #   y -3.5..+3.5, entirely on the shield plateau and 3.5 mm clear of the
+    #   USB connector. Extruded z 6.40 (0.2 mm above the shield) up to the
+    #   front inner face at intD = 14.0. It lands on solid front wall: the
+    #   radar window pockets span x -21..-2, so there is no overlap.
+    BOSS_CX, BOSS_CY = 6.0 * MM, 0.0
+    BOSS_W = 7.0 * MM
+    BOSS_Z0 = 6.40 * MM          # RF shield top 6.20 + 0.20 clearance
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    rect(sk, BOSS_CX, BOSS_CY, BOSS_W, BOSS_W)
+    extrude(comp, sk.profiles.item(0), BOSS_Z0, intD,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("boss did not merge with the shell: %d bodies"
+                           % comp.bRepBodies.count)
+    print("xiao hold-down boss ok (%.1f x %.1f mm at x=%.1f, y=%.1f, "
+          "z %.2f..%.2f)" % (BOSS_W * 10, BOSS_W * 10, BOSS_CX * 10,
+                             BOSS_CY * 10, BOSS_Z0 * 10, intD * 10))
 
     # 6. soften exterior edges for hand comfort (change request 2026-09-07).
     # Operates on shell_body ONLY (fillet/chamfer features act on its edges,

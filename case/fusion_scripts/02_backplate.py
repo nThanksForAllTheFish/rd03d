@@ -110,16 +110,49 @@ def run(_context: str):
     extrude(comp, profs, 0, 11 * MM,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
+    # Board-seating fix 2026-09-07: the crossbars now bear on the RD-03D's
+    # BARE PCB, not on its rear connector.
+    #   Was: two 4 mm-wide bars at y = +/-18 with tops at z = intD - 1 - radarT
+    #   = 6.65 mm (the board's TOTAL thickness incl. the rear connector). That
+    #   was wrong in both places: probing the live vendor model showed the
+    #   board's rear profile is a bare PCB face at z = 10.50 mm, with only the
+    #   5-pin connector reaching back to z = 6.70 over y -20..-13.5. So the
+    #   +18 bar stopped 3.85 mm short of the board (no contact at all) and the
+    #   -18 bar was the sole support, loading the connector - the board could
+    #   rock on it.
+    #   Now: tops at the measured PCB rear face, placed in the two
+    #   full-board-width bands measured clear of every rear component
+    #   (probed at x -18.6, -17, -14, -11.5, -9, -6, -4.4):
+    #       band y -13.0..-11.0  -> crossbar A, y -12.8..-11.2 (1.6 wide)
+    #       band y +17.5..+20.0  -> crossbar B, y +17.7..+19.8 (2.1 wide)
+    #   The connector now hangs free in the open space below the bars.
+    #   The board's resting position is UNCHANGED: PCB rear + the 2.54 mm
+    #   PCB/patch stack = patch face at z = 13.0, i.e. 1 mm behind the shell's
+    #   front inner wall exactly as before, so the RF geometry is unaffected.
+    #   (rT / radarT is now only descriptive of the board's total thickness;
+    #   the support height is the measured PCB rear face, a local constant.)
+    #   Height provenance: the change request quoted a coarse probe reading of
+    #   10.50 mm. Bisecting the vendor solid's underside on a 21 x 9 grid over
+    #   both bar footprints put the rear face uniformly at 10.4600 mm, so a
+    #   10.50 top left a 0.04 mm nominal overlap (2.235 mm^3 = 15.1 x 3.7 x
+    #   0.04, exactly the board-width x total-bar-width slab) and a nonzero
+    #   plate<->radar interference pair. 10.46 restores exact face contact and
+    #   the zero-interference invariant; functionally identical either way,
+    #   since the board simply rests on whatever height the bars are.
+    PCB_REAR_Z = 10.46 * MM      # measured bare-PCB rear face of the RD-03D
+    XBARS = ((-12.0 * MM, 1.6 * MM),    # A: y -12.8..-11.2
+             (18.75 * MM, 2.1 * MM))    # B: y +17.7..+19.8
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    for sy in (-1, 1):
-        rect(sk, rCx, sy * 18 * MM, bayW, 4 * MM)
+    for cy, w in XBARS:
+        rect(sk, rCx, cy, bayW, w)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
-    board_back_z = intD - 1 * MM - rT  # patch face lands 1mm behind front wall
-    extrude(comp, profs, 0, board_back_z,
+    extrude(comp, profs, 0, PCB_REAR_Z,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
-    print("radar bay ok (X walls + crossbars; Y-restraint is the shell's "
-          "job), support top z(cm)=", round(board_back_z, 3))
+    print("radar bay ok (X walls + crossbars bearing on the PCB; "
+          "Y-restraint is the shell's job), crossbar top z(mm)=",
+          round(PCB_REAR_Z * 10, 3), "board total thickness radarT(mm)=",
+          round(rT * 10, 2))
 
     # 4b. notch the radar fence +X wall where the XIAO board crosses it
     # (as-built correction found in Task 5: the bay centers put the radar
