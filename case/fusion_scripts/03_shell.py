@@ -74,36 +74,65 @@ def run(_context: str):
             participants=[shell_body])
     print("shell box ok")
 
-    # 3: radar window pocket on the INTERIOR front face over the patch end
-    # (design review 2026-09-07: flipped from the exterior so the outside
-    # stays perfectly smooth). Cut z from intD up (wall - windowT); the
-    # remaining window panel is windowT thick at z intD+(wall-winT)..intD+wall.
-    # rect x in [rCx-9.5mm, rCx+9.5mm], y in [1mm, 23mm] - the +Y extent is
-    # clamped to the cavity edge intH/2 (the exterior pocket ran to 25/the
-    # outer face; on the interior, cutting past 23 would tunnel through the
-    # solid top wall and open a slot on the outer +Y face).
+    # 3: RADOME STEP over the antenna zones (RF fix 2026-09-08). This
+    # REPLACES the two interior window pockets built on 2026-09-07 - they
+    # made the RF worse, not better.
     #
-    # Coverage fix 2026-09-07: the RD-03D has SIX antenna patches - a 2x2 RX
-    # array at the +Y end (under the original pocket) AND two TX patches at
-    # roughly y -15..-4 (confirmed against the vendor photo; the STEP does
-    # not model the flat copper, so this is not visible in the CAD). The TX
-    # pair was radiating through the full 2 mm wall. A SECOND pocket, same X
-    # span and same depth, now covers them: y -17..-2.
-    # The ~3 mm of full-thickness wall deliberately left at y -2..+1 (over
-    # the radar IC, between the two pockets) is a stiffening rib for the
-    # otherwise 19 x 40 mm thin panel.
-    # Both rects go in one sketch and are cut as one feature (two profiles).
+    # What was wrong: the pockets cut the front wall from z=14.0 up to 14.8,
+    # thinning it to windowT (1.2 mm) but putting the radome's INNER face at
+    # 14.80. Probed on the live model, the RD-03D's PCB FRONT face - the
+    # antenna/patch plane - sits at z = 11.70 (its PCB rear rests on the
+    # crossbars at 10.46; the 13.0 figure quoted in earlier notes is the
+    # board's overall front extent, i.e. the 45-degree IC, not the patches).
+    # That left a 3.10 mm AIR gap in front of the patches, which at 24 GHz
+    # (lambda = 12.5 mm) is essentially exactly lambda/4 = 3.125 mm - the
+    # WORST possible spacing. A quarter-wave air layer is an impedance
+    # transformer: the reflection off the plastic comes back to the patches
+    # in phase and adds instead of cancelling.
+    #
+    # The fix is to bring the plastic DOWN to the patches instead of thinning
+    # it. Solid material is JOINED from z = RADOME_Z0 (12.90) up to the front
+    # inner face (intD = 14.0) over the two antenna zones, leaving a 1.20 mm
+    # air gap ~ lambda/10, well inside the near field where the transformer
+    # effect is negligible. The wall is then solid 12.90..16.00 (3.10 mm)
+    # over the antennas and unchanged at 14.00..16.00 (2.00 mm) everywhere
+    # else. Nothing touches the z=16 face - the exterior stays perfectly flat.
+    #
+    # Print note: this is a raised plateau in the shell's print orientation
+    # (front face on the bed, so the boss is printed on top of the already-
+    # laid front wall) - no overhang, no support.
+    #
+    # The IC band y -4..+4 is deliberately EXCLUDED: the radar's 45-degree IC
+    # protrudes to z = 12.95 over about x -15..-5, y -3..+3, so the wall stays
+    # at 14.00 there (1.05 mm clearance) - and the band keeps doing the
+    # stiffening-rib job the gap between the old pockets did.
+    #
+    # X runs to -21.5 and the RX zone's +Y to 23.5, i.e. 0.5 mm INTO the
+    # cavity walls (x=-21, y=+23). Those slabs are already solid at this
+    # height, so the geometry is identical either way; the overlap just makes
+    # the Join merge by volume instead of by coplanar faces.
+    RADOME_Z0 = 12.90 * MM         # -> 1.20 mm air gap at the 11.70 patches
+    RADOME_X0, RADOME_X1 = -21.5 * MM, -2.0 * MM
+    RADOME_ZONES = ((-17.0 * MM, -4.0 * MM),     # TX pair
+                    (4.0 * MM, 23.5 * MM))       # RX 2x2 array
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, rCx, 12 * MM, 19 * MM, 22 * MM)      # RX array: y +1..+23
-    rect(sk, rCx, -9.5 * MM, 19 * MM, 15 * MM)    # TX pair:  y -17..-2
+    for y0, y1 in RADOME_ZONES:
+        rect(sk, (RADOME_X0 + RADOME_X1) / 2, (y0 + y1) / 2,
+             RADOME_X1 - RADOME_X0, y1 - y0)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     if profs.count != 2:
-        raise RuntimeError("expected 2 window profiles, found %d"
+        raise RuntimeError("expected 2 radome profiles, found %d"
                            % profs.count)
-    extrude(comp, profs, intD, intD + (wall - winT),
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
+    extrude(comp, profs, RADOME_Z0, intD,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[shell_body])
-    print("window pockets (interior, RX y+1..+23 and TX y-17..-2) ok")
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("radome step did not merge with the shell: "
+                           "%d bodies" % comp.bRepBodies.count)
+    print("radome step ok (inner face z=%.2f, TX y-17..-4, RX y+4..+23, "
+          "x -21..-2; IC band y-4..+4 left at %.2f). windowT=%.2f is now "
+          "unused by the antenna zones." % (RADOME_Z0 * 10, intD * 10,
+                                            winT * 10))
 
     # 4: usb notch through +X wall, back rim z=-backT up to z=8mm
     sk = comp.sketches.add(comp.xYConstructionPlane)

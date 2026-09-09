@@ -37,6 +37,128 @@ def collection(items):
     return coll
 
 
+def box(sk, x0, x1, y0, y1):
+    """Axis-aligned rect from an X range and a Y range, either order (cm)."""
+    sk.sketchCurves.sketchLines.addTwoPointRectangle(
+        adsk.core.Point3D.create(min(x0, x1), min(y0, y1), 0),
+        adsk.core.Point3D.create(max(x0, x1), max(y0, y1), 0))
+
+
+def plane_at_z(comp, z):
+    inp = comp.constructionPlanes.createInput()
+    inp.setByOffset(comp.xYConstructionPlane,
+                    adsk.core.ValueInput.createByReal(z))
+    pl = comp.constructionPlanes.add(inp)
+    pl.isLightBulbOn = False      # keep the user's viewport clean
+    return pl
+
+
+def ramp_loft(comp, z_lo, lo, z_hi, hi, participants):
+    """Join a straight ruled ramp lofted between two axis-aligned rects.
+
+    `lo`/`hi` are (x0, x1, y0, y1) tuples (cm) at z_lo / z_hi. A loft is used
+    rather than a two-distance chamfer because the chamfer API's distance ->
+    face assignment depends on the edge's internal face order, which is not
+    predictable from a script; the loft states both end sections explicitly.
+    """
+    s_lo = comp.sketches.add(plane_at_z(comp, z_lo))
+    box(s_lo, *lo)
+    s_hi = comp.sketches.add(plane_at_z(comp, z_hi))
+    box(s_hi, *hi)
+    lofts = comp.features.loftFeatures
+    li = lofts.createInput(adsk.fusion.FeatureOperations.JoinFeatureOperation)
+    li.loftSections.add(s_lo.profiles.item(0))
+    li.loftSections.add(s_hi.profiles.item(0))
+    li.isSolid = True
+    try:
+        li.participantBodies = participants
+    except Exception as exc:      # keep going: Join of an overlapping solid
+        print("  (loft participantBodies unsupported: %s)" % exc)
+    feat = lofts.add(li)
+    # loftFeatures (unlike extrudeFeatures) leaves its profile sketches
+    # visible; hide them so the user's viewport is not littered
+    for s in (s_lo, s_hi):
+        s.isVisible = False
+    return feat
+
+
+def clip(comp, body, axis, wall_out, wall_in, f0, f1, slots, slot_z0,
+         raise_z0, top_z, lip_z, lip_proj, thin=0.0, label=""):
+    """Build ONE cantilever retention clip on a straight fence wall.
+
+    axis  'x' -> the wall's thickness runs along X (wall_out / wall_in are X
+                 coordinates of its outer / inner faces) and the finger spans
+                 f0..f1 in Y.  'y' -> the transpose.
+    slots list of (v0, v1) spans in the finger-span axis, cut through the full
+          wall thickness from slot_z0 up past the clip top; they isolate the
+          finger so it can flex.  The finger stays anchored below slot_z0.
+    thin  material removed from the wall's OUTER face over the finger width
+          (0 = keep the wall at full thickness).  Lowers the spring rate.
+    lip   flat underside at lip_z projecting lip_proj past the wall's inner
+          face, ramping back flush with the wall by top_z.  The ramp doubles
+          as the insertion lead-in (the board's edge cams the finger open on
+          the way in); the flat underside is the retaining face.
+    Every feature is restricted to `body`.  All lengths in cm.
+    """
+    MM = 0.1
+    s = 1.0 if wall_in > wall_out else -1.0      # sign of "inward"
+    eps = 0.1 * MM
+    z_over = top_z + 1.0 * MM
+
+    def mk(sk, u0, u1, v0, v1):
+        if axis == "x":
+            box(sk, u0, u1, v0, v1)
+        else:
+            box(sk, v0, v1, u0, u1)
+
+    # a) raise the wall locally over the finger width (overlaps the existing
+    #    wall so the Join merges by volume, not by coplanar faces)
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    mk(sk, wall_out, wall_in, f0, f1)
+    extrude(comp, sk.profiles.item(0), raise_z0, top_z,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[body])
+
+    # b) thin the finger from the OUTER face
+    if thin > 0:
+        sk = comp.sketches.add(comp.xYConstructionPlane)
+        mk(sk, wall_out - s * eps, wall_out + s * thin, f0, f1)
+        extrude(comp, sk.profiles.item(0), slot_z0, z_over,
+                adsk.fusion.FeatureOperations.CutFeatureOperation,
+                participants=[body])
+
+    # c) isolating slots
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for v0, v1 in slots:
+        mk(sk, wall_out - s * eps, wall_in + s * eps, v0, v1)
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != len(slots):
+        raise RuntimeError("%s: expected %d slot profiles, found %d"
+                           % (label, len(slots), profs.count))
+    extrude(comp, profs, slot_z0, z_over,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[body])
+
+    # d) lip + lead-in ramp
+    back = wall_in - s * 0.3 * MM        # anchor the loft inside the wall
+    if axis == "x":
+        lo = (back, wall_in + s * lip_proj, f0, f1)
+        hi = (back, wall_in, f0, f1)
+    else:
+        lo = (f0, f1, back, wall_in + s * lip_proj)
+        hi = (f0, f1, back, wall_in)
+    ramp_loft(comp, lip_z, lo, top_z, hi, [body])
+
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("%s: clip did not merge, %d bodies"
+                           % (label, comp.bRepBodies.count))
+    print("  clip %-14s axis=%s wall %.2f..%.2f  finger %.2f..%.2f  "
+          "top %.2f  lip %.2f +%.2f  slots %s"
+          % (label, axis, wall_out * 10, wall_in * 10, f0 * 10, f1 * 10,
+             top_z * 10, lip_z * 10, lip_proj * 10,
+             [(round(a * 10, 2), round(b * 10, 2)) for a, b in slots]))
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -260,5 +382,102 @@ def run(_context: str):
         print("rear entry chamfers ok (0.3mm x 45deg on 6 edges)")
     except Exception as exc:  # counterbore alone is acceptable
         print("CHAMFER SKIPPED:", exc)
+
+    # 8. BOARD RETENTION CLIPS (change request 2026-09-08). Until now nothing
+    # held either board down on the plate: the radar was captured only when
+    # the lid closed, and the XIAO only by the shell's hold-down boss. Both
+    # boards now press into cantilever snap fingers cut into the fence walls
+    # they already sit against, so a bare plate holds its boards.
+    #
+    # MUST come after step 6 (the plate-outline Intersect is limited to
+    # z <= 11 mm and would decapitate anything taller) and after step 7 (the
+    # LEGO bore chamfer selects edges by circle radius; extra clip edges are
+    # harmless but the ordering keeps that selection on virgin topology).
+    #
+    # Measurement provenance (probed on the live vendor solids, not derived):
+    #   RD-03D  PCB rear face z = 10.46 (rests on the crossbars); PCB FRONT
+    #           face - the antenna/patch plane - z = 11.70, flat across both
+    #           board edges over the whole clip range; board x -19.05..-3.95,
+    #           y +/-22.01. Its 45-degree IC protrudes to 12.95, but only over
+    #           about x -15..-5, y -3..+3, i.e. nowhere near either edge.
+    #   XIAO    PCB top z = 4.20, flat along both long edges (the header
+    #           holes are further in at y ~ +/-7.5); board x -3.23..19.23,
+    #           y +/-8.89. Edge castellations bite ~0.24 mm in at a ~2.54 mm
+    #           pitch, so a lip reaching 0.34 mm past the edge still lands on
+    #           solid board (0.10 mm) even where it crosses a castellation.
+    #   Fence walls as built: radar +/-X walls x -20.8..-19.3 (inner face
+    #           -19.3) and x -3.7..-2.2 (inner face -3.7); XIAO +/-Y walls
+    #           y +/-9.15..+/-10.65 (inner faces +/-9.15), 1.5 thick.
+    #
+    # Each lip's flat underside sits 0.10 mm above its board's front/top face,
+    # so the clips CLEAR the boards at rest (no press, no interference) and
+    # only bear if a board tries to lift. That 0.10 mm float is deliberate:
+    # a preloaded clip would creep in PETG.
+    print("retention clips:")
+    LIP_FLOAT = 0.10 * MM
+
+    # 8a. RADAR clips - one per +/-X fence wall, 7 mm finger, slots from
+    # z=2.0 to the top (~10 mm of lever below the lip), wall raised locally
+    # to 12.5, lip underside at 11.80 = PCB front 11.70 + float, projecting
+    # 0.85 past the wall's inner face -> lip inner edges at x -18.45 / -4.55
+    # against board edges -19.05 / -3.95 = 0.60 mm of grab per side.
+    RADAR_PCB_FRONT_Z = 11.70 * MM
+    R_LIP_Z = RADAR_PCB_FRONT_Z + LIP_FLOAT      # 11.80
+    R_TOP_Z = 12.50 * MM
+    R_LIP = 0.85 * MM
+    R_SLOT_Z0 = 2.0 * MM
+    R_RAISE_Z0 = 10.5 * MM                       # inside the 11 mm wall
+
+    # LEFT wall: finger centred on y=0 as designed. This is the radar IC's
+    # y band, which is exactly why it is free: the shell keeps its front
+    # inner face at 14.0 over y -4..+4 (the radome step in 03_shell.py skips
+    # that band for the IC), so a 12.5 clip top has 1.5 mm of headroom.
+    clip(comp, plate_body, "x", -20.8 * MM, -19.3 * MM,
+         -3.5 * MM, 3.5 * MM,
+         [(-4.5 * MM, -3.5 * MM), (3.5 * MM, 4.5 * MM)],
+         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar -X")
+
+    # RIGHT wall: DEVIATION, recorded. The change request asked for this clip
+    # at y=0 too, but the +X radar fence wall does not exist there: step 4b
+    # notches it down to z=postH (3 mm) over y +/-9.4 because the XIAO board
+    # (x -3.23..19.23) crosses the wall's x -3.7..-2.2 footprint. Verified on
+    # the live model - wall top is 2.95 at y=0, 10.95 only outside y +/-9.4.
+    # A finger there would run straight through the XIAO board, and even a
+    # finger thinned to miss it would have only 0.27 mm of flex room before
+    # hitting the XIAO. So this clip moves +Y to the nearest full-height
+    # stretch of the same wall: finger y +12.0..+19.0 (still well inside the
+    # board's +/-22.01 and clear of the XIAO fence bars, which end at
+    # y=10.65). Its inboard slot is widened to start at the step-4b notch
+    # edge (y=9.4) instead of 11.0 so it swallows the 1.6 mm orphan stub of
+    # wall that would otherwise be left standing between notch and slot.
+    # Cost of the move: the clip top now sits under the RX radome step
+    # (shell inner face 12.90 there, not 14.00), so headroom is 0.40 mm
+    # instead of 1.50. Static clearance - the finger flexes in X, not Z.
+    clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
+         12.0 * MM, 19.0 * MM,
+         [(9.4 * MM, 12.0 * MM), (19.0 * MM, 20.0 * MM)],
+         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar +X")
+
+    # 8b. XIAO clips - one per +/-Y fence wall, 7 mm finger at x 4.5..11.5.
+    # The XIAO's top face is only 4.2 mm above the plate, so the lever is
+    # short; the finger is therefore THINNED to 1.0 mm (0.5 mm off the wall's
+    # OUTER face, inner face stays at +/-9.15) and the grab is smaller, to
+    # keep bending strain away from PETG's yield. Slots from z=0.5, wall
+    # raised locally to 5.6, lip underside 4.30 = PCB top 4.20 + float,
+    # projecting 0.60 -> lip inner edges y +/-8.55 vs board edges +/-8.89 =
+    # 0.34 mm of grab per side.
+    XIAO_PCB_TOP_Z = 4.20 * MM
+    X_LIP_Z = XIAO_PCB_TOP_Z + LIP_FLOAT         # 4.30
+    X_TOP_Z = 5.60 * MM
+    X_LIP = 0.60 * MM
+    X_SLOT_Z0 = 0.5 * MM
+    X_RAISE_Z0 = 4.5 * MM                        # inside the 5 mm wall
+    X_THIN = 0.5 * MM
+    for sy in (-1, 1):
+        clip(comp, plate_body, "y", sy * 10.65 * MM, sy * 9.15 * MM,
+             4.5 * MM, 11.5 * MM,
+             [(3.5 * MM, 4.5 * MM), (11.5 * MM, 12.5 * MM)],
+             X_SLOT_Z0, X_RAISE_Z0, X_TOP_Z, X_LIP_Z, X_LIP, thin=X_THIN,
+             label="xiao %sY" % ("+" if sy > 0 else "-"))
 
     print("BackPlate bodies:", comp.bRepBodies.count)
