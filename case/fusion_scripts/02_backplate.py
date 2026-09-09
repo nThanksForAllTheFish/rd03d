@@ -427,6 +427,12 @@ def run(_context: str):
     R_LIP = 0.85 * MM
     R_SLOT_Z0 = 2.0 * MM
     R_RAISE_Z0 = 10.5 * MM                       # inside the 11 mm wall
+    # The +X clip (below) sits under the RX radome step at 12.90 rather than
+    # the 14.0 wall, so it gets its own lower top for lid clearance: 0.60 mm
+    # instead of 0.40. Trade: a slightly steeper insertion cam (0.85 over
+    # 0.50 instead of 0.70), i.e. a firmer snap. Both parts are separate
+    # prints, so nominal clearance absorbs their stacked tolerance.
+    R_TOP_Z_PX = 12.30 * MM
 
     # LEFT wall: finger centred on y=0 as designed. This is the radar IC's
     # y band, which is exactly why it is free: the shell keeps its front
@@ -451,18 +457,20 @@ def run(_context: str):
     # edge (y=9.4) instead of 11.0 so it swallows the 1.6 mm orphan stub of
     # wall that would otherwise be left standing between notch and slot.
     # Cost of the move: the clip top now sits under the RX radome step
-    # (shell inner face 12.90 there, not 14.00), so headroom is 0.40 mm
+    # (shell inner face 12.90 there, not 14.00), so headroom is 0.60 mm
     # instead of 1.50. Static clearance - the finger flexes in X, not Z.
     clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
          12.0 * MM, 19.0 * MM,
          [(9.4 * MM, 12.0 * MM), (19.0 * MM, 20.0 * MM)],
-         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar +X")
+         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP, label="radar +X")
 
     # 8b. XIAO clips - one per +/-Y fence wall, 7 mm finger at x 4.5..11.5.
     # The XIAO's top face is only 4.2 mm above the plate, so the lever is
     # short; the finger is therefore THINNED to 1.0 mm (0.5 mm off the wall's
     # OUTER face, inner face stays at +/-9.15) and the grab is smaller, to
-    # keep bending strain away from PETG's yield. Slots from z=0.5, wall
+    # keep bending strain away from PETG's yield. Slots run to the plate
+    # floor (z=0) so the finger gets its full 4.3 mm of lever - at a
+    # 0.34 mm deflection that is ~2.5% strain vs PETG's ~4-5% yield. Wall
     # raised locally to 5.6, lip underside 4.30 = PCB top 4.20 + float,
     # projecting 0.60 -> lip inner edges y +/-8.55 vs board edges +/-8.89 =
     # 0.34 mm of grab per side.
@@ -470,7 +478,7 @@ def run(_context: str):
     X_LIP_Z = XIAO_PCB_TOP_Z + LIP_FLOAT         # 4.30
     X_TOP_Z = 5.60 * MM
     X_LIP = 0.60 * MM
-    X_SLOT_Z0 = 0.5 * MM
+    X_SLOT_Z0 = 0.0
     X_RAISE_Z0 = 4.5 * MM                        # inside the 5 mm wall
     X_THIN = 0.5 * MM
     for sy in (-1, 1):
