@@ -676,6 +676,18 @@ The user's 100 uF electrolytic (12.0 mm long, 8.2 mm diameter) lies on its side 
 - Modify: `case/fusion_scripts/90_verify.py`
 - Modify: `case/fusion_scripts/02_backplate.py` (new step 10)
 
+> **CORRECTION (applied during execution, commit `19c63f5`).** The bore-sketch
+> code below is WRONG and is kept only to document the trap. It assumes a sketch
+> on a YZ-parallel plane maps sketch-x to world Y and sketch-y to world Z. Probing
+> the live document showed the *plane* reports uDirection = +Y and vDirection = +Z,
+> but the *sketch* Fusion creates on it picks u = world −Z, v = world +Y. The circle
+> therefore landed in fresh air below the plate and the Cut silently removed nothing
+> while still printing success. The shipped implementation uses
+> `sk.modelToSketchSpace(want)` and asserts both the circle's `worldGeometry.center`
+> and the volume the cut actually removed. **Any future non-XY sketch in this
+> codebase must use `modelToSketchSpace` rather than hand-mapping axes.**
+> Step 3 also requires `import math` at the top of `02_backplate.py`.
+
 Target geometry (mm): axis at y +16.75, z 5.5; ribs 1.2 mm thick at x 3.0 and x 12.8; rib blocks y 11.25…22.25, z 0…8.0; bore radius 4.3 → 1.2 mm arms at the equator and a 7.0 mm opening at the top. Rib x positions clear the +Y clip trench at x 4.4…11.6 by ≥0.6 mm.
 
 - [ ] **Step 1: Write the failing checks**
