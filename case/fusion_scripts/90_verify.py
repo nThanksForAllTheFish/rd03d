@@ -246,6 +246,13 @@ def check_radar_cable_exit(plate):
     # z=postH over |y|<9.4 to clear the XIAO board, leaving only a 3 mm stub
     solid(plate, -2.95, 0.0, 1.5, "step-4b stub survives at mid-span")
     solid(plate, -2.95, 15.0, 5.0, "+X bay wall intact beyond the 4b notch")
+    # crossbar A is slotted so the pocket opens into the bay under the board
+    void(plate, -9.0, -12.0, 1.0, "crossbar A cable slot open low")
+    void(plate, -9.0, -12.0, 9.0, "crossbar A cable slot open high")
+    solid(plate, -15.0, -12.0, 5.0, "crossbar A -X segment still bears")
+    solid(plate, -5.0, -12.0, 5.0, "crossbar A +X segment still bears")
+    # step-4b notch is open above the XIAO board so wires reach both edges
+    void(plate, -2.95, 0.0, 6.0, "4b notch open above the XIAO board")
     # the lane the cable then runs along, between jack collar and XIAO fence
     void(plate, 3.0, -13.0, 2.0, "cable lane clear of the collar")
     void(plate, 12.0, -13.0, 2.0, "cable lane clear at the collar's +Y face")

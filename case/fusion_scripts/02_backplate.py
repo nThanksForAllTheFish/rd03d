@@ -863,4 +863,36 @@ def run(_context: str):
           "height, %.2f mm of wall removed)"
           % (CABLE_Y1 * 10, (-20.7 - -22.85)))
 
+    # 13. Crossbar A cable slot (2026-09-10, user's proposal). Better route
+    # than step 12's corner notch: come up THROUGH the bar that seals the
+    # connector pocket, then use the open space under the radar board.
+    #
+    # Crossbar A spans the full bay width at y -12.8..-11.2 from the floor to
+    # PCB_REAR_Z, so slotting it opens the pocket into the rest of the bay.
+    # From there the wires run +X/+Y under the board (up to 10.46 mm of
+    # headroom) and cross the +X wall through the step-4b notch, which is
+    # open from z=postH to z=14 over |y|<9.4 - i.e. ABOVE the XIAO board,
+    # whose top face is at 4.20. That matters: it lands the wires on top of
+    # the board, where BOTH long edges are reachable. D6 sits on the +Y edge
+    # and D7 on the -Y edge, so any route that arrives from one side only
+    # would strand one of them.
+    #
+    # Cut full height rather than as a tunnel: no bridging, more room, and
+    # the bar simply becomes two segments that each still butt into a wall.
+    # The board bears on both, which is no worse than one continuous line -
+    # 4 mm of unsupported FR4 spans nothing. Placed mid-bay so both segments
+    # keep real length (8.3 mm at -X, 3.3 mm at +X).
+    CBL_X0, CBL_X1 = -11.0 * MM, -7.0 * MM
+    cbl_y, cbl_w = XBARS[0]
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    box(sk, CBL_X0, CBL_X1,
+        cbl_y - cbl_w / 2 - 0.1 * MM, cbl_y + cbl_w / 2 + 0.1 * MM)
+    extrude(comp, sk.profiles.item(0), -0.01 * MM, PCB_REAR_Z + 0.01 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("crossbar A cable slot ok (x %.2f..%.2f, full height; bar left "
+          "as %.2f + %.2f mm segments)"
+          % (CBL_X0 * 10, CBL_X1 * 10,
+             (CBL_X0 - (rCx - bayW / 2)) * 10, ((rCx + bayW / 2) - CBL_X1) * 10))
+
     print("BackPlate bodies:", comp.bRepBodies.count)
