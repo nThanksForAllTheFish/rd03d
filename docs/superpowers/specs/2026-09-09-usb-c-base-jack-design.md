@@ -128,14 +128,14 @@ that only fits the -Y band by ~0.1 mm alongside the jack.
   8 mm height: a Technic pin pushed in from the back would have bottomed out
   on the rib, silently costing one of the six mount holes. At x 5.0 the rib's
   left edge is x 4.40, a full 1.00 mm clear of the bore edge at 3.40.
-- The -X rib now overlaps the outboard +Y clip trench **in plan** (rib
-  x 4.40…5.60 vs trench x 4.4…11.6, over y 11.25…11.85). **This is harmless
-  and must not be "fixed".** The rib is z 0…8.0 and the trench z -1.5…0, so
-  they never share space; the rib's first layer bridges a 1.2 × 0.6 mm patch
-  over a 1.5 mm slot, which FDM does without noticing. The clip blade
-  (y 9.15…10.65, 0.34 mm of deflection) is 0.6 mm away and unaffected.
-  `90_verify.check_lego_bores_clear` and the trench probe at (5.0, 11.5,
-  -0.75) guard both facts.
+- ~~The -X rib now overlaps the outboard +Y clip trench **in plan** (rib
+  x 4.40…5.60 vs trench x 4.4…11.6, over y 11.25…11.85). This is harmless
+  and must not be "fixed": the rib is z 0…8.0 and the trench z -1.5…0, so
+  they never share space.~~ *(Moot 2026-09-10: the clip trenches are deleted,
+  so the floor under the rib is plain solid plate and the two features no
+  longer meet even in plan. The probe at (5.0, 11.5, -0.75) that guarded this
+  was removed with them.)* Rib placement is still pinned by the Technic bores
+  above, and `90_verify.check_lego_bores_clear` still guards that.
 - Lead end faces **+X**.
 
 ### 3. Wire routing
@@ -182,6 +182,43 @@ the interior counterbores serve nothing and their recesses fall where printed
 features want flat floor. Result: one flat interior floor.
 
 ### 6. XIAO clips — 1.5 mm fingers on a longer lever (`02_backplate.py`, 8b)
+
+> **SUPERSEDED 2026-09-10 — the slots and trenches described in this section
+> no longer exist.** The user printed this design, handled it, and reported
+> the XIAO clips as *"very wimpy — barely holding it in"*, then instructed
+> that the slots and the trenches be removed. They were: `02_backplate.py`
+> step 8b now passes `NO_SLOTS`, and step 8c (the four clip-root trenches)
+> is deleted outright. Each XIAO clip is now a 7 mm stretch (x 4.5…11.5) of
+> the **continuous** 1.5 mm fence wall, raised locally to 5.6 mm, carrying
+> the same 0.60 mm lip with its flat underside at z 4.30 for 0.34 mm of
+> grab per side. Lip, grab and float are unchanged — a lip change was
+> offered and declined.
+>
+> **What this section got wrong, and it is worth keeping to see it.** The
+> analysis below is internally correct: on an isolated end-loaded
+> cantilever, a 1.5 mm finger at 0.34 mm of grab really does want a longer
+> lever, and the trenches really did take peak strain from 4.1 % to 2.3 %.
+> But strain was never the constraint that mattered on this part. The
+> design minimised a failure (a cracked finger) that had not occurred,
+> at the direct expense of the function (holding the board) that had. The
+> before/after table below is a table of the wrong figure of merit.
+>
+> No strain or force number is quoted for the replacement, deliberately. A
+> wall anchored along its whole base and continuous with its neighbours out
+> to the plate edge, loaded near its top, is not a simple cantilever;
+> reusing the 3·t·d/(2·L²) formula on it would produce a confident number
+> that means nothing. Qualitatively: substantially stiffer, so
+> substantially more retention, **and the trade is insertion force** —
+> firmer to seat, and a fingernail or spudger to release.
+>
+> Knock-on effects: `X_TRENCH_Z0` and `X_SLOT_Z0` are deleted as dead;
+> the slot-to-bore web hazard described at the end of this section is moot
+> (no slot, no web) though its *lesson* is not; and the plate volume rose
+> 16.741 → 16.821 cm³, matching the 79.86 mm³ of restored material
+> (51.84 mm³ of trench + 28.02 mm³ of slot) to within rounding.
+> `90_verify.check_xiao_clips` was retargeted at the new geometry, and now
+> also probes **above** the floor (x 4.1 / 11.85, y ±9.9, z 2.0) so a wall
+> still sliced through at full height cannot pass.
 
 The finger goes to **1.5 mm**, the fence wall's own thickness, so the `thin=`
 shave disappears. A 1.0 mm wall is not reliably printable on the user's 0.6 mm
@@ -254,9 +291,11 @@ Added by `02_backplate.py` itself via `des.userParameters.add`, **not** by
 
 User prints **PETG on a 0.6 mm nozzle**. Every new wall is 1.2 or 1.5 mm — two
 clean extrusions or two at 0.75. The seating ramps *add* material (1.5 to
-2.3 mm) rather than thinning anything. Slot, fence notches and clip trenches are
-voids, where 1.2 mm is comfortable. The only sub-1.2 mm feature in the design is
-the **0.60 mm clip lip**, which is exactly one extrusion and is deliberate.
+2.3 mm) rather than thinning anything. Slot and fence notches are voids, where
+1.2 mm is comfortable. The only sub-1.2 mm feature in the design is the
+**0.60 mm clip lip**, which is exactly one extrusion and is deliberate.
+*(2026-09-10: the clip trenches referred to here are deleted -- see the
+superseded note in section 6.)*
 
 ## Verification
 
@@ -267,14 +306,19 @@ Scripted, before anything is printed:
    axis, each intersected with the plate and with the shell — all must give
    zero volume.
 2. **Probe:** measure and assert slot cross-section, ramp start z = 2.58, collar
-   outer extents, trench depth -1.5, slot z0 -1.5, lip projection 0.60.
+   outer extents and lip projection 0.60. *(2026-09-10: the trench-depth and
+   slot-z0 assertions are gone with the features -- `90_verify` now asserts
+   solid plate at those points instead, and asserts the fence wall continuous
+   above the floor at the old slot bands.)*
 2b. **LEGO bore clearance** (added 2026-09-09, final review): for each of the
    six bore centres, assert void at the centre *and* at ±1.5 mm in x, all at
    z = 0.5 — half a millimetre above the interior floor, where every
    floor-borne feature would show. The off-centre pair is the part that
    bites: the offending cradle rib straddled only the bore's +x flank, so a
-   centre-only probe would have passed. Plus a `solid` at (3.3, ±10.5, -0.75)
-   for the slot-to-bore web.
+   centre-only probe would have passed. *(The extra `solid` at
+   (3.3, ±10.5, -0.75) for the slot-to-bore web was removed on 2026-09-10:
+   with no slot there is no web, so it had become trivially true. The six-bore
+   sweep itself is untouched.)*
 3. **Body counts** after every join/cut, with explicit `participantBodies` on
    every boolean (the all-body-participation trap that consumed the BackPlate
    once already).

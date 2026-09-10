@@ -7,7 +7,7 @@ The living design is in your Fusion; save it to your own project.
 ## Parts
 
 - `rd03d_case_back.stl` — back plate (8 mm thick): radar bay left, XIAO
-  posts right, with five cantilever retention clips (three on the radar's
+  posts right, with five snap retention clips (three on the radar's
   ±X fence walls, one on each of the XIAO's ±Y walls);
   six LEGO Technic pin holes (8 mm pitch, counterbored on the **rear face
   only**) through the back for pin/ball-pin mounting; and a **USB-C power
@@ -65,20 +65,23 @@ down means holding an iron over them.
      the 0.6 mm of deflection at about 1 % surface strain. Slotting it
      would only have weakened the wall's real job, which is holding the
      radar board laterally.
-   - XIAO clips: 0.34 mm of grab per side, on the ±Y fence walls, and
-     these **do keep their relief slots**. Their lip is only 4.3 mm up,
-     and wall stiffness scales as (thickness/length)³ — a slot-free
-     1.5 mm wall at that length would be roughly 22× stiffer than the
-     isolated finger and would need of order 65 N to move 0.2 mm, i.e.
-     you would flex the PCB before the wall budged. The finger itself is
-     the wall's full 1.5 mm — a 1.0 mm finger will not print on a 0.6 mm
-     nozzle — and the bending strain is kept survivable by lengthening
-     the lever rather than thinning it: a 1.2 mm trench either side sinks
-     the cantilever root to 1.5 mm *below* the interior floor. They are
-     still the light pair of the five. They locate the board; the
-     7 × 7 mm boss on the inside of
-     the shell's front wall, which comes down onto the XIAO's RF shield
-     can, is what actually backs them up once the lid is on.
+   - XIAO clips: 0.34 mm of grab per side, on the ±Y fence walls, and as
+     of **2026-09-10 these have no relief slots and no root trenches
+     either** — the wall is continuous. The first printed version *was*
+     slotted, with a 1.2 mm trench either side sinking the cantilever
+     root below the floor, all to keep bending strain low on a short
+     lever. It held the board far too weakly in the hand ("very wimpy"),
+     so the slots and trenches came out. What is left is a 7 mm stretch
+     of the plain 1.5 mm fence wall, raised locally to 5.6 mm, carrying
+     the same 0.60 mm lip with its underside 0.10 mm above the board.
+     Anchored along its whole base and continuous with the wall either
+     side, it is far stiffer than the old isolated finger and holds much
+     harder. **The trade is insertion force** — expect a firm push to
+     click the XIAO in, and use a fingernail or a spudger on the lip to
+     get it out. The rock-one-edge-in tip above matters more here than
+     anywhere else. The 7 × 7 mm boss on the inside of the shell's front
+     wall, which comes down onto the XIAO's RF shield can, still backs
+     them up once the lid is on.
    The radar lands on two crossbars that bear on the bare PCB, in the two
    component-free bands across the board's back — its 5-pin connector
    hangs free in the space between them, so don't force the board down
@@ -220,43 +223,55 @@ jack, cradle, notches, clips and the absent shell notch with
 - The XIAO is held on its posts by a boss on the shell's inner front
   face, landing 0.2 mm above the RF shield can and clear of the USB-C
   connector.
-- **Retention clips (2026-09-08, revised 2026-09-09).** Each lip's flat
+- **Retention clips (2026-09-08, revised 2026-09-09 and 2026-09-10).**
+  Each lip's flat
   underside sits 0.10 mm above its board's face (radar 11.80 vs 11.70;
   XIAO 4.30 vs 4.20), so the clips do not preload the boards at rest —
   they only bear if a board tries to lift. That float is deliberate: a
   permanently strained PETG finger would creep. Radar clips are three
   7 mm lip bands on the full-thickness (1.5 mm) fence walls, tops at
   12.50 (−X, under the shell's 14.00 IC band) and 12.30 (both +X, under
-  the 12.90 radome zones); XIAO fingers are 7 mm wide at the wall's full
-  1.5 mm, slotted from z = −1.5, which is why their grab is 0.34 mm rather
-  than 0.60 mm. Insertion deflection is ~0.6 mm (radar) and ~0.34 mm
-  (XIAO, ≈2.3 % surface strain — the reason for PETG and for keeping the
-  grab small). Each lip's 0.6–0.85 mm flat underside is a small unsupported
-  overhang printing back-face-down; that is expected and bridges fine at
-  0.2 mm layers.
-- **Why the radar clips have no relief slots but the XIAO clips do
-  (2026-09-09).** The radar lip is 11.8 mm above the plate. Treating the
-  1.5 mm wall as a cantilever of that length, the 0.6 mm of tip
-  deflection needed to clear the board edge works out at ≈1 % peak
-  surface strain — a quarter of PETG's yield — for of order 12 N at the
-  lip. So the wall flexes enough unaided, and the slots that used to
-  isolate each finger were pure cost: they cut into the wall that
-  restrains the radar board sideways. Removing them also freed the
-  budget for a third clip. The XIAO lip is only 4.3 mm up. Stiffness
-  goes as t³/L³, so the same 1.5 mm wall on a 4.3 mm lever is ≈22×
-  stiffer than the isolated finger: ~65 N for 0.2 mm of travel. There the
-  slots are what make the clip a spring at all, and they stay.
-- **XIAO clip rework (2026-09-09).** The finger went from 1.0 mm back to
-  the wall's own 1.5 mm — a 1.0 mm wall does not print on the 0.6 mm
-  nozzle this case is designed around — and the strain that thinning used
-  to buy is now bought by a longer lever instead: two 1.2 × 1.5 mm
-  trenches drop the cantilever root to z = −1.5, taking the lever from
-  4.30 to 5.80 mm. Peak strain 3·t·d/(2·L²) works out at 2.3 %, down from
-  2.8 % at the old 1.0/4.30 and well clear of the 4.1 % a 1.5 mm finger
-  would have seen on the old lever. Spring rate goes as t³/L³, so the
-  insertion force is about 1.4× the old one. Lip (0.60) and grab (0.34)
-  are unchanged: 0.6 and 1.2 are what a 0.6 mm nozzle resolves cleanly, so
-  a *smaller* lip would print worse, not better.
+  the 12.90 radome zones); the two XIAO clips are the same idea at 7 mm
+  wide on the ±Y walls, with a 0.34 mm grab rather than 0.60 mm because
+  their board edge is only 4.2 mm up. All five are now lip bands on
+  continuous walls — no slots, no trenches anywhere (see below).
+  Insertion deflection is ~0.6 mm (radar) and ~0.34 mm (XIAO). Each lip's
+  0.6–0.85 mm flat underside is a small unsupported overhang printing
+  back-face-down; that is expected and bridges fine at 0.2 mm layers.
+  PETG still matters: these are stiff walls being flexed, and PLA is
+  brittle enough to crack one.
+- **Why the radar clips have no relief slots (2026-09-09).** The radar lip
+  is 11.8 mm above the plate. Treating the 1.5 mm wall as a cantilever of
+  that length, the 0.6 mm of tip deflection needed to clear the board edge
+  works out at ≈1 % peak surface strain — a quarter of PETG's yield — for
+  of order 12 N at the lip. So the wall flexes enough unaided, and the
+  slots that used to isolate each finger were pure cost: they cut into the
+  wall that restrains the radar board sideways. Removing them also freed
+  the budget for a third clip.
+- **The XIAO clips lost their slots and trenches too (2026-09-10) — the
+  one change here driven by a printed part rather than a calculation.**
+  Through 2026-09-09 the XIAO clips kept 0.7 mm relief slots at each end
+  of the finger and a 1.2 × 1.5 mm trench either side that dropped the
+  cantilever root to z = −1.5, lengthening the lever from 4.30 to 5.80 mm
+  and holding peak bending strain to ≈2.3 %. The reasoning was sound and
+  the arithmetic was right, and it optimised for the wrong thing: the
+  printed clips were *very wimpy — barely holding the board in*. Strain
+  was never the binding constraint; retention was.
+
+  Slots and trenches are gone. Each XIAO clip is now a 7 mm stretch
+  (x 4.5…11.5) of the continuous 1.5 mm fence wall, raised locally to
+  5.6 mm, carrying the same 0.60 mm lip with its flat underside at
+  z 4.30 — 0.10 mm over the XIAO's 4.20 mm top face — for 0.34 mm of grab
+  per side. The lip is deliberately unchanged; the user declined a lip
+  change, and 0.6 mm is what a 0.6 mm nozzle resolves cleanly anyway.
+
+  No strain or force figure is quoted for the new arrangement, on purpose.
+  The old numbers modelled an isolated end-loaded cantilever; this wall is
+  anchored along its entire base and continuous with its neighbours out to
+  the plate edge, which is a different problem, and any figure put on it
+  here would be invented precision. Qualitatively it is much stiffer and
+  holds much better, **and the trade is insertion force** — it takes a
+  firm push to seat the board and a fingernail or spudger to release it.
 - **Keeping the six Technic bores usable (2026-09-09, final review).** Two
   separate features had crept over the LEGO holes at (0.95, ±12), both while
   the *stated* clearance check only looked at the clip trenches:
@@ -270,18 +285,17 @@ jack, cradle, notches, clips and the absent shell notch with
     instead of 7.9) — putting the rib edge 1.00 mm clear of the bore.
   - The XIAO clip slots, once they were taken down to z = −1.5, passed
     within **0.431 mm** of the same bore — thinner than a 0.6 mm nozzle can
-    lay down, so the slicer would simply have dropped the web. The slots
-    narrowed from 1.0 mm to **0.7 mm** (x 3.8…4.5 and 11.5…12.2), restoring
-    a 0.70 mm web. The finger is untouched at x 4.5…11.5, so lever, strain,
-    grab and insertion force are all exactly as before, and 0.7 mm still
-    clears the finger's 0.34 mm deflection with 0.36 mm to spare.
+    lay down, so the slicer would simply have dropped the web. They were
+    narrowed from 1.0 mm to 0.7 mm to restore a 0.70 mm web. *(Moot since
+    2026-09-10: the slots are gone entirely, and with them this hazard. The
+    lesson is not moot — any future feature taken below z = 0 near x 3…4,
+    y ±10…12 has to be checked against these bores on its own, not by
+    inheriting some other feature's clearance.)*
 
-  The −X rib now crosses the outboard +Y clip trench **in plan**
-  (x 4.40…5.60 vs 4.4…11.6, over y 11.25…11.85). That is deliberate and
-  harmless — the rib is z 0…8 and the trench z −1.5…0, so they never touch;
-  the rib's first layer just bridges a 1.2 × 0.6 mm patch over a 1.5 mm
-  slot. `90_verify.py` now probes all six bores (centre **and** ±1.5 mm in
-  x, at z = 0.5) so nothing can roof one again.
+  The `x = 5.0` rib no longer overlaps anything below the floor either,
+  since the trench it used to cross in plan was deleted with the slots.
+  `90_verify.py` probes all six bores (centre **and** ±1.5 mm in x, at
+  z = 0.5) so nothing can roof one again.
 - **Interior LEGO counterbores deleted (2026-09-09).** The six Technic
   bores keep their rear counterbore and rear entry chamfer but no longer
   have one on the inside — a pin only ever enters from the back — so the

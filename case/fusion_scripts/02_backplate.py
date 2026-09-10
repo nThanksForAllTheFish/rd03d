@@ -421,8 +421,10 @@ def run(_context: str):
     # 8. BOARD RETENTION CLIPS (change request 2026-09-08). Until now nothing
     # held either board down on the plate: the radar was captured only when
     # the lid closed, and the XIAO only by the shell's hold-down boss. Both
-    # boards now press into cantilever snap fingers cut into the fence walls
-    # they already sit against, so a bare plate holds its boards.
+    # boards now press in under snap lips carried on the fence walls they
+    # already sit against, so a bare plate holds its boards. (As of
+    # 2026-09-10 none of the five is a slot-isolated finger any more: every
+    # one is a lip on a continuous wall - see 8a and 8b.)
     #
     # MUST come after step 6 (the plate-outline Intersect is limited to
     # z <= 11 mm and would decapitate anything taller) and after step 7 (the
@@ -471,11 +473,9 @@ def run(_context: str):
     # as cosmetic on 2026-09-08) is gone, and the +X wall is continuous
     # from the step-4b notch edge (y=9.4) to the plate outline.
     #
-    # Contrast with the XIAO clips in 8b, which KEEP their slots: their
-    # lever is only 4.3 mm. Wall stiffness goes as t^3/L^3, so a slot-free
-    # 1.5 mm XIAO wall would be (1.5/1.0)^3 * (11.8/4.3)^3 ~= 22x stiffer
-    # than the thinned+slotted finger - order 65 N for 0.2 mm, i.e. the
-    # PCB would flex before the wall did. Slots stay there.
+    # (2026-09-10: the XIAO clips in 8b are now slot-free too, but for the
+    # opposite reason - see 8b. Here the wall is long enough to flex; there
+    # the user wanted it NOT to flex.)
     RADAR_PCB_FRONT_Z = 11.70 * MM
     R_LIP_Z = RADAR_PCB_FRONT_Z + LIP_FLOAT      # 11.80
     R_TOP_Z = 12.50 * MM
@@ -525,78 +525,58 @@ def run(_context: str):
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
          label="radar C +X")
 
-    # 8b. XIAO clips - one per +/-Y fence wall, 7 mm finger at x 4.5..11.5.
-    # 2026-09-09: the change request also proposed dropping THESE slots.
-    # Declined on the numbers (see the stiffness comparison in 8a): a
-    # slot-free 1.5 mm wall on this short a lever is far stiffer than the
-    # slotted finger and would take far more force to move 0.2 mm. The
-    # slots stay. The XIAO's top face is only 4.2 mm above the plate, so
-    # the lever is inherently short; rather than thin the finger to keep
-    # strain down, the cantilever root is now dropped 1.5 mm below the
-    # plate floor by trenches either side of the finger (see step 8c
-    # below), which lengthens the lever instead. Wall raised locally to
-    # 5.6, lip underside 4.30 = PCB top 4.20 + float, projecting 0.60 ->
-    # lip inner edges y +/-8.55 vs board edges +/-8.89 = 0.34 mm of grab
-    # per side.
+    # 8b. XIAO clips - one per +/-Y fence wall, 7 mm lip band at x 4.5..11.5.
+    #
+    # NO SLOTS, NO TRENCHES (2026-09-10, user instruction after printing and
+    # handling the part; supersedes the slotted-and-trenched design of
+    # 2026-09-09 and its 8c trench block, both now deleted).
+    #
+    # The user's report: the clips as printed were "very wimpy - barely
+    # holding it in". That is physical evidence against the calculation the
+    # earlier design optimised for, and it wins. The old design isolated a
+    # 1.5 mm blade with 0.7 mm slots at each end and dropped its root 1.5 mm
+    # below the floor with a trench either side, all to keep BENDING STRAIN
+    # low on a lever only ~5.8 mm long. It succeeded at that and failed at
+    # the actual job, which is holding the board down.
+    #
+    # What the clip is NOW: a 7 mm stretch (x 4.5..11.5) of the continuous
+    # 1.5 mm fence wall, locally raised from 5.0 to 5.60 mm and carrying a
+    # 0.60 mm lip whose flat underside sits at z 4.30 - 0.10 mm above the
+    # XIAO's 4.20 mm top face - for 0.34 mm of grab per side against the
+    # board edges at y +/-8.89. Lip, grab and float are all UNCHANGED; the
+    # user did not ask for a lip change and explicitly declined one.
+    #
+    # It is no longer a cantilever in any useful sense: the wall is anchored
+    # along its whole base to the plate floor and is continuous with its
+    # neighbours in x out to the plate edge. Deliberately NO strain or force
+    # figure is quoted here. The old 2.3% / 1.4x arithmetic modelled an
+    # isolated end-loaded blade and does not describe this at all; a
+    # base-anchored, laterally-continuous wall loaded near its top is a
+    # different problem, and any number written down for it would be false
+    # precision. Qualitatively: far stiffer, so much higher retention.
+    #
+    # THE TRADE IS INSERTION FORCE. Getting the board past the lip now takes
+    # a firmer push, and removing it takes a firmer fingernail. That is the
+    # cost the user accepted in exchange for a board that stays put. The
+    # 0.85 mm-rise lead-in ramp (clip() step d) still cams the board in, and
+    # the README's "rock one edge in first" tip matters more than it did.
     XIAO_PCB_TOP_Z = 4.20 * MM
     X_LIP_Z = XIAO_PCB_TOP_Z + LIP_FLOAT         # 4.30
     X_TOP_Z = 5.60 * MM
     X_LIP = 0.60 * MM
-    # 2026-09-09: finger taken to the wall's own 1.5 mm (a 1.0 mm wall does
-    # not print on the user's 0.6 mm nozzle), and the root dropped 1.5 mm
-    # into the plate by the trenches below so the lever grows 4.30 -> 5.80
-    # mm. Peak strain 3*t*d/(2*L^2) = 3*1.5*0.34/(2*5.8^2) = 2.3%, down from
-    # 2.8% at 1.0/4.30 and well clear of the 4.1% a 1.5 mm finger would see
-    # on the old lever. Spring rate goes as t^3/L^3 -> 1.4x the old force.
-    # The lip stays at 0.60 mm: a 0.6 mm nozzle resolves 0.6 and 1.2, so a
-    # smaller lip would print worse, not better.
-    X_TRENCH_Z0 = -1.5 * MM
-    X_SLOT_Z0 = X_TRENCH_Z0
     X_RAISE_Z0 = 4.5 * MM                        # inside the 5 mm wall
     X_THIN = 0.0
-    # SLOT WIDTH 0.7, NOT 1.0 (2026-09-09 fix, final review). Dropping
-    # X_SLOT_Z0 to -1.5 above pushed these slots into the plate BODY for the
-    # first time - before that they only ever cut the fence wall above z=0,
-    # where no LEGO bore reaches. At 1.0 mm wide the inboard slot's nearest
-    # corner (3.5, +/-10.66) sat 2.881 mm from the bore centre at
-    # (0.95, +/-12), i.e. 0.431 mm of PETG to the 2.45 mm bore wall - under
-    # what a 0.6 mm nozzle can resolve, so the slicer drops or merges it and
-    # the "web" is not printed at all. Pulling the inboard slot's outer edge
-    # 3.5 -> 3.8 (and mirroring 12.5 -> 12.2 so both slots stay equal) moves
-    # that corner to 3.149 mm out and restores a 0.700 mm web = one clean
-    # 0.6 mm extrusion with margin.
-    # Nothing about the spring changes: the FINGER is still x 4.5..11.5, so
-    # lever, strain and grab are untouched; a 0.7 mm gap still clears the
-    # finger's 0.34 mm deflection with 0.36 mm to spare; and the trenches at
-    # x 4.4..11.6 still overlap both slots (4.4..4.5 and 11.5..11.6), so the
-    # blade is free at its ends exactly as before.
+    # NO_SLOTS (defined in 8a) makes clip() skip its slot cut entirely; with
+    # X_THIN = 0 the thinning cut is skipped too, so slot_z0 is never read
+    # and the old X_SLOT_Z0 / X_TRENCH_Z0 constants are gone rather than
+    # left behind to imply geometry that no longer exists. 0.0 is passed for
+    # slot_z0 to make that unusedness explicit.
     for sy in (-1, 1):
         clip(comp, plate_body, "y", sy * 10.65 * MM, sy * 9.15 * MM,
              4.5 * MM, 11.5 * MM,
-             [(3.8 * MM, 4.5 * MM), (11.5 * MM, 12.2 * MM)],
-             X_SLOT_Z0, X_RAISE_Z0, X_TOP_Z, X_LIP_Z, X_LIP, thin=X_THIN,
+             NO_SLOTS,
+             0.0, X_RAISE_Z0, X_TOP_Z, X_LIP_Z, X_LIP, thin=X_THIN,
              label="xiao %sY" % ("+" if sy > 0 else "-"))
-
-    # 8c. Clip-root trenches. Free the finger below the plate floor so its
-    # cantilever root sits at X_TRENCH_Z0 instead of z=0. Spans x 4.4..11.6
-    # (0.1 mm into each isolating slot, so no coincident faces), 1.2 mm wide
-    # - a void, not a wall, so the 0.6 mm nozzle is not a constraint. Clear
-    # of the snap pockets (+/-X edges, y +/-12) and of every LEGO bore: the
-    # x 8.95 column only has holes at y +/-4, and the x 0.95 column lies
-    # outside x 4.4..11.6.
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    for sy in (-1, 1):
-        box(sk, 4.4 * MM, 11.6 * MM, sy * 7.95 * MM, sy * 9.15 * MM)
-        box(sk, 4.4 * MM, 11.6 * MM, sy * 10.65 * MM, sy * 11.85 * MM)
-    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
-    if profs.count != 4:
-        raise RuntimeError("expected 4 clip-trench profiles, found %d"
-                           % profs.count)
-    extrude(comp, profs, X_TRENCH_Z0, 0,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[plate_body])
-    print("xiao clip trenches ok (x 4.4..11.6, 1.2 mm wide, to z %.2f)"
-          % (X_TRENCH_Z0 * 10))
 
     # 9. USB-C base jack (2026-09-09). The user powers the node through a
     # jack in the LEGO-mount face instead of the XIAO's own connector.
@@ -726,15 +706,14 @@ def run(_context: str):
     #      clear of the bore edge at x 3.40. 90_verify.check_lego_bores_clear
     #      now asserts this for all six bores so it cannot regress.
     #
-    #   2. The +Y clip TRENCH at x 4.4..11.6, y 10.65..11.85, z -1.5..0.
-    #      The -X rib now overlaps this IN PLAN (rib x 4.40..5.60 vs trench
-    #      x 4.4..11.6, over y 11.25..11.85). That is HARMLESS - do not
-    #      "fix" it by moving the rib back. The rib occupies z 0..8.0 and
-    #      the trench z -1.5..0, so they never share space; the rib's first
-    #      layer simply bridges a 1.2 x 0.6 mm patch over a 1.5 mm deep
-    #      slot, which FDM does without noticing. Nor does it touch the clip
-    #      itself: the blade is at y 9.15..10.65, 0.6 mm from the rib, and
-    #      deflects only 0.34 mm.
+    #   2. (Historical, 2026-09-09 - 2026-09-10.) The -X rib used to overlap
+    #      the +Y clip's outboard trench (x 4.4..11.6, y 10.65..11.85,
+    #      z -1.5..0) in plan, over y 11.25..11.85. That was harmless (rib
+    #      z 0..8, trench z -1.5..0 - never the same space) and it is now
+    #      moot: the clip trenches were deleted with the XIAO clip slots on
+    #      2026-09-10, so the floor under the rib is plain solid plate.
+    #      Constraint 1 is the only thing pinning RIB_X now, and it still
+    #      pins it - do not move the ribs back toward x 3.0.
     #
     # Lead end faces +X. There is NO through-channel past the XIAO fence
     # there - the +/-Y fence bars run the full plate width to x 20.85 (only

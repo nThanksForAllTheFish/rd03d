@@ -62,31 +62,44 @@ def check_baseline(plate, shell):
 
 
 def check_xiao_clips(plate):
-    """1.5 mm fingers, slots and trenches reaching z = -1.5."""
+    """Lips on a CONTINUOUS 1.5 mm fence wall: no slots, no trenches.
+
+    Retargeted 2026-09-10. The user printed the slotted-and-trenched design
+    and reported the clips "very wimpy - barely holding it in", then asked
+    for the slots and trenches to go. So the probes that used to assert an
+    isolated blade rooted at z = -1.5 now assert the opposite: that region
+    is plain solid plate again, above the floor as well as below it. The
+    lip geometry (0.60 mm projection, underside at 4.30, 0.34 mm grab) is
+    unchanged and its probes are unchanged with it.
+    """
     for sy in (-1, 1):
         tag = "+Y" if sy > 0 else "-Y"
-        # trenches: 1.2 mm wide, 1.5 mm deep, either side of the finger
-        void(plate, 8.0, sy * 8.55, -0.75, "inboard clip trench " + tag)
-        void(plate, 8.0, sy * 11.25, -0.75, "outboard clip trench " + tag)
-        # the blade between them survives, and is rooted below the trenches
-        solid(plate, 8.0, sy * 9.9, -0.75, "clip blade " + tag)
-        solid(plate, 8.0, sy * 9.9, -2.0, "clip blade root below trench " + tag)
-        # isolating slots now reach the trench depth
-        void(plate, 4.0, sy * 9.9, -0.75, "clip slot runs to -1.5 " + tag)
-        void(plate, 12.0, sy * 9.9, -0.75, "clip slot runs to -1.5 " + tag)
+        # WAS the two clip trenches (1.2 mm wide, z -1.5..0, either side of
+        # the finger). Deleted: with no slots the wall is not a cantilever,
+        # so there is no root to lengthen. Now solid floor.
+        solid(plate, 8.0, sy * 8.55, -0.75, "no inboard clip trench " + tag)
+        solid(plate, 8.0, sy * 11.25, -0.75, "no outboard clip trench " + tag)
+        # the wall's footprint in the plate, which never was cut
+        solid(plate, 8.0, sy * 9.9, -0.75, "plate under the clip wall " + tag)
+        solid(plate, 8.0, sy * 9.9, -2.0, "plate under the clip wall " + tag)
+        # WAS the isolating slots, cut z -1.5..6.6 at x 3.8..4.5 and
+        # 11.5..12.2. Below the floor they are gone...
+        solid(plate, 4.0, sy * 9.9, -0.75, "no clip slot below floor " + tag)
+        solid(plate, 12.0, sy * 9.9, -0.75, "no clip slot below floor " + tag)
+        # ...and, the point that actually matters, gone ABOVE the floor too,
+        # where the fence wall is. A below-floor-only check would pass on a
+        # wall still sliced through at full height. x 4.1 and 11.85 are
+        # inside the old 0.7 mm slot bands; z 2.0 is mid-wall.
+        solid(plate, 4.1, sy * 9.9, 2.0, "wall continuous at old slot " + tag)
+        solid(plate, 11.85, sy * 9.9, 2.0, "wall continuous at old slot " + tag)
         # finger is full 1.5 mm: the old 0.5 mm outer shave is gone
         solid(plate, 8.0, sy * 10.4, 3.0, "finger at full thickness " + tag)
         # lip material spans lip_z(4.30)..top_z(5.60); z=4.30 is the board
         # top + 0.10 float, so probe just inside the lip, not in the gap
         solid(plate, 8.0, sy * 8.7, 4.40, "clip lip " + tag)
-        # trenches are local to the finger: plate is solid beyond them in x.
-        # Probed on the inboard trench's y band - the outboard band at
-        # y +/-11.25 passes within 1.00 mm of the LEGO bore at (0.95, +/-12)
-        # (nearest trench corner (4.4, 11.85): 3.453 from the bore centre,
-        # less the 2.45 bore radius). This comment previously said 1.29 mm,
-        # which was wrong in the unsafe direction.
-        solid(plate, 2.0, sy * 8.55, -0.75, "plate solid beyond trench " + tag)
-        solid(plate, 14.0, sy * 8.55, -0.75, "plate solid beyond trench " + tag)
+        # plate floor is solid either side of the clip in x as well
+        solid(plate, 2.0, sy * 8.55, -0.75, "plate solid beyond clip " + tag)
+        solid(plate, 14.0, sy * 8.55, -0.75, "plate solid beyond clip " + tag)
 
 
 def check_no_interior_counterbores(plate):
@@ -123,6 +136,16 @@ def check_lego_bores_clear(plate):
     z = 0.5 is half a millimetre above the interior floor: every floor-borne
     feature in this design (ribs, fences, posts, collar) starts at z = 0, so
     anything overhanging a bore registers here.
+
+    REMOVED 2026-09-10: a pair of probes at (3.3, +/-10.5, -0.75) that
+    guarded the 0.70 mm web between the XIAO clip's inboard slot and the
+    (0.95, +/-12) bore. The slots are gone (02_backplate step 8b), so there
+    is no web and no hazard - but that also means those probes had become
+    trivially true, asserting solid plate in the middle of solid plate.
+    They are deleted rather than kept, so nobody reads a green run as
+    evidence that the web hazard was re-checked. It cannot recur unless a
+    clip feature is taken below z = 0 again; if one ever is, its clearance
+    to these bores must be worked out afresh, not inherited.
     """
     for cx, cy in ((0.95, -12), (0.95, -4), (0.95, 4), (0.95, 12),
                    (8.95, -4), (8.95, 4)):
@@ -130,15 +153,6 @@ def check_lego_bores_clear(plate):
             void(plate, cx + dx, cy, 0.5,
                  "Technic bore (%.2f, %+.0f) unroofed at dx=%+.1f"
                  % (cx, cy, dx))
-    # The clip slots' web to the same bore pair. The slots were narrowed
-    # 1.0 -> 0.7 mm (02_backplate step 8b) because at 1.0 the web was
-    # 0.431 mm - below what a 0.6 mm nozzle resolves. x = 3.3 is inside the
-    # restored 0.70 mm web (bore wall reaches x 2.887 at y = +/-10.5, slot
-    # now starts at 3.8), so this fails if either the slot creeps back out
-    # or the bore grows.
-    for sy in (-1, 1):
-        solid(plate, 3.3, sy * 10.5, -0.75,
-              "slot-to-bore web survives at y=%+.1f" % (sy * 10.5))
 
 
 def check_usb_jack(plate):
@@ -187,13 +201,14 @@ def check_cap_cradle(plate):
     # ribs stop clear of the fence and the plate edge
     void(plate, 5.0, 11.0, 2.0, "gap between cradle rib and XIAO fence")
     void(plate, 5.0, 22.5, 2.0, "gap between cradle rib and plate edge")
-    # the +Y clip trench is not FILLED by a rib. The -X rib (x 4.4..5.6) now
-    # overlaps the trench (x 4.4..11.6, y 10.65..11.85) in plan over
-    # y 11.25..11.85 - deliberately, and harmlessly, because the rib is
-    # z 0..8 and the trench z -1.5..0. This probe is the guard on that: it
-    # fails the moment a rib is given a start below z = 0.
-    void(plate, 5.0, 11.5, -0.75, "trench open UNDER the -X cradle rib")
-    void(plate, 8.0, 11.25, -0.75, "outboard +Y clip trench still open")
+    # REMOVED 2026-09-10: two probes at (5.0, 11.5, -0.75) and
+    # (8.0, 11.25, -0.75) that asserted the +Y clip's outboard trench stayed
+    # open under and beside the -X cradle rib. The trenches are gone
+    # (02_backplate step 8b), so both points are ordinary solid plate and
+    # the rib/trench interaction they guarded no longer exists. Flipping
+    # them to `solid` here would only duplicate check_xiao_clips, which now
+    # owns that ground; the rib's own placement is still guarded by
+    # check_lego_bores_clear.
 
 
 def check_fence_notches(plate):
