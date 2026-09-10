@@ -146,6 +146,18 @@ def check_cap_cradle(plate):
     void(plate, 8.0, 11.25, -0.75, "outboard +Y clip trench still open")
 
 
+def check_fence_notches(plate):
+    """3.5 mm wide x 2.5 mm deep wire notches at x 14.5..18.0, both walls."""
+    for sy in (-1, 1):
+        tag = "+Y" if sy > 0 else "-Y"
+        void(plate, 16.0, sy * 9.9, 4.0, "wire notch open " + tag)
+        void(plate, 16.0, sy * 9.9, 2.8, "wire notch open " + tag)
+        solid(plate, 16.0, sy * 9.9, 1.0, "wall below the notch " + tag)
+        solid(plate, 13.0, sy * 9.9, 4.0, "wall intact -X of the notch " + tag)
+        solid(plate, 19.5, sy * 9.9, 4.0, "wall intact +X of the notch " + tag)
+        solid(plate, 8.0, sy * 9.9, 4.0, "clip finger untouched " + tag)
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -160,6 +172,7 @@ def run(_context: str):
     check_no_interior_counterbores(plate)
     check_usb_jack(plate)
     check_cap_cradle(plate)
+    check_fence_notches(plate)
 
     if FAILURES:
         for f in FAILURES:

@@ -775,4 +775,27 @@ def run(_context: str):
           % ([round(v * 10, 2) for v in RIB_X], capR * 10, CAP_Y * 10,
              CAP_Z * 10, RIB_T * 10, mouth * 10, RIB_TOP * 10, cut * 1000))
 
+    # 11. Wire notches (2026-09-09). The jack's 5V/GND pair reaches the
+    # XIAO's pads - user-confirmed on the long edge shared with D7, at the
+    # end nearest the XIAO's own USB-C, i.e. x 14..18 - in about 10 mm
+    # within the -Y band. This notch lets the pair drop straight down
+    # instead of being pinched between the board edge and the fence wall.
+    # Cut in BOTH walls: the standard pinout puts those pads on -Y, and
+    # mirroring costs nothing if the board reads the other way round. Clear
+    # of the clip fingers at x 4.5..11.5.
+    NOTCH_X0, NOTCH_X1 = 14.5 * MM, 18.0 * MM
+    NOTCH_Z0 = 2.5 * MM
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        box(sk, NOTCH_X0, NOTCH_X1, sy * 9.05 * MM, sy * 10.75 * MM)
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 2:
+        raise RuntimeError("expected 2 wire-notch profiles, found %d"
+                           % profs.count)
+    extrude(comp, profs, NOTCH_Z0, 5.1 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("wire notches ok (x %.2f..%.2f, z %.2f..5.00, both fence walls)"
+          % (NOTCH_X0 * 10, NOTCH_X1 * 10, NOTCH_Z0 * 10))
+
     print("BackPlate bodies:", comp.bRepBodies.count)
