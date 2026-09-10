@@ -101,6 +101,33 @@ def check_no_interior_counterbores(plate):
         void(plate, cx, cy, -4.0, "through-bore at (%.2f, %.2f)" % (cx, cy))
 
 
+def check_usb_jack(plate):
+    """9.33 x 3.42 through-slot at (13.6, -19.0), collar, 45 deg ramps."""
+    # slot is open the whole way through the plate and up the collar
+    for z in (-7.5, -4.0, 0.5, 2.0):
+        void(plate, 13.6, -19.0, z, "jack slot open at z=%.1f" % z)
+    # slot walls are solid: 1.5 mm collar either side above the floor,
+    # plate either side below it
+    solid(plate, 13.6, -21.5, -4.0, "plate beside the slot (-Y)")
+    solid(plate, 13.6, -16.5, -4.0, "plate beside the slot (+Y)")
+    solid(plate, 13.6, -21.5, 2.0, "collar -Y wall")
+    solid(plate, 13.6, -16.5, 2.0, "collar +Y wall")
+    solid(plate, 8.0, -19.0, 2.0, "collar -X end wall")
+    solid(plate, 19.2, -19.0, 2.0, "collar +X end wall")
+    # below the ramp the channel is the full 3.42 mm
+    void(plate, 13.6, -20.2, 2.0, "full-width channel below the ramp (-Y)")
+    void(plate, 13.6, -17.8, 2.0, "full-width channel below the ramp (+Y)")
+    # above the ramp it has narrowed to 1.82 mm
+    solid(plate, 13.6, -20.2, 4.0, "ramped wall above z=3.38 (-Y)")
+    solid(plate, 13.6, -17.8, 4.0, "ramped wall above z=3.38 (+Y)")
+    void(plate, 13.6, -19.0, 4.0, "tail channel still open at z=4.0")
+    # nothing above the collar top
+    void(plate, 13.6, -19.0, 5.0, "above the 4.5 mm collar top")
+    # the collar clears the plate edge and the LEGO counterbore band
+    solid(plate, 20.3, -19.0, -4.0, "plate between collar and +X edge")
+    void(plate, 13.6, -19.0, -8.5, "outside the back face")
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -113,6 +140,7 @@ def run(_context: str):
     check_baseline(plate, shell)
     check_xiao_clips(plate)
     check_no_interior_counterbores(plate)
+    check_usb_jack(plate)
 
     if FAILURES:
         for f in FAILURES:

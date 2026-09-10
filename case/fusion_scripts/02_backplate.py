@@ -167,10 +167,36 @@ def clip(comp, body, axis, wall_out, wall_in, f0, f1, slots, slot_z0,
               if slots else "NONE (continuous wall)")))
 
 
+def ensure_params(des):
+    """Create this plan's user parameters if the document lacks them.
+
+    Deliberately NOT added to 01_setup.py: re-running that script resets
+    every parameter the user has hand-tuned. Existing values are left alone
+    so the user can edit them in Modify -> Change Parameters.
+    """
+    spec = [
+        ("usbJackW", "9.08 mm", "USB-C jack widest section (its PCB)"),
+        ("usbJackT", "3.17 mm", "USB-C jack thickness"),
+        ("usbJackL", "14.42 mm", "USB-C jack overall length"),
+        ("usbShellL", "10.58 mm", "USB-C jack metal shell length"),
+        ("usbJackClear", "0.25 mm", "total jack slot clearance"),
+        ("capDia", "8.2 mm", "bulk capacitor diameter"),
+        ("capLen", "12 mm", "bulk capacitor body length"),
+        ("capClear", "0.4 mm", "total capacitor cradle clearance"),
+    ]
+    ups = des.userParameters
+    for name, expr, comment in spec:
+        if ups.itemByName(name) is None:
+            ups.add(name, adsk.core.ValueInput.createByString(expr),
+                    "mm", comment)
+            print("added param", name, "=", expr)
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
     root = des.rootComponent
+    ensure_params(des)
 
     for occ in list(root.occurrences):
         if occ.component.name.startswith("BackPlate"):
@@ -553,5 +579,105 @@ def run(_context: str):
             participants=[plate_body])
     print("xiao clip trenches ok (x 4.4..11.6, 1.2 mm wide, to z %.2f)"
           % (X_TRENCH_Z0 * 10))
+
+    # 9. USB-C base jack (2026-09-09). The user powers the node through a
+    # jack in the LEGO-mount face instead of the XIAO's own connector.
+    # Measured part: 14.42 long overall, 10.58 of that metal shell, 9.08
+    # wide (its PCB, the widest section), 3.17 thick. Mouth flush with the
+    # back face at z=-8, so 6.42 protrudes into the free -Y band beside the
+    # XIAO and the PCB tail starts at z=+0.92 - above the floor, which is
+    # why the plate's slot only ever contains the metal shell.
+    #
+    # The shell's rear edge lands at z = usbShellL - backT = 2.58, where a
+    # 45 deg ramp on each +/-Y collar wall rises 0.8 mm inward and wedges it
+    # to a stop. Ramps rather than a flat ledge: they self-centre, they
+    # print with no unsupported horizontal overhang, and since USB-C is
+    # reversible they work whichever face the jack's PCB tail is flush with
+    # (a dimension we never measured and do not need).
+    #
+    # PULL-OUT RETENTION IS EPOXY. The part presents no rearward-facing
+    # surface to catch, so no printed feature can resist it; the collar
+    # gives ~40 mm2 of glue wall against a plug latch force of order 10 N.
+    jW = p(des, "usbJackW") + p(des, "usbJackClear")      # 9.33
+    jT = p(des, "usbJackT") + p(des, "usbJackClear")      # 3.42
+    JCX, JCY = 13.6 * MM, -19.0 * MM
+    COLLAR_T = 1.5 * MM
+    COLLAR_TOP = 4.5 * MM
+    RAMP_Z0 = p(des, "usbShellL") - backT                 # 2.58
+    RAMP_RISE = 0.8 * MM
+    RAMP_Z1 = RAMP_Z0 + RAMP_RISE                         # 3.38
+    ANCHOR = 0.3 * MM            # loft sections start inside the wall
+    sx0, sx1 = JCX - jW / 2, JCX + jW / 2                 # 8.935 .. 18.265
+    sy0, sy1 = JCY - jT / 2, JCY + jT / 2                 # -20.71 .. -17.29
+
+    # 9a. collar box, then one cut for the slot AND the collar bore
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    box(sk, sx0 - COLLAR_T, sx1 + COLLAR_T,
+        sy0 - COLLAR_T, sy1 + COLLAR_T)
+    extrude(comp, sk.profiles.item(0), 0, COLLAR_TOP,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    box(sk, sx0, sx1, sy0, sy1)
+    extrude(comp, sk.profiles.item(0), -backT, COLLAR_TOP,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+
+    # 9b. seating ramps on both +/-Y collar walls, plus the narrowed wall
+    # they lead into (z RAMP_Z1..COLLAR_TOP), leaving a 1.82 mm tail channel
+    for s in (-1, 1):
+        # s = -1 is the -Y wall, whose material lies at more negative y and
+        # whose channel is toward +y; "inward" is therefore -s.
+        face = sy0 if s < 0 else sy1          # the wall's inner face
+        back_y = face + s * ANCHOR            # 0.3 mm INTO the wall
+        tip_y = face - s * RAMP_RISE          # 0.8 mm INTO the channel
+        ramp_loft(comp, RAMP_Z0,
+                  (sx0, sx1, back_y, face),
+                  RAMP_Z1,
+                  (sx0, sx1, back_y, tip_y),
+                  [plate_body])
+        sk = comp.sketches.add(comp.xYConstructionPlane)
+        box(sk, sx0, sx1, back_y, tip_y)
+        extrude(comp, sk.profiles.item(0), RAMP_Z1, COLLAR_TOP,
+                adsk.fusion.FeatureOperations.JoinFeatureOperation,
+                participants=[plate_body])
+
+    # 9c. 0.5 mm entry chamfer on the slot's back-face opening, so the plug
+    # finds the mouth. Comfort feature: report and continue if refused.
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for e in plate_body.edges:
+            g = e.geometry
+            if not isinstance(g, adsk.core.Line3D):
+                continue
+            mz = (g.startPoint.z + g.endPoint.z) / 2
+            mx = (g.startPoint.x + g.endPoint.x) / 2
+            my = (g.startPoint.y + g.endPoint.y) / 2
+            if abs(mz + backT) > 0.005:
+                continue
+            on_x = (abs(abs(mx - JCX) - jW / 2) < 0.005
+                    and abs(my - JCY) < jT / 2 + 0.005)
+            on_y = (abs(abs(my - JCY) - jT / 2) < 0.005
+                    and abs(mx - JCX) < jW / 2 + 0.005)
+            if on_x or on_y:
+                edges.add(e)
+        if edges.count != 4:
+            raise RuntimeError("expected 4 slot mouth edges, found %d"
+                               % edges.count)
+        ch = comp.features.chamferFeatures
+        chi = ch.createInput(edges, False)
+        chi.setToEqualDistance(adsk.core.ValueInput.createByReal(0.5 * MM))
+        ch.add(chi)
+        print("usb slot mouth chamfer ok (0.5mm x 45deg on 4 edges)")
+    except Exception as exc:
+        print("USB MOUTH CHAMFER SKIPPED:", exc)
+
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("usb jack step split the plate: %d bodies"
+                           % comp.bRepBodies.count)
+    print("usb jack ok: slot %.2f x %.2f at (%.2f, %.2f), collar to %.2f, "
+          "ramp %.2f->%.2f, tail channel %.2f"
+          % (jW * 10, jT * 10, JCX * 10, JCY * 10, COLLAR_TOP * 10,
+             RAMP_Z0 * 10, RAMP_Z1 * 10, (jT - 2 * RAMP_RISE) * 10))
 
     print("BackPlate bodies:", comp.bRepBodies.count)
