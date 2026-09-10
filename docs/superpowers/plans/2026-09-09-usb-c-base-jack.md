@@ -1094,8 +1094,9 @@ for f in ("rd03d_case_back.stl", "rd03d_case_shell.stl"):
         for v in range(3):
             p = struct.unpack("<3f", d[base + v * 12: base + v * 12 + 12])
             for a in range(3):
-                lo[a] = min(lo[a], p[a] * 10)
-                hi[a] = max(hi[a], p[a] * 10)
+                # Fusion writes STL in mm, not cm - no scaling here
+                lo[a] = min(lo[a], p[a])
+                hi[a] = max(hi[a], p[a])
     print(f, n, "tris",
           " ".join("%s %.2f..%.2f" % (ax, lo[i], hi[i])
                    for i, ax in enumerate("xyz")))
