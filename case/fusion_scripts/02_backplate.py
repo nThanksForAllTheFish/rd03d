@@ -338,9 +338,11 @@ def run(_context: str):
     # through-holes on the 8mm LEGO pitch — a 1x4 column at x=0.95mm
     # (y=-12,-4,+4,+12) and a 1x2 column one pitch over at x=8.95mm
     # (y=-4,+4). Each: legoHole dia through bore (z -backT..0) with a
-    # legoCbDia x legoCbDepth counterbore on BOTH faces so Technic
-    # pin collars/tips seat flush, plus a 0.3mm 45 deg entry chamfer
-    # on the rear opening.
+    # legoCbDia x legoCbDepth counterbore on the REAR face only, so pin
+    # collars seat flush, plus a 0.3mm 45 deg entry chamfer on the rear
+    # opening. (2026-09-09: the interior counterbores were deleted - a
+    # Technic pin only ever goes in from the back, and their 0.9 mm
+    # recesses fell where printed features want flat interior floor.)
     pitch = p(des, "legoPitch")
     holeD = p(des, "legoHole")
     cbD = p(des, "legoCbDia")
@@ -362,9 +364,6 @@ def run(_context: str):
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
     extrude(comp, circles(cbD / 2), -backT, -backT + cbZ,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[plate_body])
-    extrude(comp, circles(cbD / 2), -cbZ, 0,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
     print("technic holes ok:",

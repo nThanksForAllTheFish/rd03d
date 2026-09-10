@@ -86,6 +86,21 @@ def check_xiao_clips(plate):
         solid(plate, 14.0, sy * 8.55, -0.75, "plate solid beyond trench " + tag)
 
 
+def check_no_interior_counterbores(plate):
+    """Interior face is flat: only the 4.9 mm bores break it."""
+    for cx, cy in ((0.95, -12), (0.95, -4), (0.95, 4), (0.95, 12),
+                   (8.95, -4), (8.95, 4)):
+        # 2.8 mm out from the bore centre: inside the old 3.2 mm
+        # counterbore radius, outside the 2.45 mm through-bore
+        solid(plate, cx, cy + 2.8, -0.45,
+              "interior counterbore removed at (%.2f, %.2f)" % (cx, cy))
+        # the rear counterbore is unchanged
+        void(plate, cx, cy + 2.8, -7.55,
+             "rear counterbore kept at (%.2f, %.2f)" % (cx, cy))
+        # the through-bore is unchanged
+        void(plate, cx, cy, -4.0, "through-bore at (%.2f, %.2f)" % (cx, cy))
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -97,6 +112,7 @@ def run(_context: str):
 
     check_baseline(plate, shell)
     check_xiao_clips(plate)
+    check_no_interior_counterbores(plate)
 
     if FAILURES:
         for f in FAILURES:
