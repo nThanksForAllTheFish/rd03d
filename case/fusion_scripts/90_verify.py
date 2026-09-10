@@ -128,6 +128,24 @@ def check_usb_jack(plate):
     void(plate, 13.6, -19.0, -8.5, "outside the back face")
 
 
+def check_cap_cradle(plate):
+    """Two 1.2 mm C-clip ribs saddling a 8.2 mm cap at y 16.75, z 5.5."""
+    for rx in (3.0, 12.8):
+        solid(plate, rx, 12.0, 2.0, "cradle rib body at x=%.1f" % rx)
+        solid(plate, rx, 21.5, 2.0, "cradle rib body at x=%.1f" % rx)
+        void(plate, rx, 16.75, 5.5, "cap bore at x=%.1f" % rx)
+        solid(plate, rx, 16.75, 0.5, "rib material below the bore x=%.1f" % rx)
+        void(plate, rx, 16.75, 8.5, "open above the rib top x=%.1f" % rx)
+    # nothing between the ribs
+    void(plate, 8.0, 16.75, 4.0, "clear between the cradle ribs")
+    void(plate, 8.0, 12.0, 2.0, "clear between the cradle ribs")
+    # ribs stop clear of the fence and the plate edge
+    void(plate, 3.0, 11.0, 2.0, "gap between cradle rib and XIAO fence")
+    void(plate, 3.0, 22.5, 2.0, "gap between cradle rib and plate edge")
+    # the +Y clip trench is not roofed by a rib
+    void(plate, 8.0, 11.25, -0.75, "outboard +Y clip trench still open")
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -141,6 +159,7 @@ def run(_context: str):
     check_xiao_clips(plate)
     check_no_interior_counterbores(plate)
     check_usb_jack(plate)
+    check_cap_cradle(plate)
 
     if FAILURES:
         for f in FAILURES:

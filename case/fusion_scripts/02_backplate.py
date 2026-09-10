@@ -1,3 +1,5 @@
+import math
+
 import adsk.core
 import adsk.fusion
 
@@ -679,5 +681,98 @@ def run(_context: str):
           "ramp %.2f->%.2f, tail channel %.2f"
           % (jW * 10, jT * 10, JCX * 10, JCY * 10, COLLAR_TOP * 10,
              RAMP_Z0 * 10, RAMP_Z1 * 10, (jT - 2 * RAMP_RISE) * 10))
+
+    # 10. Bulk capacitor cradle (2026-09-09). The user's 100 uF electrolytic
+    # (12 x 8.2 dia) sits across the incoming 5 V. It lies on its SIDE in the
+    # +Y band, which is otherwise empty: standing it would put 12 mm into a
+    # 14 mm cavity with the leads pointing at the lid, and its footprint only
+    # fits the -Y band alongside the jack by about 0.1 mm.
+    #
+    # Two rib blocks with the cap's cylinder bored through them: 1.2 mm of
+    # arm at the equator (two clean extrusions on the 0.6 mm nozzle),
+    # thicker below, and a 7.0 mm opening at the rib top (z=8.0) so the cap
+    # snaps down past its widest point. Rib x positions sit clear of the +Y
+    # clip trench at x 4.4..11.6. Lead end faces +X, where the XIAO fence is
+    # open, giving a full-height wire channel at x 19.3..20.85 through to
+    # the -Y band and the jack.
+    capR = p(des, "capDia") / 2 + p(des, "capClear") / 2   # 4.3
+    CAP_Y, CAP_Z = 16.75 * MM, 5.5 * MM
+    RIB_T = 1.2 * MM
+    RIB_R = capR + RIB_T                                   # 5.5
+    RIB_TOP = CAP_Z + 2.5 * MM                             # 8.0 -> 7.0 mouth
+    RIB_X = (3.0 * MM, 12.8 * MM)
+
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for rx in RIB_X:
+        box(sk, rx - RIB_T / 2, rx + RIB_T / 2,
+            CAP_Y - RIB_R, CAP_Y + RIB_R)
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != len(RIB_X):
+        raise RuntimeError("expected %d cradle rib profiles, found %d"
+                           % (len(RIB_X), profs.count))
+    extrude(comp, profs, 0, RIB_TOP,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
+
+    # bore the cap's cylinder along X through both ribs. This is the ONLY
+    # feature in this script that does not sketch on XY: the sketch sits on
+    # a YZ-parallel plane offset to x = BORE_X0, whose normal is +X, so the
+    # extrude sweeps along world X and the circle appears in section.
+    #
+    # Do NOT hand-map the circle's centre into sketch axes. Probed on the
+    # live document: this plane's own geometry reports uDirection = world +Y
+    # and vDirection = world +Z, but the SKETCH Fusion creates on it picks a
+    # different basis - u = world -Z, v = world +Y. Writing the centre as
+    # (CAP_Y, CAP_Z) therefore put it at world (y 5.5, z -16.75), in fresh
+    # air below the plate, and the Cut silently removed nothing (the plate's
+    # volume rose by exactly the two rib blocks). modelToSketchSpace asks
+    # the sketch for its own mapping instead of assuming one.
+    BORE_X0 = 1.0 * MM           # plane offset; ribs live at x 2.4..13.4
+    BORE_LEN = 14.0 * MM         # sweep +X clear through both ribs
+    pl_inp = comp.constructionPlanes.createInput()
+    pl_inp.setByOffset(comp.yZConstructionPlane,
+                       adsk.core.ValueInput.createByReal(BORE_X0))
+    pl = comp.constructionPlanes.add(pl_inp)
+    pl.isLightBulbOn = False
+    sk = comp.sketches.add(pl)
+    want = adsk.core.Point3D.create(BORE_X0, CAP_Y, CAP_Z)
+    circ = sk.sketchCurves.sketchCircles.addByCenterRadius(
+        sk.modelToSketchSpace(want), capR)
+    got = circ.worldGeometry.center
+    if max(abs(got.x - want.x), abs(got.y - want.y),
+           abs(got.z - want.z)) > 1e-6:
+        raise RuntimeError(
+            "cap bore circle landed at (%.3f, %.3f, %.3f) mm, wanted "
+            "(%.3f, %.3f, %.3f) mm"
+            % (got.x * 10, got.y * 10, got.z * 10,
+               want.x * 10, want.y * 10, want.z * 10))
+
+    # A cut that sweeps the wrong way, or lands off the ribs, removes nothing
+    # and raises no error - the failure mode above. Check the volume actually
+    # removed against the closed form: per rib, RIB_T times the part of the
+    # bore circle below the rib top, i.e. the full circle less the segment
+    # standing proud of RIB_TOP. (The circle's bottom, CAP_Z - capR = 1.2, is
+    # above the plate floor, so nothing else limits it.)
+    d = RIB_TOP - CAP_Z                                   # 2.5
+    seg = capR ** 2 * math.acos(d / capR) - d * math.sqrt(capR ** 2 - d ** 2)
+    want_cut = len(RIB_X) * RIB_T * (math.pi * capR ** 2 - seg)
+    vol_before = plate_body.volume
+    extrude(comp, sk.profiles.item(0), 0, BORE_LEN,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    sk.isVisible = False
+    cut = vol_before - plate_body.volume
+    if abs(cut - want_cut) > 5e-4:      # 0.5 mm3
+        raise RuntimeError("cap bore removed %.4f mm3, expected %.4f mm3"
+                           % (cut * 1000, want_cut * 1000))
+
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("cap cradle split the plate: %d bodies"
+                           % comp.bRepBodies.count)
+    mouth = 2 * math.sqrt(capR ** 2 - d ** 2)
+    print("cap cradle ok: ribs at x %s, bore r=%.2f at (y %.2f, z %.2f), "
+          "arm %.2f, mouth %.2f at z %.2f (bore removed %.2f mm3)"
+          % ([round(v * 10, 2) for v in RIB_X], capR * 10, CAP_Y * 10,
+             CAP_Z * 10, RIB_T * 10, mouth * 10, RIB_TOP * 10, cut * 1000))
 
     print("BackPlate bodies:", comp.bRepBodies.count)
