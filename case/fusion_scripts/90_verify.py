@@ -232,6 +232,25 @@ def check_no_shell_notch(shell):
     void(shell, 19.0, 0.0, 7.0, "cavity still open inside the +X wall")
 
 
+def check_radar_cable_exit(plate):
+    """The +X bay wall is notched at its -Y corner for the radar cable.
+
+    The connector pocket is otherwise sealed: bay walls at +/-X, crossbar A
+    (full height, y -12.8..-11.2) at +Y, and only 0.84 mm to the plate edge
+    at -Y. This notch is the cable's only route to the XIAO.
+    """
+    for z in (1.0, 5.0, 9.0):
+        void(plate, -2.95, -21.8, z, "cable exit open at z=%.1f" % z)
+    solid(plate, -2.95, -19.5, 5.0, "+X bay wall intact under clip B")
+    # NB not probed at y=0: step 4b deliberately cuts this wall away above
+    # z=postH over |y|<9.4 to clear the XIAO board, leaving only a 3 mm stub
+    solid(plate, -2.95, 0.0, 1.5, "step-4b stub survives at mid-span")
+    solid(plate, -2.95, 15.0, 5.0, "+X bay wall intact beyond the 4b notch")
+    # the lane the cable then runs along, between jack collar and XIAO fence
+    void(plate, 3.0, -13.0, 2.0, "cable lane clear of the collar")
+    void(plate, 12.0, -13.0, 2.0, "cable lane clear at the collar's +Y face")
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -248,6 +267,7 @@ def run(_context: str):
     check_usb_jack(plate)
     check_cap_cradle(plate)
     check_fence_notches(plate)
+    check_radar_cable_exit(plate)
     check_no_shell_notch(shell)
 
     if FAILURES:

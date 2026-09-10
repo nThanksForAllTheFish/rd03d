@@ -828,4 +828,39 @@ def run(_context: str):
     print("wire notches ok (x %.2f..%.2f, z %.2f..5.00, both fence walls)"
           % (NOTCH_X0 * 10, NOTCH_X1 * 10, NOTCH_Z0 * 10))
 
+    # 12. Radar cable exit (2026-09-10). The user photographed the assembled
+    # plate: the RD-03D's 4-wire connector cable leaves the connector heading
+    # -Y, straight off the end of the board, and had nowhere to go. The
+    # connector pocket is sealed on three sides - the two 1.5 mm bay walls at
+    # +/-X, and CROSSBAR A, which spans the full bay width at y -12.8..-11.2
+    # from the floor up to PCB_REAR_Z where the board rests on it. There is no
+    # gap over the bar, because the board is what sits on it. So the pocket's
+    # only exits were the open -Y end, which runs into the 0.84 mm between the
+    # board edge (y -22.01) and the plate edge (-22.85), and the +X wall.
+    #
+    # Cut the extreme -Y corner out of that wall. It lines up with where the
+    # cable already goes, and it is the ONLY free stretch: clip B occupies
+    # y -20.5..-13.5, crossbar A butts into the wall at -12.8..-11.2, and the
+    # step-4b notch starts at -9.4, leaving only 0.7 mm and 1.8 mm gaps
+    # between them. Ends at y -20.7 so it stops 0.2 mm clear of clip B's
+    # raised span rather than sharing a face with it.
+    #
+    # Structurally free: the board's -Y end is already cantilevered over the
+    # connector pocket with no support nearer than crossbar A, and lateral
+    # retention still comes from ~40 mm of remaining wall plus all three
+    # clips. Deliberately NOT cut as a wider, shorter window under clip B -
+    # that would leave the clip backed by a 7 mm-span beam instead of a solid
+    # wall, softening it, and the user's complaint this round was that clips
+    # feel too weak.
+    CABLE_Y0, CABLE_Y1 = -23.0 * MM, -20.7 * MM
+    cx_in = rCx + bayW / 2                 # +X wall inner face, -3.70
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    box(sk, cx_in - 0.1 * MM, cx_in + 1.6 * MM, CABLE_Y0, CABLE_Y1)
+    extrude(comp, sk.profiles.item(0), -0.01 * MM, 11.01 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("radar cable exit ok (+X bay wall notched y -22.85..%.2f, full "
+          "height, %.2f mm of wall removed)"
+          % (CABLE_Y1 * 10, (-20.7 - -22.85)))
+
     print("BackPlate bodies:", comp.bRepBodies.count)
