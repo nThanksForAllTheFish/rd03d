@@ -92,6 +92,9 @@ def clip(comp, body, axis, wall_out, wall_in, f0, f1, slots, slot_z0,
     slots list of (v0, v1) spans in the finger-span axis, cut through the full
           wall thickness from slot_z0 up past the clip top; they isolate the
           finger so it can flex.  The finger stays anchored below slot_z0.
+          An EMPTY list skips the slot cuts entirely, leaving the wall
+          continuous - correct where the wall is tall enough to supply the
+          needed flex on its own (see the radar clips in step 8a).
     thin  material removed from the wall's OUTER face over the finger width
           (0 = keep the wall at full thickness).  Lowers the spring rate.
     lip   flat underside at lip_z projecting lip_proj past the wall's inner
@@ -127,17 +130,21 @@ def clip(comp, body, axis, wall_out, wall_in, f0, f1, slots, slot_z0,
                 adsk.fusion.FeatureOperations.CutFeatureOperation,
                 participants=[body])
 
-    # c) isolating slots
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    for v0, v1 in slots:
-        mk(sk, wall_out - s * eps, wall_in + s * eps, v0, v1)
-    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
-    if profs.count != len(slots):
-        raise RuntimeError("%s: expected %d slot profiles, found %d"
-                           % (label, len(slots), profs.count))
-    extrude(comp, profs, slot_z0, z_over,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[body])
+    # c) isolating slots (skipped entirely when `slots` is empty - an empty
+    #    ObjectCollection is rejected by extrudeFeatures, and adding an
+    #    empty sketch would litter the user's browser tree)
+    if slots:
+        sk = comp.sketches.add(comp.xYConstructionPlane)
+        for v0, v1 in slots:
+            mk(sk, wall_out - s * eps, wall_in + s * eps, v0, v1)
+        profs = collection([sk.profiles.item(i)
+                            for i in range(sk.profiles.count)])
+        if profs.count != len(slots):
+            raise RuntimeError("%s: expected %d slot profiles, found %d"
+                               % (label, len(slots), profs.count))
+        extrude(comp, profs, slot_z0, z_over,
+                adsk.fusion.FeatureOperations.CutFeatureOperation,
+                participants=[body])
 
     # d) lip + lead-in ramp
     back = wall_in - s * 0.3 * MM        # anchor the loft inside the wall
@@ -156,7 +163,8 @@ def clip(comp, body, axis, wall_out, wall_in, f0, f1, slots, slot_z0,
           "top %.2f  lip %.2f +%.2f  slots %s"
           % (label, axis, wall_out * 10, wall_in * 10, f0 * 10, f1 * 10,
              top_z * 10, lip_z * 10, lip_proj * 10,
-             [(round(a * 10, 2), round(b * 10, 2)) for a, b in slots]))
+             ([(round(a * 10, 2), round(b * 10, 2)) for a, b in slots]
+              if slots else "NONE (continuous wall)")))
 
 
 def run(_context: str):
@@ -416,55 +424,86 @@ def run(_context: str):
     print("retention clips:")
     LIP_FLOAT = 0.10 * MM
 
-    # 8a. RADAR clips - one per +/-X fence wall, 7 mm finger, slots from
-    # z=2.0 to the top (~10 mm of lever below the lip), wall raised locally
-    # to 12.5, lip underside at 11.80 = PCB front 11.70 + float, projecting
-    # 0.85 past the wall's inner face -> lip inner edges at x -18.45 / -4.55
-    # against board edges -19.05 / -3.95 = 0.60 mm of grab per side.
+    # 8a. RADAR clips - THREE, and NO relief slots (change request
+    # 2026-09-09, user design review; supersedes the two slotted radar
+    # clips of 2026-09-08).
+    #
+    # Why the slots go away: the lip underside sits 11.80 mm above the
+    # plate, so the fence wall itself is an 11.8 mm cantilever of 1.5 mm
+    # PETG. Deflecting its tip the 0.60 mm needed to clear the board edge
+    # puts the peak surface strain at ~3*t*d/(2*L^2) = 3*1.5*0.60/
+    # (2*11.8^2) ~= 1% - a quarter of PETG's ~4-5% yield - and needs of
+    # order 12 N at the lip. A 1.5 x 7 mm section at that length simply
+    # does not need to be isolated from its neighbours to flex, and the
+    # slots cost stiffness where the wall's real job is holding the radar
+    # laterally. So all three radar clips pass an EMPTY slot list; the
+    # local wall raise and the lip/ramp are unchanged.
+    #
+    # Bonus effect of dropping the +X clip's inboard slot: the 1.7 x 1.25
+    # x 3 mm nick it used to take out of the XIAO's +Y fence bar (recorded
+    # as cosmetic on 2026-09-08) is gone, and the +X wall is continuous
+    # from the step-4b notch edge (y=9.4) to the plate outline.
+    #
+    # Contrast with the XIAO clips in 8b, which KEEP their slots: their
+    # lever is only 4.3 mm. Wall stiffness goes as t^3/L^3, so a slot-free
+    # 1.5 mm XIAO wall would be (1.5/1.0)^3 * (11.8/4.3)^3 ~= 22x stiffer
+    # than the thinned+slotted finger - order 65 N for 0.2 mm, i.e. the
+    # PCB would flex before the wall did. Slots stay there.
     RADAR_PCB_FRONT_Z = 11.70 * MM
     R_LIP_Z = RADAR_PCB_FRONT_Z + LIP_FLOAT      # 11.80
     R_TOP_Z = 12.50 * MM
     R_LIP = 0.85 * MM
-    R_SLOT_Z0 = 2.0 * MM
+    R_SLOT_Z0 = 2.0 * MM                         # unused: slots are []
     R_RAISE_Z0 = 10.5 * MM                       # inside the 11 mm wall
-    # The +X clip (below) sits under the RX radome step at 12.90 rather than
-    # the 14.0 wall, so it gets its own lower top for lid clearance: 0.60 mm
-    # instead of 0.40. Trade: a slightly steeper insertion cam (0.85 over
-    # 0.50 instead of 0.70), i.e. a firmer snap. Both parts are separate
-    # prints, so nominal clearance absorbs their stacked tolerance.
+    # Both +X clips sit under a radome step at 12.90 rather than the 14.0
+    # wall, so they get their own lower top for lid clearance: 0.60 mm of
+    # headroom instead of 0.40. Trade: a slightly steeper insertion cam
+    # (0.85 over 0.50 instead of 0.70), i.e. a firmer snap. Both parts are
+    # separate prints, so nominal clearance absorbs their stacked tolerance.
     R_TOP_Z_PX = 12.30 * MM
+    NO_SLOTS = []
 
-    # LEFT wall: finger centred on y=0 as designed. This is the radar IC's
-    # y band, which is exactly why it is free: the shell keeps its front
-    # inner face at 14.0 over y -4..+4 (the radome step in 03_shell.py skips
-    # that band for the IC), so a 12.5 clip top has 1.5 mm of headroom.
+    # A - LEFT wall, finger centred on y=0. This is the radar IC's y band,
+    # which is exactly why it is free: the shell keeps its front inner face
+    # at 14.0 over y -4..+4 (the radome step in 03_shell.py skips that band
+    # for the IC), so a 12.50 clip top has 1.50 mm of headroom.
     clip(comp, plate_body, "x", -20.8 * MM, -19.3 * MM,
          -3.5 * MM, 3.5 * MM,
-         [(-4.5 * MM, -3.5 * MM), (3.5 * MM, 4.5 * MM)],
-         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar -X")
+         NO_SLOTS,
+         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar A -X")
 
-    # RIGHT wall: DEVIATION, recorded. The change request asked for this clip
-    # at y=0 too, but the +X radar fence wall does not exist there: step 4b
-    # notches it down to z=postH (3 mm) over y +/-9.4 because the XIAO board
-    # (x -3.23..19.23) crosses the wall's x -3.7..-2.2 footprint. Verified on
-    # the live model - wall top is 2.95 at y=0, 10.95 only outside y +/-9.4.
-    # A finger there would run straight through the XIAO board, and even a
-    # finger thinned to miss it would have only 0.27 mm of flex room before
-    # hitting the XIAO. So this clip moves +Y to the nearest full-height
-    # stretch of the same wall: finger y +12.0..+19.0 (still well inside the
-    # board's +/-22.01 and clear of the XIAO fence bars, which end at
-    # y=10.65). Its inboard slot is widened to start at the step-4b notch
-    # edge (y=9.4) instead of 11.0 so it swallows the 1.6 mm orphan stub of
-    # wall that would otherwise be left standing between notch and slot.
-    # Cost of the move: the clip top now sits under the RX radome step
-    # (shell inner face 12.90 there, not 14.00), so headroom is 0.60 mm
-    # instead of 1.50. Static clearance - the finger flexes in X, not Z.
+    # The +X wall cannot carry a clip at y=0: step 4b notches it down to
+    # z=postH (3 mm) over y +/-9.4 because the XIAO board (x -3.23..19.23)
+    # crosses the wall's x -3.7..-2.2 footprint. So the two +X clips take
+    # the two full-height stretches of that wall, one under each radome
+    # zone, each placed to sit CLEAR of a crossbar - a crossbar runs the
+    # full bay width (x -19.3..-3.7) and butts into both walls, so a lip
+    # band on top of one would be locally braced and would not flex.
+    #
+    # B - +X wall under the TX radome. Crossbar A occupies y -12.8..-11.2,
+    # so the band stops at -13.5 (0.70 mm clear) and runs down to -20.5
+    # (1.51 mm inside the board's -22.01 edge).
     clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
-         12.0 * MM, 19.0 * MM,
-         [(9.4 * MM, 12.0 * MM), (19.0 * MM, 20.0 * MM)],
-         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP, label="radar +X")
+         -20.5 * MM, -13.5 * MM,
+         NO_SLOTS,
+         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
+         label="radar B +X")
+
+    # C - +X wall under the RX radome, in the free stretch between the
+    # step-4b notch edge (y=9.4) and crossbar B (y +17.7..+19.8):
+    # y +10.0..+17.0 leaves 0.60 mm to the notch and 0.70 mm to the bar.
+    clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
+         10.0 * MM, 17.0 * MM,
+         NO_SLOTS,
+         R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
+         label="radar C +X")
 
     # 8b. XIAO clips - one per +/-Y fence wall, 7 mm finger at x 4.5..11.5.
+    # 2026-09-09: the change request also proposed dropping THESE slots.
+    # Declined on the numbers (see the stiffness comparison in 8a): with a
+    # 4.3 mm lever a slot-free 1.5 mm wall is ~22x stiffer than this
+    # thinned, slotted finger and would take ~65 N to move 0.2 mm. The
+    # slots, the 1.0 mm thinning and the 0.34 mm grab all stay as built.
     # The XIAO's top face is only 4.2 mm above the plate, so the lever is
     # short; the finger is therefore THINNED to 1.0 mm (0.5 mm off the wall's
     # OUTER face, inner face stays at +/-9.15) and the grab is smaller, to

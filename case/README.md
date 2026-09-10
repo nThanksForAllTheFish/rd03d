@@ -7,8 +7,9 @@ The living design is in your Fusion; save it to your own project.
 ## Parts
 
 - `rd03d_case_back.stl` — back plate (8 mm thick): radar bay left, XIAO
-  posts right, with a cantilever retention clip on each board's two side
-  walls; six LEGO Technic pin holes (8 mm pitch, counterbored both faces)
+  posts right, with five cantilever retention clips (three on the radar's
+  ±X fence walls, one on each of the XIAO's ±Y walls);
+  six LEGO Technic pin holes (8 mm pitch, counterbored both faces)
   through the back for pin/ball-pin mounting. The rear face is otherwise
   fully flat (great first layer; tape sticks directly to it).
 - `rd03d_case_shell.stl` — front shell: a radome step that brings the
@@ -19,7 +20,7 @@ The living design is in your Fusion; save it to your own project.
 
 ## Printing
 
-**PETG preferred** — the four retention clips are live springs and PLA is
+**PETG preferred** — the five retention clips are live springs and PLA is
 brittle enough to snap one on the first insertion. 0.4–0.6 mm nozzle,
 0.2 mm layers, no supports.
 Back plate: print flat (back face down). Shell: print open-side-up.
@@ -33,16 +34,32 @@ chamfer prints cleanly bed-side.
 ## Assembly
 
 1. Wire the boards (radar TX→D7, RX→D6, 5V, GND), then **press each board
-   straight down until it clicks under its retention clips** — two per
-   board, one on each side wall. Each clip's tapered face cams open as the
+   straight down until it clicks under its retention clips** — three for
+   the radar, two for the XIAO. Each clip's tapered face cams open as the
    board's edge goes past and springs back over it; to remove a board,
-   push both clips outward with a fingernail. Seat the RD-03D patch-side
+   push the clips outward with a fingernail. Seat the RD-03D patch-side
    out, the XIAO on its posts with USB-C toward the notch. The radar is
    still Y-loose until the shell closes; that's normal.
-   - Radar clips: 0.6 mm of grab per side, on the ±X fence walls. The
-     right-hand one sits toward the +Y end of the wall rather than at
-     mid-height-centre, because the XIAO board crosses that wall at y≈0.
-   - XIAO clips: 0.34 mm of grab per side, on the ±Y fence walls. They are
+   - **Insertion tip:** don't press a board down flat. Tuck one long edge
+     under its clip(s) first, then rock/press the opposite edge down —
+     you then only flex the clips on one side at a time, which roughly
+     halves the force and keeps you from bowing the PCB.
+   - Radar clips: 0.6 mm of grab per side, **three** of them — one on the
+     −X fence wall at mid-height (y ≈ 0, over the radar IC), and two on
+     the +X wall, at y ≈ −17 and y ≈ +13.5. The +X wall cannot carry a
+     clip at y ≈ 0 because the XIAO board crosses it there, so its share
+     is split into two clips, one behind each antenna group. These three
+     have **no relief slots**: the lip sits 11.8 mm above the plate, so
+     the 1.5 mm fence wall is already a long enough cantilever to give up
+     the 0.6 mm of deflection at about 1 % surface strain. Slotting it
+     would only have weakened the wall's real job, which is holding the
+     radar board laterally.
+   - XIAO clips: 0.34 mm of grab per side, on the ±Y fence walls, and
+     these **do keep their relief slots**. Their lip is only 4.3 mm up,
+     and wall stiffness scales as (thickness/length)³ — a slot-free
+     1.5 mm wall at that length would be roughly 22× stiffer than the
+     thinned, slotted finger and would need of order 65 N to move
+     0.2 mm, i.e. you would flex the PCB before the wall budged. They are
      deliberately lighter — the XIAO's top face is only 4.2 mm up, so the
      finger is short and is thinned to 1.0 mm to keep the bending strain
      survivable. They locate the board; the 7 × 7 mm boss on the inside of
@@ -113,18 +130,33 @@ Re-export STLs after edits (File → 3D Print, or re-run
 - The XIAO is held on its posts by a boss on the shell's inner front
   face, landing 0.2 mm above the RF shield can and clear of the USB-C
   connector.
-- **Retention clips (2026-09-08).** Each lip's flat underside sits
-  0.10 mm above its board's face (radar 11.80 vs 11.70; XIAO 4.30 vs
-  4.20), so the clips do not preload the boards at rest — they only bear
-  if a board tries to lift. That float is deliberate: a permanently
-  strained PETG finger would creep. Radar fingers are 7 mm wide × 1.5 mm
-  thick with ~10 mm of lever (slots from z = 2.0); XIAO fingers are 7 mm
-  wide but thinned to 1.0 mm with only ~4 mm of lever, which is why their
-  grab is 0.34 mm rather than 0.60 mm. Insertion deflection is ~0.6 mm
-  (radar, ≈1.4 % surface strain) and ~0.34 mm (XIAO, ≈3 % — the reason
-  for PETG and for keeping the grab small). Each lip's 0.6–0.85 mm flat
-  underside is a small unsupported overhang printing back-face-down;
-  that is expected and bridges fine at 0.2 mm layers.
+- **Retention clips (2026-09-08, revised 2026-09-09).** Each lip's flat
+  underside sits 0.10 mm above its board's face (radar 11.80 vs 11.70;
+  XIAO 4.30 vs 4.20), so the clips do not preload the boards at rest —
+  they only bear if a board tries to lift. That float is deliberate: a
+  permanently strained PETG finger would creep. Radar clips are three
+  7 mm lip bands on the full-thickness (1.5 mm) fence walls, tops at
+  12.50 (−X, under the shell's 14.00 IC band) and 12.30 (both +X, under
+  the 12.90 radome zones); XIAO fingers are 7 mm wide, thinned to 1.0 mm,
+  slotted from z = 0, which is why their grab is 0.34 mm rather than
+  0.60 mm. Insertion deflection is ~0.6 mm (radar) and ~0.34 mm (XIAO,
+  ≈3 % surface strain — the reason for PETG and for keeping the grab
+  small). Each lip's 0.6–0.85 mm flat underside is a small unsupported
+  overhang printing back-face-down; that is expected and bridges fine at
+  0.2 mm layers.
+- **Why the radar clips have no relief slots but the XIAO clips do
+  (2026-09-09).** The radar lip is 11.8 mm above the plate. Treating the
+  1.5 mm wall as a cantilever of that length, the 0.6 mm of tip
+  deflection needed to clear the board edge works out at ≈1 % peak
+  surface strain — a quarter of PETG's yield — for of order 12 N at the
+  lip. So the wall flexes enough unaided, and the slots that used to
+  isolate each finger were pure cost: they cut into the wall that
+  restrains the radar board sideways. Removing them also freed the
+  budget for a third clip. The XIAO lip is only 4.3 mm up. Stiffness
+  goes as t³/L³, so the same 1.5 mm wall at 4.3 mm is ≈22× stiffer than
+  the thinned+slotted finger: ~65 N for 0.2 mm of travel. There the
+  slots and the 1.0 mm thinning are what make the clip a spring at all,
+  and they stay.
 - Caution: re-running `fusion_scripts/01_setup.py` resets ALL user
   parameters to the repo defaults, overwriting any tuning you did in
   Fusion's Change Parameters dialog.
