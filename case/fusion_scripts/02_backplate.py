@@ -723,14 +723,26 @@ def run(_context: str):
     # the XIAO.
     capR = p(des, "capDia") / 2 + p(des, "capClear") / 2   # 4.3
     CAP_Y, CAP_Z = 16.75 * MM, 5.5 * MM
-    RIB_T = 1.2 * MM
-    RIB_R = capR + RIB_T                                   # 5.5
+    # 2026-09-10: the user reports the printed ribs look fragile. RIB_W (the
+    # rib's width along X) doubles 1.2 -> 2.4 mm - four perimeters on a 0.6
+    # nozzle instead of two, and twice the arm section. RIB_ARM (the radial
+    # arm thickness at the equator) deliberately stays 1.2: it sets RIB_R and
+    # therefore the rib's Y extent, and at 1.5 the block would run y
+    # 10.95..22.55, leaving only 0.3 mm to both the XIAO fence and the plate
+    # edge. Widening in X is linear in stiffness, thickening radially is
+    # cubic - but the cubic one is the one with nowhere to go.
+    RIB_W = 2.4 * MM             # rib width along X
+    RIB_ARM = 1.2 * MM           # radial arm thickness at the equator
+    RIB_R = capR + RIB_ARM                                 # 5.5
     RIB_TOP = CAP_Z + 2.5 * MM                             # 8.0 -> 7.0 mouth
-    RIB_X = (5.0 * MM, 14.8 * MM)
+    # -X rib nudged 5.0 -> 5.6 so the wider block still clears the LEGO bore
+    # at (0.95, +12) by 1.00 mm: the bore reaches x 3.40 and the rib now
+    # spans x 4.40..6.80. Span 9.2 mm, cap centred at x 10.2.
+    RIB_X = (5.6 * MM, 14.8 * MM)
 
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for rx in RIB_X:
-        box(sk, rx - RIB_T / 2, rx + RIB_T / 2,
+        box(sk, rx - RIB_W / 2, rx + RIB_W / 2,
             CAP_Y - RIB_R, CAP_Y + RIB_R)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     if profs.count != len(RIB_X):
@@ -753,7 +765,7 @@ def run(_context: str):
     # air below the plate, and the Cut silently removed nothing (the plate's
     # volume rose by exactly the two rib blocks). modelToSketchSpace asks
     # the sketch for its own mapping instead of assuming one.
-    BORE_X0 = 1.0 * MM           # plane offset; ribs live at x 4.4..15.4
+    BORE_X0 = 1.0 * MM           # plane offset; ribs live at x 4.4..16.0
     BORE_LEN = 16.0 * MM         # sweep +X clear through both ribs (to 17.0;
     #                              was 14.0, which stopped at x 15.0 and would
     #                              have left 0.4 mm of the +X rib unbored once
@@ -779,13 +791,13 @@ def run(_context: str):
 
     # A cut that sweeps the wrong way, or lands off the ribs, removes nothing
     # and raises no error - the failure mode above. Check the volume actually
-    # removed against the closed form: per rib, RIB_T times the part of the
+    # removed against the closed form: per rib, RIB_W times the part of the
     # bore circle below the rib top, i.e. the full circle less the segment
     # standing proud of RIB_TOP. (The circle's bottom, CAP_Z - capR = 1.2, is
     # above the plate floor, so nothing else limits it.)
     d = RIB_TOP - CAP_Z                                   # 2.5
     seg = capR ** 2 * math.acos(d / capR) - d * math.sqrt(capR ** 2 - d ** 2)
-    want_cut = len(RIB_X) * RIB_T * (math.pi * capR ** 2 - seg)
+    want_cut = len(RIB_X) * RIB_W * (math.pi * capR ** 2 - seg)
     vol_before = plate_body.volume
     extrude(comp, sk.profiles.item(0), 0, BORE_LEN,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
@@ -803,7 +815,7 @@ def run(_context: str):
     print("cap cradle ok: ribs at x %s, bore r=%.2f at (y %.2f, z %.2f), "
           "arm %.2f, mouth %.2f at z %.2f (bore removed %.2f mm3)"
           % ([round(v * 10, 2) for v in RIB_X], capR * 10, CAP_Y * 10,
-             CAP_Z * 10, RIB_T * 10, mouth * 10, RIB_TOP * 10, cut * 1000))
+             CAP_Z * 10, RIB_W * 10, mouth * 10, RIB_TOP * 10, cut * 1000))
 
     # 11. Wire notches (2026-09-09). The jack's 5V/GND pair reaches the
     # XIAO's pads - user-confirmed on the long edge shared with D7, at the
@@ -877,22 +889,27 @@ def run(_context: str):
     # and D7 on the -Y edge, so any route that arrives from one side only
     # would strand one of them.
     #
-    # Cut full height rather than as a tunnel: no bridging, more room, and
-    # the bar simply becomes two segments that each still butt into a wall.
-    # The board bears on both, which is no worse than one continuous line -
-    # 4 mm of unsupported FR4 spans nothing. Placed mid-bay so both segments
-    # keep real length (8.3 mm at -X, 3.3 mm at +X).
-    CBL_X0, CBL_X1 = -11.0 * MM, -7.0 * MM
+    # Cut as a TUNNEL, 3.5 mm deep, FLUSH AGAINST THE +X WALL (both the
+    # user's calls, 2026-09-10; it was a full-height slot mid-bay first).
+    # Two gains over that. The bar keeps its full 15.6 mm of bearing on the
+    # PCB rear - the material above the tunnel still reaches PCB_REAR_Z and
+    # still butts into the wall - instead of becoming two segments. And the
+    # wires emerge hugging the +X wall, which is the direction they want:
+    # they run +Y along it to the step-4b notch and cross ABOVE the XIAO
+    # board there. 3.5 x 4.0 mm passes four ~1.5 mm wires stacked 2x2 with
+    # slack, and a 4 mm bridge prints without support.
+    CBL_X1 = rCx + bayW / 2 + 0.1 * MM     # 0.1 into the wall: no shared face
+    CBL_X0 = CBL_X1 - 4.1 * MM
+    CBL_Z1 = 3.5 * MM
     cbl_y, cbl_w = XBARS[0]
     sk = comp.sketches.add(comp.xYConstructionPlane)
     box(sk, CBL_X0, CBL_X1,
         cbl_y - cbl_w / 2 - 0.1 * MM, cbl_y + cbl_w / 2 + 0.1 * MM)
-    extrude(comp, sk.profiles.item(0), -0.01 * MM, PCB_REAR_Z + 0.01 * MM,
+    extrude(comp, sk.profiles.item(0), -0.01 * MM, CBL_Z1,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("crossbar A cable slot ok (x %.2f..%.2f, full height; bar left "
-          "as %.2f + %.2f mm segments)"
-          % (CBL_X0 * 10, CBL_X1 * 10,
-             (CBL_X0 - (rCx - bayW / 2)) * 10, ((rCx + bayW / 2) - CBL_X1) * 10))
+    print("crossbar A cable tunnel ok (x %.2f..%.2f, z 0..%.2f; bar keeps "
+          "full bearing above it)"
+          % (CBL_X0 * 10, CBL_X1 * 10, CBL_Z1 * 10))
 
     print("BackPlate bodies:", comp.bRepBodies.count)

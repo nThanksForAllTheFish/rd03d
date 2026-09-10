@@ -140,6 +140,25 @@ It cannot go in from the inside, and it must not be pre-soldered.
 in the +Y band, lead end toward +X. It snaps down past its equator; no lid
 feature holds it.
 
+**RD-03D connector cable (added 2026-09-10).** The connector sits in a pocket
+sealed on three sides by the two bay walls and by crossbar A, the rib that
+carries the board's rear face. Crossbar A is tunnelled 3.5 mm deep hard
+against the +X wall so the cable can get out:
+
+1. Plug the cable in, then feed the four wires through the tunnel under
+   crossbar A, hugging the +X wall.
+2. Run them +Y along that wall, under the radar board (there is 10.46 mm of
+   headroom), to the step-4b notch at |y| < 9.4.
+3. Cross the wall there. That notch is open from z 3 to the ceiling, i.e.
+   ABOVE the XIAO, whose top face is at 4.20 - so the wires land on top of
+   the board and both long edges are in reach. That matters: D6 is on the +Y
+   edge and D7 on the -Y edge, so a route arriving from one side would
+   strand one of them.
+
+Do this before clipping the radar board down. There is also a 2.15 mm notch
+in the -Y corner of the +X wall if you would rather take 5V/GND out to the
+-Y band, where the jack and capacitor already are.
+
 **Wire routes.**
 
 - Jack to XIAO: out of the collar, through the notch in the -Y fence wall at
