@@ -38,8 +38,9 @@ chamfer prints cleanly bed-side.
 ## Assembly
 
 Fit the USB-C power jack **first** — see the next section. It goes in from
-inside the case, and its wires have to reach the XIAO's pads, so doing it
-after the boards are clipped down means working around them.
+the **back face**, tail first, and it is soldered *after* it is seated, so
+you want the empty bay to work in: doing it after the boards are clipped
+down means holding an iron over them.
 
 1. Wire the boards (radar TX→D7, RX→D6, 5V, GND), then **press each board
    straight down until it clicks under its retention clips** — three for
@@ -103,19 +104,34 @@ to GND. Without them a modern USB-C charger never enables VBUS — but a
 USB-A-to-C cable works either way, because A ports always have VBUS live,
 which makes this failure very confusing to diagnose.
 
-**Assembly order:**
+**Assembly order — seat the jack from the BACK, and solder it afterwards.**
 
-1. Solder the two supply wires to the jack's VBUS and GND pads on the bench.
-   Do this before the jack goes anywhere near the case.
-2. Push the jack into the collar **from inside the case**, mouth first. It
-   stops when the metal shell wedges on the two 45 degree ramps, with the
-   mouth flush at the back face and about 6.4 mm of the body standing above
-   the floor. The tail pads stay exposed above the 4.5 mm collar.
-3. Plug a cable in and confirm it seats fully **before** gluing.
-4. Two dabs of epoxy in the collar. This is the only thing resisting
-   pull-out — the connector has no rearward-facing surface for a printed
-   feature to catch, so the ramps take the push-in load and the glue takes
-   the rest.
+The jack goes in the way a plug does: from outside, through the back face.
+It cannot go in from the inside, and it must not be pre-soldered.
+
+> **Why not from inside, mouth first?** The two seating ramps narrow the
+> collar bore to **1.82 mm** from z 3.38 upward, and the jack's metal shell
+> is **3.17 mm** thick. Pushing the shell down through that channel means
+> levering a 3.17 mm metal part against two 1.5 mm PETG collar walls — they
+> break before it passes. Only the thin PCB tail fits the 1.82 mm channel,
+> which is exactly what the ramps are for.
+
+1. **Seat the jack from the back face, tail first.** The PCB tail passes up
+   through the slot and out through the 1.82 mm channel between the ramps;
+   the metal shell follows into the full 3.42 mm slot and wedges to a stop
+   on the ramps, with the mouth flush at the back face. About 6.4 mm of the
+   body then stands above the interior floor, and the tail's solder pads
+   end up at z ≈ 6.42 — clear above the 4.5 mm collar, which is the whole
+   reason this order works.
+2. **Plug a cable in and confirm it bottoms out properly** — while the jack
+   is still free to be pushed back out and re-seated.
+3. **Then solder** the two supply wires to the tail's VBUS and GND pads.
+   They are standing exposed above the collar, so the iron reaches them
+   easily with the jack in place.
+4. **Then two dabs of epoxy** in the collar. This is the only thing
+   resisting pull-out — the connector has no rearward-facing surface for a
+   printed feature to catch, so the ramps take the push-in load and the glue
+   takes the rest.
 
 **Capacitor.** The 100 uF electrolytic lies on its side in the two-rib cradle
 in the +Y band, lead end toward +X. It snaps down past its equator; no lid
@@ -126,13 +142,24 @@ feature holds it.
 - Jack to XIAO: out of the collar, through the notch in the -Y fence wall at
   x 14.5..18.0, onto the XIAO's 5V and GND pads. There is a matching notch in
   the +Y wall if your board reads the other way round.
-- Capacitor to the 5V rail: the XIAO fence is open on +X, giving a full-height
-  channel at x 19.3..20.85 from the +Y band into the -Y band. Join at the jack
-  pads or at the XIAO pads, whichever is tidier.
+- Capacitor to the 5V rail: **over a fence bar, or through a wire notch.**
+  There is *no* channel round the +X end of the XIAO fence — both ±Y fence
+  bars run the full width of the plate, out to the edge at x 20.85. (Only the
+  *board* stops short, at x 19.23; the wall beside it does not.) So take the
+  leads either **over the top of a bar** — they are 5 mm tall in a 14 mm
+  cavity, leaving about 9 mm of headroom — or **through the ±Y wire notches
+  and across the bay above the XIAO**. Join at the jack pads or at the XIAO
+  pads, whichever is tidier.
 
-**Plug clearance.** A plug overmold wider than about 14 mm will foul a ball
-joint in the LEGO hole at (8.95, -12). Use a plain Technic pin in that hole,
-or a right-angle plug.
+**Plug clearance.** The constraint is the plug overmold's **thickness** — its
+short dimension, which runs along **Y**, across the slot's short axis. The
+slot is centred at y −19.0 and the shell's skirt puts an inner rim face at
+y −23.0 (at z −8), so an overmold thicker than about **8 mm** cannot reach the
+mouth. The overmold's *width* runs along the slot's long axis (X) and is
+unconstrained. Measure the plug **across its thin dimension**, not its wide
+one, and if it is over ~8 mm use a right-angle or slim plug.
+(There is no LEGO hole at (8.95, −12) — the x 8.95 column carries holes only
+at y ±4. The six centres are (0.95, ±12), (0.95, ±4) and (8.95, ±4).)
 
 ## Tweaking fit
 
@@ -230,6 +257,31 @@ jack, cradle, notches, clips and the absent shell notch with
   insertion force is about 1.4× the old one. Lip (0.60) and grab (0.34)
   are unchanged: 0.6 and 1.2 are what a 0.6 mm nozzle resolves cleanly, so
   a *smaller* lip would print worse, not better.
+- **Keeping the six Technic bores usable (2026-09-09, final review).** Two
+  separate features had crept over the LEGO holes at (0.95, ±12), both while
+  the *stated* clearance check only looked at the clip trenches:
+  - The capacitor cradle's ribs were at x 3.0 and 12.8. The x = 3.0 rib
+    (footprint x 2.40…3.60) sat over the bore, which reaches x 3.40 — a
+    1.00 mm overlap across 3.20 mm of y, roofing about 11 % of that bore's
+    interior mouth for the rib's full 8 mm height. A Technic pin pushed in
+    from the back would have bottomed out on it, and you would only have
+    found out after printing. The ribs moved to **x 5.0 and 14.8** — same
+    9.8 mm span, so the capacitor sits identically (just centred at x 9.9
+    instead of 7.9) — putting the rib edge 1.00 mm clear of the bore.
+  - The XIAO clip slots, once they were taken down to z = −1.5, passed
+    within **0.431 mm** of the same bore — thinner than a 0.6 mm nozzle can
+    lay down, so the slicer would simply have dropped the web. The slots
+    narrowed from 1.0 mm to **0.7 mm** (x 3.8…4.5 and 11.5…12.2), restoring
+    a 0.70 mm web. The finger is untouched at x 4.5…11.5, so lever, strain,
+    grab and insertion force are all exactly as before, and 0.7 mm still
+    clears the finger's 0.34 mm deflection with 0.36 mm to spare.
+
+  The −X rib now crosses the outboard +Y clip trench **in plan**
+  (x 4.40…5.60 vs 4.4…11.6, over y 11.25…11.85). That is deliberate and
+  harmless — the rib is z 0…8 and the trench z −1.5…0, so they never touch;
+  the rib's first layer just bridges a 1.2 × 0.6 mm patch over a 1.5 mm
+  slot. `90_verify.py` now probes all six bores (centre **and** ±1.5 mm in
+  x, at z = 0.5) so nothing can roof one again.
 - **Interior LEGO counterbores deleted (2026-09-09).** The six Technic
   bores keep their rear counterbore and rear entry chamfer but no longer
   have one on the inside — a pin only ever enters from the back — so the

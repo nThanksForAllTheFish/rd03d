@@ -554,10 +554,26 @@ def run(_context: str):
     X_SLOT_Z0 = X_TRENCH_Z0
     X_RAISE_Z0 = 4.5 * MM                        # inside the 5 mm wall
     X_THIN = 0.0
+    # SLOT WIDTH 0.7, NOT 1.0 (2026-09-09 fix, final review). Dropping
+    # X_SLOT_Z0 to -1.5 above pushed these slots into the plate BODY for the
+    # first time - before that they only ever cut the fence wall above z=0,
+    # where no LEGO bore reaches. At 1.0 mm wide the inboard slot's nearest
+    # corner (3.5, +/-10.66) sat 2.881 mm from the bore centre at
+    # (0.95, +/-12), i.e. 0.431 mm of PETG to the 2.45 mm bore wall - under
+    # what a 0.6 mm nozzle can resolve, so the slicer drops or merges it and
+    # the "web" is not printed at all. Pulling the inboard slot's outer edge
+    # 3.5 -> 3.8 (and mirroring 12.5 -> 12.2 so both slots stay equal) moves
+    # that corner to 3.149 mm out and restores a 0.700 mm web = one clean
+    # 0.6 mm extrusion with margin.
+    # Nothing about the spring changes: the FINGER is still x 4.5..11.5, so
+    # lever, strain and grab are untouched; a 0.7 mm gap still clears the
+    # finger's 0.34 mm deflection with 0.36 mm to spare; and the trenches at
+    # x 4.4..11.6 still overlap both slots (4.4..4.5 and 11.5..11.6), so the
+    # blade is free at its ends exactly as before.
     for sy in (-1, 1):
         clip(comp, plate_body, "y", sy * 10.65 * MM, sy * 9.15 * MM,
              4.5 * MM, 11.5 * MM,
-             [(3.5 * MM, 4.5 * MM), (11.5 * MM, 12.5 * MM)],
+             [(3.8 * MM, 4.5 * MM), (11.5 * MM, 12.2 * MM)],
              X_SLOT_Z0, X_RAISE_Z0, X_TOP_Z, X_LIP_Z, X_LIP, thin=X_THIN,
              label="xiao %sY" % ("+" if sy > 0 else "-"))
 
@@ -691,16 +707,47 @@ def run(_context: str):
     # Two rib blocks with the cap's cylinder bored through them: 1.2 mm of
     # arm at the equator (two clean extrusions on the 0.6 mm nozzle),
     # thicker below, and a 7.0 mm opening at the rib top (z=8.0) so the cap
-    # snaps down past its widest point. Rib x positions sit clear of the +Y
-    # clip trench at x 4.4..11.6. Lead end faces +X, where the XIAO fence is
-    # open, giving a full-height wire channel at x 19.3..20.85 through to
-    # the -Y band and the jack.
+    # snaps down past its widest point.
+    #
+    # RIB X POSITIONS - what they must clear, in priority order:
+    #
+    #   1. THE LEGO TECHNIC BORES (2026-09-09 fix, final review). The ribs
+    #      run y 11.25..22.25 at z 0..8, which crosses the y band of the
+    #      through-bores at (0.95, +/-12): radius 2.45 puts that bore at
+    #      x -1.50..3.40, y 9.55..14.45. The ribs were at x 3.0 and 12.8;
+    #      the x=3.0 rib's footprint (x 2.40..3.60) therefore overlapped
+    #      that bore by 1.00 mm in x over 3.20 mm in y and ROOFED about 11%
+    #      of the bore's interior mouth for the rib's full 8 mm height. A
+    #      Technic pin pushed in from the back would have bottomed out on
+    #      the rib - one of the six mount holes silently unusable, and only
+    #      discoverable after printing. Moved to x 5.0 and 14.8: same 9.8 mm
+    #      rib span (the cap sits identically, just centred at x 9.9 instead
+    #      of 7.9), and the -X rib's left edge is now x 4.40, a full 1.00 mm
+    #      clear of the bore edge at x 3.40. 90_verify.check_lego_bores_clear
+    #      now asserts this for all six bores so it cannot regress.
+    #
+    #   2. The +Y clip TRENCH at x 4.4..11.6, y 10.65..11.85, z -1.5..0.
+    #      The -X rib now overlaps this IN PLAN (rib x 4.40..5.60 vs trench
+    #      x 4.4..11.6, over y 11.25..11.85). That is HARMLESS - do not
+    #      "fix" it by moving the rib back. The rib occupies z 0..8.0 and
+    #      the trench z -1.5..0, so they never share space; the rib's first
+    #      layer simply bridges a 1.2 x 0.6 mm patch over a 1.5 mm deep
+    #      slot, which FDM does without noticing. Nor does it touch the clip
+    #      itself: the blade is at y 9.15..10.65, 0.6 mm from the rib, and
+    #      deflects only 0.34 mm.
+    #
+    # Lead end faces +X. There is NO through-channel past the XIAO fence
+    # there - the +/-Y fence bars run the full plate width to x 20.85 (only
+    # the BOARD stops at x 19.23). The cap's leads reach the -Y band either
+    # over the top of a fence bar (5 mm tall in a 14 mm cavity, so ~9 mm of
+    # headroom) or through the +/-Y wire notches and across the bay above
+    # the XIAO.
     capR = p(des, "capDia") / 2 + p(des, "capClear") / 2   # 4.3
     CAP_Y, CAP_Z = 16.75 * MM, 5.5 * MM
     RIB_T = 1.2 * MM
     RIB_R = capR + RIB_T                                   # 5.5
     RIB_TOP = CAP_Z + 2.5 * MM                             # 8.0 -> 7.0 mouth
-    RIB_X = (3.0 * MM, 12.8 * MM)
+    RIB_X = (5.0 * MM, 14.8 * MM)
 
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for rx in RIB_X:
@@ -727,8 +774,12 @@ def run(_context: str):
     # air below the plate, and the Cut silently removed nothing (the plate's
     # volume rose by exactly the two rib blocks). modelToSketchSpace asks
     # the sketch for its own mapping instead of assuming one.
-    BORE_X0 = 1.0 * MM           # plane offset; ribs live at x 2.4..13.4
-    BORE_LEN = 14.0 * MM         # sweep +X clear through both ribs
+    BORE_X0 = 1.0 * MM           # plane offset; ribs live at x 4.4..15.4
+    BORE_LEN = 16.0 * MM         # sweep +X clear through both ribs (to 17.0;
+    #                              was 14.0, which stopped at x 15.0 and would
+    #                              have left 0.4 mm of the +X rib unbored once
+    #                              the ribs moved +2 mm - the want_cut guard
+    #                              below would have caught it, loudly)
     pl_inp = comp.constructionPlanes.createInput()
     pl_inp.setByOffset(comp.yZConstructionPlane,
                        adsk.core.ValueInput.createByReal(BORE_X0))
