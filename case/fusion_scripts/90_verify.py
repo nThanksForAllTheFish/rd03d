@@ -211,25 +211,21 @@ def check_cap_cradle(plate):
     # check_lego_bores_clear.
 
 
-def check_fence_notches(plate):
-    """3.5 mm wide x 2.5 mm deep wire notches at x 14.5..18.0, both walls."""
+def check_fence_walls_continuous(plate):
+    """Both XIAO fence walls run unbroken past the clip finger.
+
+    Was check_fence_notches until 2026-09-10, asserting a wire notch at
+    x 14.5..18.0. The notches were deleted: with the clip's isolating slots
+    gone (02_backplate step 8b) the finger's stiffness comes from wall
+    continuity, so this now asserts the opposite of what it used to.
+    """
     for sy in (-1, 1):
         tag = "+Y" if sy > 0 else "-Y"
-        void(plate, 16.0, sy * 9.9, 4.0, "wire notch open " + tag)
-        void(plate, 16.0, sy * 9.9, 2.8, "wire notch open " + tag)
-        solid(plate, 16.0, sy * 9.9, 1.0, "wall below the notch " + tag)
-        solid(plate, 13.0, sy * 9.9, 4.0, "wall intact -X of the notch " + tag)
-        solid(plate, 19.5, sy * 9.9, 4.0, "wall intact +X of the notch " + tag)
+        for x in (13.0, 16.0, 19.5):
+            solid(plate, x, sy * 9.9, 4.0,
+                  "fence wall unbroken at x=%.1f %s" % (x, tag))
+        solid(plate, 16.0, sy * 9.9, 1.0, "fence wall solid to the floor " + tag)
         solid(plate, 8.0, sy * 9.9, 4.0, "clip finger untouched " + tag)
-
-
-def check_no_shell_notch(shell):
-    """The +X wall is continuous: the old notch spanned y +/-5.65, z -8..8."""
-    for z in (-6.0, -2.0, 2.0, 6.0):
-        solid(shell, 22.0, 0.0, z, "+X wall solid at z=%.1f" % z)
-    solid(shell, 22.0, 4.0, 0.0, "+X wall solid at y=4")
-    solid(shell, 22.0, -4.0, 0.0, "+X wall solid at y=-4")
-    void(shell, 19.0, 0.0, 7.0, "cavity still open inside the +X wall")
 
 
 def check_radar_cable_exit(plate):
@@ -278,7 +274,7 @@ def run(_context: str):
     check_lego_bores_clear(plate)
     check_usb_jack(plate)
     check_cap_cradle(plate)
-    check_fence_notches(plate)
+    check_fence_walls_continuous(plate)
     check_radar_cable_exit(plate)
     check_no_shell_notch(shell)
 

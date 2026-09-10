@@ -164,10 +164,18 @@ in the -Y corner of the +X wall if you would rather take 5V/GND out to the
 
 **Wire routes.**
 
-- Jack to XIAO: out of the collar, through the notch in the -Y fence wall at
-  x 14.5..18.0, onto the XIAO's 5V and GND pads. There is a matching notch in
-  the +Y wall if your board reads the other way round.
-- Capacitor to the 5V rail: **over a fence bar, or through a wire notch.**
+- Jack to XIAO: out of the collar and straight over the top of the -Y fence
+  bar onto the 5V and GND pads. The bar tops out at z 5.00 and the pads sit
+  at 4.20, so it is an 0.8 mm climb with ~9 mm of headroom to the shell.
+  (There were wire notches here until 2026-09-10; they were deleted because
+  the clip rework made wall continuity matter more than the 0.8 mm.)
+- **Solder on the top face only, and mind the clip lips.** The lips overhang
+  the board's ±Y edges by 0.34 mm with just 0.10 mm of clearance above it,
+  over x 4.5..11.5. A solder joint on an edge pad in that span will foul
+  one. The four pads you need are all outside it — 5V ≈ x 14.9, GND ≈ 12.4,
+  D6 and D7 ≈ −0.4 — but GND clears the finger's end by under a millimetre,
+  so check it before you commit to a fat joint.
+- Capacitor to the 5V rail: **over a fence bar.**
   There is *no* channel round the +X end of the XIAO fence — both ±Y fence
   bars run the full width of the plate, out to the edge at x 20.85. (Only the
   *board* stops short, at x 19.23; the wall beside it does not.) So take the
