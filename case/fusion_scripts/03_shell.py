@@ -134,13 +134,12 @@ def run(_context: str):
           "unused by the antenna zones." % (RADOME_Z0 * 10, intD * 10,
                                             winT * 10))
 
-    # 4: usb notch through +X wall, back rim z=-backT up to z=8mm
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, intW / 2 + wall / 2, 0, wall + 0.02, 11.3 * MM)
-    extrude(comp, sk.profiles.item(0), -backT, 8 * MM,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[shell_body])
-    print("usb notch ok")
+    # 4: (deleted 2026-09-09) the USB notch through the +X wall. The base
+    # jack in the back plate replaces it entirely, so the XIAO's own USB-C
+    # is no longer reachable with the case closed - serial console and USB
+    # reflash now need the lid unclipped. `usbClear` joins `tapeRecess` as a
+    # dead user parameter; both are left in place rather than re-running
+    # 01_setup.py, which resets user-tuned values.
 
     # 4b: radar retention ribs (thin-wall fix 2026-09-07). The plate's old
     # 0.6 mm +/-Y fence segments were unprintable on a 0.6 mm nozzle, so
@@ -316,8 +315,9 @@ def run(_context: str):
     # Outer-perimeter edge selector at a z level: straight edges lying on the
     # outer faces (|x|=ox or |y|=oy) plus the corner-fillet arcs. The window
     # pocket is on the interior face and never touches the outer boundary.
-    # At z_top the boundary is one clean closed loop (4 straights + 4 arcs
-    # = 8 edges); at z_back the USB notch splits the +X segment (9 edges).
+    # At both z_top and z_back the boundary is one clean closed loop
+    # (4 straights + 4 arcs = 8 edges). Before 2026-09-09 the USB notch
+    # split the +X segment at z_back, giving 9.
     def perimeter_edges(zlev):
         found = []
         for e in shell_body.edges:
@@ -359,62 +359,10 @@ def run(_context: str):
     # 6c. back rim outer edge fillet.
     rim = perimeter_edges(z_back)
     print("back rim edges found:", len(rim))
-    if not 8 <= len(rim) <= 10:
-        raise RuntimeError("back rim edge count out of range: %d" % len(rim))
+    if len(rim) != 8:
+        raise RuntimeError("back rim should be 8 edges with the USB notch "
+                           "gone, found %d" % len(rim))
     add_fillet(rim, soft)
     print("rim fillet ok (r=%.2f mm on %d edges)" % (soft * 10, len(rim)))
-
-    # 6d. USB-notch outer-edge soften: the two vertical edges where the notch
-    # meets the outer +X face (x=ox, y=+/-5.65) and the notch's outer top
-    # edge (x=ox, z=8, spanning y). Comfort feature - skip (and report) any
-    # edge the kernel refuses rather than failing the build.
-    usb_y = 11.3 / 2 * MM
-
-    def usb_targets():
-        vs, ts = [], []
-        for e in shell_body.edges:
-            g = e.geometry
-            if not isinstance(g, adsk.core.Line3D):
-                continue
-            d = line_dir(g)
-            mx, my, mz = mid(g)
-            if abs(mx - ox) > EPS:
-                continue
-            if abs(abs(d.z) - 1) < 1e-6 and abs(abs(my) - usb_y) < EPS:
-                vs.append(e)
-            elif (abs(abs(d.y) - 1) < 1e-6 and abs(mz - 8 * MM) < EPS
-                  and abs(my) < EPS):
-                ts.append(e)
-        return vs, ts
-
-    vs, ts = usb_targets()
-    total = len(vs) + len(ts)
-    print("usb notch edges found: %d vertical + %d top" % (len(vs), len(ts)))
-    done = 0
-    try:
-        add_fillet(vs + ts, soft)
-        done = total
-    except Exception as exc:
-        print("usb group fillet refused (%s); retrying per-edge" % exc)
-        failed = set()
-        while True:  # re-scan after each success: topology changes
-            vs, ts = usb_targets()
-            nxt = None
-            for e in vs + ts:
-                key = tuple(round(v, 3) for v in mid(e.geometry))
-                if key not in failed:
-                    nxt = (e, key)
-                    break
-            if nxt is None:
-                break
-            try:
-                add_fillet([nxt[0]], soft)
-                done += 1
-            except Exception as exc2:
-                failed.add(nxt[1])
-                print("USB EDGE SKIPPED at mm",
-                      tuple(round(v * 10, 2) for v in nxt[1]), ":", exc2)
-    print("usb notch soften: %d/%d edges filleted (r=%.2f mm)"
-          % (done, total, soft * 10))
 
     print("FrontShell bodies:", comp.bRepBodies.count)

@@ -158,6 +158,15 @@ def check_fence_notches(plate):
         solid(plate, 8.0, sy * 9.9, 4.0, "clip finger untouched " + tag)
 
 
+def check_no_shell_notch(shell):
+    """The +X wall is continuous: the old notch spanned y +/-5.65, z -8..8."""
+    for z in (-6.0, -2.0, 2.0, 6.0):
+        solid(shell, 22.0, 0.0, z, "+X wall solid at z=%.1f" % z)
+    solid(shell, 22.0, 4.0, 0.0, "+X wall solid at y=4")
+    solid(shell, 22.0, -4.0, 0.0, "+X wall solid at y=-4")
+    void(shell, 19.0, 0.0, 7.0, "cavity still open inside the +X wall")
+
+
 def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -173,6 +182,7 @@ def run(_context: str):
     check_usb_jack(plate)
     check_cap_cradle(plate)
     check_fence_notches(plate)
+    check_no_shell_notch(shell)
 
     if FAILURES:
         for f in FAILURES:
