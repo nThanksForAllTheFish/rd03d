@@ -9,14 +9,18 @@ The living design is in your Fusion; save it to your own project.
 - `rd03d_case_back.stl` — back plate (8 mm thick): radar bay left, XIAO
   posts right, with five cantilever retention clips (three on the radar's
   ±X fence walls, one on each of the XIAO's ±Y walls);
-  six LEGO Technic pin holes (8 mm pitch, counterbored both faces)
-  through the back for pin/ball-pin mounting. The rear face is otherwise
-  fully flat (great first layer; tape sticks directly to it).
+  six LEGO Technic pin holes (8 mm pitch, counterbored on the **rear face
+  only**) through the back for pin/ball-pin mounting; and a **USB-C power
+  jack**, with a capacitor cradle and wire notches inside. Apart from the
+  jack's mouth — which sits flush in it — the rear face is flat (great
+  first layer; tape sticks directly to it), and so is the interior floor,
+  which carries no counterbores.
 - `rd03d_case_shell.stl` — front shell: a radome step that brings the
   front wall down to 1.2 mm in front of the antennas (solid 3.1 mm of
-  plastic there, exterior face still perfectly flat), USB-C notch, a
-  hold-down boss over the XIAO, four snap bumps engage the plate's edge
-  grooves.
+  plastic there, exterior face still perfectly flat), a hold-down boss
+  over the XIAO, four snap bumps engage the plate's edge grooves. Its
+  side walls are unbroken: the old side USB notch is **gone** — see the
+  USB-C base jack section below.
 
 ## Printing
 
@@ -33,13 +37,19 @@ chamfer prints cleanly bed-side.
 
 ## Assembly
 
+Fit the USB-C power jack **first** — see the next section. It goes in from
+inside the case, and its wires have to reach the XIAO's pads, so doing it
+after the boards are clipped down means working around them.
+
 1. Wire the boards (radar TX→D7, RX→D6, 5V, GND), then **press each board
    straight down until it clicks under its retention clips** — three for
    the radar, two for the XIAO. Each clip's tapered face cams open as the
    board's edge goes past and springs back over it; to remove a board,
    push the clips outward with a fingernail. Seat the RD-03D patch-side
-   out, the XIAO on its posts with USB-C toward the notch. The radar is
-   still Y-loose until the shell closes; that's normal.
+   out, the XIAO on its posts with its own USB-C connector at the +X end
+   (that port no longer reaches daylight — power comes in through the base
+   jack instead). The radar is still Y-loose until the shell closes;
+   that's normal.
    - **Insertion tip:** don't press a board down flat. Tuck one long edge
      under its clip(s) first, then rock/press the opposite edge down —
      you then only flex the clips on one side at a time, which roughly
@@ -58,23 +68,71 @@ chamfer prints cleanly bed-side.
      these **do keep their relief slots**. Their lip is only 4.3 mm up,
      and wall stiffness scales as (thickness/length)³ — a slot-free
      1.5 mm wall at that length would be roughly 22× stiffer than the
-     thinned, slotted finger and would need of order 65 N to move
-     0.2 mm, i.e. you would flex the PCB before the wall budged. They are
-     deliberately lighter — the XIAO's top face is only 4.2 mm up, so the
-     finger is short and is thinned to 1.0 mm to keep the bending strain
-     survivable. They locate the board; the 7 × 7 mm boss on the inside of
+     isolated finger and would need of order 65 N to move 0.2 mm, i.e.
+     you would flex the PCB before the wall budged. The finger itself is
+     the wall's full 1.5 mm — a 1.0 mm finger will not print on a 0.6 mm
+     nozzle — and the bending strain is kept survivable by lengthening
+     the lever rather than thinning it: a 1.2 mm trench either side sinks
+     the cantilever root to 1.5 mm *below* the interior floor. They are
+     still the light pair of the five. They locate the board; the
+     7 × 7 mm boss on the inside of
      the shell's front wall, which comes down onto the XIAO's RF shield
      can, is what actually backs them up once the lid is on.
    The radar lands on two crossbars that bear on the bare PCB, in the two
    component-free bands across the board's back — its 5-pin connector
    hangs free in the space between them, so don't force the board down
    onto anything.
-2. Snap the shell on (bumps click into the plate grooves). Unclip with a
-   fingernail in the USB notch.
+2. Snap the shell on (bumps click into the plate grooves). There is no
+   longer a USB notch to hook a fingernail into, so to get the lid back
+   off, work a thin plastic spudger or guitar pick into the parting seam
+   at a corner and walk it along until the bumps let go.
 3. Mounting: push Technic pins / ball-pins into the six back holes
    (8 mm LEGO pitch: 1×4 column + 1×2 column); a ball-and-socket arm
    gives adjustable aim. Or stick VHB tape directly to the flat back
    if you prefer adhesive mounting.
+
+## USB-C base jack (added 2026-09-09)
+
+Power comes in through a USB-C jack in the back plate — the LEGO-mount face.
+The XIAO's own USB-C is **no longer reachable with the case closed**: the
+shell's side notch is gone. Serial console and USB reflash need the lid
+unclipped; OTA over WiFi is unaffected.
+
+**Fit the CC pulldowns first.** The jack needs 5.1 kOhm from CC1 and from CC2
+to GND. Without them a modern USB-C charger never enables VBUS — but a
+USB-A-to-C cable works either way, because A ports always have VBUS live,
+which makes this failure very confusing to diagnose.
+
+**Assembly order:**
+
+1. Solder the two supply wires to the jack's VBUS and GND pads on the bench.
+   Do this before the jack goes anywhere near the case.
+2. Push the jack into the collar **from inside the case**, mouth first. It
+   stops when the metal shell wedges on the two 45 degree ramps, with the
+   mouth flush at the back face and about 6.4 mm of the body standing above
+   the floor. The tail pads stay exposed above the 4.5 mm collar.
+3. Plug a cable in and confirm it seats fully **before** gluing.
+4. Two dabs of epoxy in the collar. This is the only thing resisting
+   pull-out — the connector has no rearward-facing surface for a printed
+   feature to catch, so the ramps take the push-in load and the glue takes
+   the rest.
+
+**Capacitor.** The 100 uF electrolytic lies on its side in the two-rib cradle
+in the +Y band, lead end toward +X. It snaps down past its equator; no lid
+feature holds it.
+
+**Wire routes.**
+
+- Jack to XIAO: out of the collar, through the notch in the -Y fence wall at
+  x 14.5..18.0, onto the XIAO's 5V and GND pads. There is a matching notch in
+  the +Y wall if your board reads the other way round.
+- Capacitor to the 5V rail: the XIAO fence is open on +X, giving a full-height
+  channel at x 19.3..20.85 from the +Y band into the -Y band. Join at the jack
+  pads or at the XIAO pads, whichever is tidier.
+
+**Plug clearance.** A plug overmold wider than about 14 mm will foul a ball
+joint in the LEGO hole at (8.95, -12). Use a plain Technic pin in that hole,
+or a right-angle plug.
 
 ## Tweaking fit
 
@@ -86,8 +144,13 @@ The retention clips and the radome step are local constants inside
 `fusion_scripts/02_backplate.py` and `03_shell.py` (grab amounts, lip
 heights, `RADOME_Z0`), not user parameters — edit them there and re-run
 those two scripts.
+The eight `usbJack*` / `cap*` parameters are created by `02_backplate.py`,
+not by `01_setup.py`, so they only exist once that script has run.
 Re-export STLs after edits (File → 3D Print, or re-run
 `fusion_scripts/05_export.py` via `run_fusion.py`).
+`fusion_scripts/90_verify.py` is a read-only probe harness that asserts the
+jack, cradle, notches, clips and the absent shell notch with
+`pointContainment`; run it after any change and expect `VERIFY OK`.
 
 ## Design notes
 
@@ -137,11 +200,11 @@ Re-export STLs after edits (File → 3D Print, or re-run
   permanently strained PETG finger would creep. Radar clips are three
   7 mm lip bands on the full-thickness (1.5 mm) fence walls, tops at
   12.50 (−X, under the shell's 14.00 IC band) and 12.30 (both +X, under
-  the 12.90 radome zones); XIAO fingers are 7 mm wide, thinned to 1.0 mm,
-  slotted from z = 0, which is why their grab is 0.34 mm rather than
-  0.60 mm. Insertion deflection is ~0.6 mm (radar) and ~0.34 mm (XIAO,
-  ≈3 % surface strain — the reason for PETG and for keeping the grab
-  small). Each lip's 0.6–0.85 mm flat underside is a small unsupported
+  the 12.90 radome zones); XIAO fingers are 7 mm wide at the wall's full
+  1.5 mm, slotted from z = −1.5, which is why their grab is 0.34 mm rather
+  than 0.60 mm. Insertion deflection is ~0.6 mm (radar) and ~0.34 mm
+  (XIAO, ≈2.3 % surface strain — the reason for PETG and for keeping the
+  grab small). Each lip's 0.6–0.85 mm flat underside is a small unsupported
   overhang printing back-face-down; that is expected and bridges fine at
   0.2 mm layers.
 - **Why the radar clips have no relief slots but the XIAO clips do
@@ -153,10 +216,24 @@ Re-export STLs after edits (File → 3D Print, or re-run
   isolate each finger were pure cost: they cut into the wall that
   restrains the radar board sideways. Removing them also freed the
   budget for a third clip. The XIAO lip is only 4.3 mm up. Stiffness
-  goes as t³/L³, so the same 1.5 mm wall at 4.3 mm is ≈22× stiffer than
-  the thinned+slotted finger: ~65 N for 0.2 mm of travel. There the
-  slots and the 1.0 mm thinning are what make the clip a spring at all,
-  and they stay.
+  goes as t³/L³, so the same 1.5 mm wall on a 4.3 mm lever is ≈22×
+  stiffer than the isolated finger: ~65 N for 0.2 mm of travel. There the
+  slots are what make the clip a spring at all, and they stay.
+- **XIAO clip rework (2026-09-09).** The finger went from 1.0 mm back to
+  the wall's own 1.5 mm — a 1.0 mm wall does not print on the 0.6 mm
+  nozzle this case is designed around — and the strain that thinning used
+  to buy is now bought by a longer lever instead: two 1.2 × 1.5 mm
+  trenches drop the cantilever root to z = −1.5, taking the lever from
+  4.30 to 5.80 mm. Peak strain 3·t·d/(2·L²) works out at 2.3 %, down from
+  2.8 % at the old 1.0/4.30 and well clear of the 4.1 % a 1.5 mm finger
+  would have seen on the old lever. Spring rate goes as t³/L³, so the
+  insertion force is about 1.4× the old one. Lip (0.60) and grab (0.34)
+  are unchanged: 0.6 and 1.2 are what a 0.6 mm nozzle resolves cleanly, so
+  a *smaller* lip would print worse, not better.
+- **Interior LEGO counterbores deleted (2026-09-09).** The six Technic
+  bores keep their rear counterbore and rear entry chamfer but no longer
+  have one on the inside — a pin only ever enters from the back — so the
+  interior floor is flat and the bays gained a little usable depth.
 - Caution: re-running `fusion_scripts/01_setup.py` resets ALL user
   parameters to the repo defaults, overwriting any tuning you did in
   Fusion's Change Parameters dialog.
