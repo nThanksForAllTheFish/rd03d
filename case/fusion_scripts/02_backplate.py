@@ -500,31 +500,59 @@ def run(_context: str):
 
     # 8b. XIAO clips - one per +/-Y fence wall, 7 mm finger at x 4.5..11.5.
     # 2026-09-09: the change request also proposed dropping THESE slots.
-    # Declined on the numbers (see the stiffness comparison in 8a): with a
-    # 4.3 mm lever a slot-free 1.5 mm wall is ~22x stiffer than this
-    # thinned, slotted finger and would take ~65 N to move 0.2 mm. The
-    # slots, the 1.0 mm thinning and the 0.34 mm grab all stay as built.
-    # The XIAO's top face is only 4.2 mm above the plate, so the lever is
-    # short; the finger is therefore THINNED to 1.0 mm (0.5 mm off the wall's
-    # OUTER face, inner face stays at +/-9.15) and the grab is smaller, to
-    # keep bending strain away from PETG's yield. Slots run to the plate
-    # floor (z=0) so the finger gets its full 4.3 mm of lever - at a
-    # 0.34 mm deflection that is ~2.5% strain vs PETG's ~4-5% yield. Wall
-    # raised locally to 5.6, lip underside 4.30 = PCB top 4.20 + float,
-    # projecting 0.60 -> lip inner edges y +/-8.55 vs board edges +/-8.89 =
-    # 0.34 mm of grab per side.
+    # Declined on the numbers (see the stiffness comparison in 8a): a
+    # slot-free 1.5 mm wall on this short a lever is far stiffer than the
+    # slotted finger and would take far more force to move 0.2 mm. The
+    # slots stay. The XIAO's top face is only 4.2 mm above the plate, so
+    # the lever is inherently short; rather than thin the finger to keep
+    # strain down, the cantilever root is now dropped 1.5 mm below the
+    # plate floor by trenches either side of the finger (see step 8c
+    # below), which lengthens the lever instead. Wall raised locally to
+    # 5.6, lip underside 4.30 = PCB top 4.20 + float, projecting 0.60 ->
+    # lip inner edges y +/-8.55 vs board edges +/-8.89 = 0.34 mm of grab
+    # per side.
     XIAO_PCB_TOP_Z = 4.20 * MM
     X_LIP_Z = XIAO_PCB_TOP_Z + LIP_FLOAT         # 4.30
     X_TOP_Z = 5.60 * MM
     X_LIP = 0.60 * MM
-    X_SLOT_Z0 = 0.0
+    # 2026-09-09: finger taken to the wall's own 1.5 mm (a 1.0 mm wall does
+    # not print on the user's 0.6 mm nozzle), and the root dropped 1.5 mm
+    # into the plate by the trenches below so the lever grows 4.30 -> 5.80
+    # mm. Peak strain 3*t*d/(2*L^2) = 3*1.5*0.34/(2*5.8^2) = 2.3%, down from
+    # 2.8% at 1.0/4.30 and well clear of the 4.1% a 1.5 mm finger would see
+    # on the old lever. Spring rate goes as t^3/L^3 -> 1.4x the old force.
+    # The lip stays at 0.60 mm: a 0.6 mm nozzle resolves 0.6 and 1.2, so a
+    # smaller lip would print worse, not better.
+    X_TRENCH_Z0 = -1.5 * MM
+    X_SLOT_Z0 = X_TRENCH_Z0
     X_RAISE_Z0 = 4.5 * MM                        # inside the 5 mm wall
-    X_THIN = 0.5 * MM
+    X_THIN = 0.0
     for sy in (-1, 1):
         clip(comp, plate_body, "y", sy * 10.65 * MM, sy * 9.15 * MM,
              4.5 * MM, 11.5 * MM,
              [(3.5 * MM, 4.5 * MM), (11.5 * MM, 12.5 * MM)],
              X_SLOT_Z0, X_RAISE_Z0, X_TOP_Z, X_LIP_Z, X_LIP, thin=X_THIN,
              label="xiao %sY" % ("+" if sy > 0 else "-"))
+
+    # 8c. Clip-root trenches. Free the finger below the plate floor so its
+    # cantilever root sits at X_TRENCH_Z0 instead of z=0. Spans x 4.4..11.6
+    # (0.1 mm into each isolating slot, so no coincident faces), 1.2 mm wide
+    # - a void, not a wall, so the 0.6 mm nozzle is not a constraint. Clear
+    # of the snap pockets (+/-X edges, y +/-12) and of every LEGO bore: the
+    # x 8.95 column only has holes at y +/-4, and the x 0.95 column lies
+    # outside x 4.4..11.6.
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        box(sk, 4.4 * MM, 11.6 * MM, sy * 7.95 * MM, sy * 9.15 * MM)
+        box(sk, 4.4 * MM, 11.6 * MM, sy * 10.65 * MM, sy * 11.85 * MM)
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 4:
+        raise RuntimeError("expected 4 clip-trench profiles, found %d"
+                           % profs.count)
+    extrude(comp, profs, X_TRENCH_Z0, 0,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("xiao clip trenches ok (x 4.4..11.6, 1.2 mm wide, to z %.2f)"
+          % (X_TRENCH_Z0 * 10))
 
     print("BackPlate bodies:", comp.bRepBodies.count)
