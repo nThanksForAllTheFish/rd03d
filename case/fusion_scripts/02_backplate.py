@@ -889,27 +889,38 @@ def run(_context: str):
     # and D7 on the -Y edge, so any route that arrives from one side only
     # would strand one of them.
     #
-    # Cut as a TUNNEL, 3.5 mm deep, FLUSH AGAINST THE +X WALL (both the
-    # user's calls, 2026-09-10; it was a full-height slot mid-bay first).
-    # Two gains over that. The bar keeps its full 15.6 mm of bearing on the
-    # PCB rear - the material above the tunnel still reaches PCB_REAR_Z and
-    # still butts into the wall - instead of becoming two segments. And the
-    # wires emerge hugging the +X wall, which is the direction they want:
-    # they run +Y along it to the step-4b notch and cross ABOVE the XIAO
-    # board there. 3.5 x 4.0 mm passes four ~1.5 mm wires stacked 2x2 with
-    # slack, and a 4 mm bridge prints without support.
+    # A 4.0 x 3.5 mm notch in the TOP of the bar, FLUSH AGAINST THE +X WALL.
+    # Three of the user's calls, in order (2026-09-10): it began as a
+    # full-height slot mid-bay, became a 3.5 mm tunnel at the base, then
+    # moved to the top.
+    #
+    # Top-opening is the one that prints with no support at all - nothing
+    # spans the gap, the bar simply stops at CBL_Z0 - whereas a base tunnel
+    # leaves a 4 mm bridge. It also suits the cable better: the connector's
+    # underside is at z 6.70, so wires leaving it stay at that height and run
+    # straight through instead of diving to the floor and climbing back.
+    #
+    # Cost, stated plainly: the notch takes 4.0 mm out of the bar's 15.6 mm
+    # bearing line on the PCB rear, leaving 11.6 mm on the -X side. The board
+    # is still carried at two y stations (this bar and crossbar B) and held
+    # down by all three clips and the lid, so the offset does not let it rock.
+    #
+    # Flush to the wall means the wires emerge already hugging the surface
+    # they run +Y along, to the step-4b notch, where they cross ABOVE the
+    # XIAO board - the only crossing that reaches both its long edges.
     CBL_X1 = rCx + bayW / 2 + 0.1 * MM     # 0.1 into the wall: no shared face
     CBL_X0 = CBL_X1 - 4.1 * MM
-    CBL_Z1 = 3.5 * MM
+    CBL_Z0 = PCB_REAR_Z - 3.5 * MM         # 6.96
     cbl_y, cbl_w = XBARS[0]
     sk = comp.sketches.add(comp.xYConstructionPlane)
     box(sk, CBL_X0, CBL_X1,
         cbl_y - cbl_w / 2 - 0.1 * MM, cbl_y + cbl_w / 2 + 0.1 * MM)
-    extrude(comp, sk.profiles.item(0), -0.01 * MM, CBL_Z1,
+    extrude(comp, sk.profiles.item(0), CBL_Z0, PCB_REAR_Z + 0.01 * MM,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("crossbar A cable tunnel ok (x %.2f..%.2f, z 0..%.2f; bar keeps "
-          "full bearing above it)"
-          % (CBL_X0 * 10, CBL_X1 * 10, CBL_Z1 * 10))
+    print("crossbar A cable notch ok (x %.2f..%.2f, z %.2f..%.2f, open at "
+          "the top - no bridge; %.1f mm of bearing line left)"
+          % (CBL_X0 * 10, CBL_X1 * 10, CBL_Z0 * 10, PCB_REAR_Z * 10,
+             (CBL_X0 - (rCx - bayW / 2)) * 10))
 
     print("BackPlate bodies:", comp.bRepBodies.count)

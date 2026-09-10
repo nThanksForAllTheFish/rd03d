@@ -249,10 +249,11 @@ def check_radar_cable_exit(plate):
     # crossbar A is slotted so the pocket opens into the bay under the board
     # crossbar A is tunnelled (not severed) hard against the +X wall, so the
     # bar still bears on the PCB across its full width
-    void(plate, -5.6, -12.0, 1.0, "crossbar A cable tunnel open")
-    void(plate, -4.0, -12.0, 2.5, "tunnel runs right up to the +X wall")
-    solid(plate, -5.6, -12.0, 6.0, "crossbar A bridges over the tunnel")
-    solid(plate, -5.6, -12.0, 10.0, "crossbar A still reaches the PCB rear")
+    void(plate, -5.6, -12.0, 8.0, "crossbar A cable notch open")
+    void(plate, -4.0, -12.0, 9.0, "notch runs right up to the +X wall")
+    solid(plate, -5.6, -12.0, 6.0, "bar solid below the notch (no bridge)")
+    solid(plate, -5.6, -12.0, 1.0, "bar solid to the floor under the notch")
+    solid(plate, -15.0, -12.0, 10.0, "bar still reaches the PCB rear at -X")
     solid(plate, -15.0, -12.0, 5.0, "crossbar A untouched away from the tunnel")
     solid(plate, -9.0, -12.0, 1.0, "crossbar A solid -X of the tunnel")
     # step-4b notch is open above the XIAO board so wires reach both edges

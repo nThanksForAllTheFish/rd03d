@@ -142,11 +142,14 @@ feature holds it.
 
 **RD-03D connector cable (added 2026-09-10).** The connector sits in a pocket
 sealed on three sides by the two bay walls and by crossbar A, the rib that
-carries the board's rear face. Crossbar A is tunnelled 3.5 mm deep hard
-against the +X wall so the cable can get out:
+carries the board's rear face. Crossbar A has a 4.0 x 3.5 mm notch in its
+TOP, hard against the +X wall, so the cable can get out:
 
-1. Plug the cable in, then feed the four wires through the tunnel under
-   crossbar A, hugging the +X wall.
+1. Plug the cable in, then lay the four wires through the notch in the top of
+   crossbar A, hugging the +X wall. They stay at connector height (its
+   underside is z 6.70) rather than diving to the floor, and once the radar
+   board is clipped down they are captured between the notch floor and the
+   board's rear face, so they cannot wander.
 2. Run them +Y along that wall, under the radar board (there is 10.46 mm of
    headroom), to the step-4b notch at |y| < 9.4.
 3. Cross the wall there. That notch is open from z 3 to the ceiling, i.e.
