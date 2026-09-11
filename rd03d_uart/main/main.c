@@ -7,7 +7,9 @@
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 
+#if CONFIG_RD03D_ENABLE_MQTT
 #include "mqtt_pub.h"
+#endif
 #include "ota_update.h"
 #include "rd03d.h"
 #include "web_server.h"
@@ -125,7 +127,9 @@ void app_main(void)
     web_server_start();
     ota_update_register(web_server_handle());
     xTaskCreate(ota_validation_task, "ota_valid", 3072, NULL, 5, NULL);
+#if CONFIG_RD03D_ENABLE_MQTT
     mqtt_pub_start();
+#endif
 
     rd03d_parser_t parser;
     rd03d_parser_init(&parser);
@@ -141,7 +145,9 @@ void app_main(void)
                 print_frame(&frame);
                 web_server_send_frame(&frame, parser.dropped_bytes,
                                       parser.bad_frames);
+#if CONFIG_RD03D_ENABLE_MQTT
                 mqtt_pub_frame(&frame);
+#endif
             }
         }
         if (xTaskGetTickCount() - last_stats >= pdMS_TO_TICKS(STATS_PERIOD_MS)) {
