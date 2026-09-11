@@ -19,7 +19,7 @@
 5. Two build trees, never mixed:
    - station: `idf.py build` → `build/`, `sdkconfig`
    - AP: `idf.py -B build.ap -D SDKCONFIG=sdkconfig.ap build` → `build.ap/`, `sdkconfig.ap`
-6. The board is a Seeed XIAO ESP32-C6 on `/dev/cu.usbmodem1101`. Flash with full `idf.py flash`, never `app-flash` alone — on a board that has taken OTA updates, `app-flash` writes the image but the bootloader keeps booting the old slot unless otadata is erased too.
+6. The board is a Seeed XIAO ESP32-C6. **Discover its port, never assume it** — boards enumerate differently, and the assembled node has appeared as `/dev/cu.usbmodem1101` while the prototype appears as `/dev/cu.usbmodem101`. Find it with `ls /dev/cu.* | grep -i usbmodem`. Flash with full `idf.py flash`, never `app-flash` alone — on a board that has taken OTA updates, `app-flash` writes the image but the bootloader keeps booting the old slot unless otadata is erased too.
 
 **Host tests** (unaffected by this work, but run them to prove it):
 
@@ -712,13 +712,18 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 Confirm the board is present first:
 
 ```bash
-ls -la /dev/cu.usbmodem* 2>/dev/null || echo "NO BOARD - ask the user to plug in the prototype XIAO"
+PORT=$(ls /dev/cu.* 2>/dev/null | grep -i usbmodem | head -1); echo "PORT=$PORT"; test -n "$PORT" || echo "NO BOARD - ask the user to plug in the prototype XIAO"
 ```
+
+Export that `PORT` and use it in both commands below. Do not hardcode a port
+name: the assembled node has appeared as `usbmodem1101`, the prototype as
+`usbmodem101`, and flashing the wrong one is how a working node gets
+overwritten.
 
 Then flash. Full `flash`, never `app-flash`:
 
 ```bash
-cd /path/to/rd03d/rd03d_uart && source ~/esp/esp-idf-v5.5/export.sh >/dev/null 2>&1 && idf.py -B build.ap -D SDKCONFIG=sdkconfig.ap -p /dev/cu.usbmodem1101 flash 2>&1 | tail -8
+cd /path/to/rd03d/rd03d_uart && source ~/esp/esp-idf-v5.5/export.sh >/dev/null 2>&1 && idf.py -B build.ap -D SDKCONFIG=sdkconfig.ap -p "$PORT" flash 2>&1 | tail -8
 ```
 
 Expected: `Hash of data verified.` for each region and `Done`.
@@ -727,8 +732,8 @@ Expected: `Hash of data verified.` for each region and `Done`.
 
 ```bash
 cd /path/to/rd03d/rd03d_uart && source ~/esp/esp-idf-v5.5/export.sh >/dev/null 2>&1 && python3 -c "
-import serial, time
-s = serial.Serial('/dev/cu.usbmodem1101', 115200, timeout=1)
+import serial, time, os
+s = serial.Serial(os.environ['PORT'], 115200, timeout=1)
 end = time.time() + 20
 while time.time() < end:
     l = s.readline()
