@@ -313,7 +313,8 @@ s += ('\nCONFIG_RD03D_AP_SSID="rd03d-radar"\n'
 io.open(p, "w", encoding="utf-8").write(s)
 print("sdkconfig.ap switched to AP mode")
 PY
-echo "AP SSID: rd03d-radar"; echo "AP password: $PSK"```
+echo "AP SSID: rd03d-radar"; echo "AP password: $PSK"
+```
 
 Record the SSID and password for the user in your report. **Do not commit them anywhere** — `sdkconfig.ap` is gitignored precisely so they stay local.
 
