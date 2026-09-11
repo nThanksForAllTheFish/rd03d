@@ -77,7 +77,7 @@ static bool resolve_broker_uri(char *uri, size_t uri_len)
 static void mqtt_connect_task(void *arg)
 {
     (void)arg;
-    while (!wifi_link_has_ip()) {
+    while (!wifi_link_is_up()) {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 

@@ -74,7 +74,7 @@ static void ota_validation_task(void *arg)
     TickType_t deadline =
         xTaskGetTickCount() + pdMS_TO_TICKS(OTA_VALID_DEADLINE_MS);
     while ((int32_t)(deadline - xTaskGetTickCount()) > 0) {
-        if (wifi_link_has_ip() && web_server_handle() != NULL) {
+        if (wifi_link_is_up() && web_server_handle() != NULL) {
             ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
             ESP_LOGI(TAG, "firmware validated (WiFi + web server up)");
             vTaskDelete(NULL);
@@ -82,7 +82,7 @@ static void ota_validation_task(void *arg)
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
-    if (wifi_link_has_ip() && web_server_handle() != NULL) {
+    if (wifi_link_is_up() && web_server_handle() != NULL) {
         ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
         ESP_LOGI(TAG, "firmware validated (WiFi + web server up)");
         vTaskDelete(NULL);
