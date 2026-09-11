@@ -545,9 +545,27 @@ Expected: a compile error quoting `SoftAP password must be at least 8 characters
 cd /path/to/rd03d/rd03d_uart && cp /tmp/sdkconfig.ap.bak sdkconfig.ap && rm /tmp/sdkconfig.ap.bak && source ~/esp/esp-idf-v5.5/export.sh >/dev/null 2>&1 && idf.py -B build.ap -D SDKCONFIG=sdkconfig.ap build 2>&1 | tail -8
 ```
 
-Expected: `Project build complete.`
+**Expected: the AP build FAILS here, and that is correct.** Corrected 2026-09-11
+after Task 4 ran — the original note claimed it would succeed, which was wrong.
 
-Note: MQTT is still compiled in at this point (Task 5 removes it), so `mqtt_pub.c` will still reference `wifi_link_is_up()` and wait forever on an AP-mode build. That is expected and harmless here — it is fixed in the next task.
+Task 3 set `# CONFIG_RD03D_ENABLE_MQTT is not set` in `sdkconfig.ap`, and
+`RD03D_MQTT_HOST` / `_PORT` / `_MOVE_MM` are `depends on` that option, so they
+are *undefined* in the AP build. `mqtt_pub.c` is still in the source list until
+Task 5, so it fails to compile:
+
+```
+main/mqtt_pub.c:48: error: 'CONFIG_RD03D_MQTT_HOST' undeclared
+main/mqtt_pub.c:70: error: 'CONFIG_RD03D_MQTT_PORT' undeclared
+main/mqtt_pub.c:116: error: 'CONFIG_RD03D_MQTT_MOVE_MM' undeclared
+```
+
+What this step actually verifies is that **`wifi_link.c` itself compiles clean**
+in AP mode — look for `Building C object .../wifi_link.c.obj` passing with no
+errors or warnings before ninja stops. Every reported error must be in
+`mqtt_pub.c`; an error in `wifi_link.c` is a real failure.
+
+This makes **Task 5 load-bearing for the AP build**, not a cleanup: until the
+MQTT sources are conditional, `idf.py -B build.ap ... build` cannot succeed.
 
 - [ ] **Step 4: Confirm the station image still builds unchanged**
 
@@ -637,6 +655,11 @@ idf_component_register(SRCS ${rd03d_srcs}
 ```
 
 - [ ] **Step 3: Build both images and compare**
+
+Note: `build.ap/` may hold a stale artifact built with MQTT enabled (Task 4 used
+that as a one-off link proof). This step rebuilds it against the real config, so
+the comparison is valid — but do not flash anything from `build.ap/` until after
+this step has run.
 
 ```bash
 cd /path/to/rd03d/rd03d_uart && source ~/esp/esp-idf-v5.5/export.sh >/dev/null 2>&1 && idf.py build >/dev/null 2>&1 && idf.py -B build.ap -D SDKCONFIG=sdkconfig.ap build >/dev/null 2>&1 && ls -l build/rd03d_uart.bin build.ap/rd03d_uart.bin | awk '{print $9, $5}'
