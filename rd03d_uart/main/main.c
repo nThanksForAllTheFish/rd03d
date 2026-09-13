@@ -7,7 +7,11 @@
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 
+#if CONFIG_RD03D_ENABLE_MQTT
 #include "mqtt_pub.h"
+#endif
+#include "led.h"
+#include "mqtt_throttle.h"
 #include "ota_update.h"
 #include "rd03d.h"
 #include "web_server.h"
@@ -74,7 +78,7 @@ static void ota_validation_task(void *arg)
     TickType_t deadline =
         xTaskGetTickCount() + pdMS_TO_TICKS(OTA_VALID_DEADLINE_MS);
     while ((int32_t)(deadline - xTaskGetTickCount()) > 0) {
-        if (wifi_link_has_ip() && web_server_handle() != NULL) {
+        if (wifi_link_is_up() && web_server_handle() != NULL) {
             ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
             ESP_LOGI(TAG, "firmware validated (WiFi + web server up)");
             vTaskDelete(NULL);
@@ -82,7 +86,7 @@ static void ota_validation_task(void *arg)
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
-    if (wifi_link_has_ip() && web_server_handle() != NULL) {
+    if (wifi_link_is_up() && web_server_handle() != NULL) {
         ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
         ESP_LOGI(TAG, "firmware validated (WiFi + web server up)");
         vTaskDelete(NULL);
@@ -125,7 +129,17 @@ void app_main(void)
     web_server_start();
     ota_update_register(web_server_handle());
     xTaskCreate(ota_validation_task, "ota_valid", 3072, NULL, 5, NULL);
+    led_init();
+#if CONFIG_RD03D_ENABLE_MQTT
     mqtt_pub_start();
+#else
+    /* No publisher in this build, so run the same movement decision purely to
+     * drive the LED. Both variants then blink identically - which matters most
+     * here, since the AP image is the one used for placement tests with
+     * nothing attached but the board. */
+    mqtt_throttle_t led_throttle;
+    mqtt_throttle_init(&led_throttle, CONFIG_RD03D_MQTT_MOVE_MM);
+#endif
 
     rd03d_parser_t parser;
     rd03d_parser_init(&parser);
@@ -141,7 +155,17 @@ void app_main(void)
                 print_frame(&frame);
                 web_server_send_frame(&frame, parser.dropped_bytes,
                                       parser.bad_frames);
+#if CONFIG_RD03D_ENABLE_MQTT
                 mqtt_pub_frame(&frame);
+#else
+                for (int t = 0; t < RD03D_NUM_TARGETS; t++) {
+                    if (mqtt_throttle_eval(&led_throttle, t,
+                                           &frame.targets[t])
+                            != MQTT_THROTTLE_NONE) {
+                        led_pulse();
+                    }
+                }
+#endif
             }
         }
         if (xTaskGetTickCount() - last_stats >= pdMS_TO_TICKS(STATS_PERIOD_MS)) {

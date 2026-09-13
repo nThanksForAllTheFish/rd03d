@@ -1,31 +1,111 @@
 menu "RD03D Configuration"
 
+choice RD03D_NET_MODE
+    prompt "Network mode"
+    default RD03D_NET_MODE_STA
+    help
+        STA joins an existing 2.4 GHz network - the normal deployment.
+        AP makes the device its own WPA2 access point so a laptop can connect
+        to it directly, for sites where it may not join the local network.
+
+config RD03D_NET_MODE_STA
+    bool "Station (join an existing network)"
+
+config RD03D_NET_MODE_AP
+    bool "Access point (SoftAP)"
+
+endchoice
+
 config RD03D_WIFI_SSID
     string "WiFi SSID"
+    depends on RD03D_NET_MODE_STA
     default ""
     help
         SSID of the 2.4 GHz network the radar streamer joins.
 
 config RD03D_WIFI_PASSWORD
     string "WiFi password"
+    depends on RD03D_NET_MODE_STA
     default ""
     help
         WPA2 password for the network. Stored only in the untracked sdkconfig.
 
+config RD03D_AP_SSID
+    string "SoftAP SSID"
+    depends on RD03D_NET_MODE_AP
+    default "rd03d-radar"
+    help
+        Network name the device broadcasts in AP mode.
+
+config RD03D_AP_PASSWORD
+    string "SoftAP WPA2 password"
+    depends on RD03D_NET_MODE_AP
+    default ""
+    help
+        At least 8 characters - WPA2's minimum, enforced at compile time.
+        Stored only in the untracked sdkconfig.ap.
+
+config RD03D_AP_CHANNEL
+    int "SoftAP 2.4 GHz channel"
+    depends on RD03D_NET_MODE_AP
+    default 6
+    range 1 13
+    help
+        1 and 11 are usually the most congested in offices. Change this if
+        the link feels slow; it is the knob to turn first.
+
+config RD03D_ENABLE_MQTT
+    bool "Publish targets over MQTT"
+    default y
+    help
+        Off for standalone/AP use, where there is no broker. When off the MQTT
+        sources are not compiled and esp-mqtt is not linked.
+
 config RD03D_MQTT_HOST
     string "MQTT broker host"
+    depends on RD03D_ENABLE_MQTT
     default "iotstack.local"
     help
         Broker hostname. A .local name is resolved via mDNS by the firmware.
 
 config RD03D_MQTT_PORT
     int "MQTT broker port"
+    depends on RD03D_ENABLE_MQTT
     default 1883
     range 1 65535
 
 config RD03D_MQTT_MOVE_MM
-    int "Minimum movement (mm) between MQTT publishes per target"
+    int "Minimum movement (mm) between published events per target"
     default 200
     range 0 30000
+    help
+        Deliberately NOT gated on RD03D_ENABLE_MQTT: it is the movement
+        threshold itself, and the LED uses the same decision so a build
+        without MQTT blinks identically.
+
+config RD03D_LED_GPIO
+    int "User LED GPIO (-1 to disable)"
+    default 15
+    range -1 30
+    help
+        15 is the user LED on the Seeed XIAO ESP32-C6. Set -1 on a board with
+        no user LED, or if the red LED you can see turns out to be the battery
+        charge indicator, which is wired to the charger IC and cannot be
+        driven from software at all.
+
+config RD03D_LED_ACTIVE_LOW
+    bool "User LED is active low"
+    default y
+    help
+        The XIAO's LED is tied to 3V3 and sunk by the GPIO, so LOW lights it.
+        Board wiring, not a chip property - hence a knob.
+
+config RD03D_LED_MS
+    int "LED pulse length (ms)"
+    default 40
+    range 5 2000
+    help
+        Long enough to see, far shorter than the ~90 ms radar frame period,
+        so it cannot pile up during continuous movement.
 
 endmenu
