@@ -10,6 +10,7 @@
 #include "mqtt_client.h"
 #include "sdkconfig.h"
 
+#include "led.h"
 #include "mqtt_throttle.h"
 #include "wifi_link.h"
 
@@ -157,6 +158,10 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
             /* Dropped (outbox full / disconnect race). Self-heals: the next
              * movement or the reconnect reset re-triggers a publish. */
             ESP_LOGW(TAG, "publish dropped for %s (%d)", topic, msg_id);
+        } else {
+            /* Only on success, so the LED means "a message reached the
+             * broker" rather than "we considered sending one". */
+            led_pulse();
         }
     }
 }

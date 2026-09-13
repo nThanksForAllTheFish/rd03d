@@ -10,6 +10,8 @@
 #if CONFIG_RD03D_ENABLE_MQTT
 #include "mqtt_pub.h"
 #endif
+#include "led.h"
+#include "mqtt_throttle.h"
 #include "ota_update.h"
 #include "rd03d.h"
 #include "web_server.h"
@@ -127,8 +129,16 @@ void app_main(void)
     web_server_start();
     ota_update_register(web_server_handle());
     xTaskCreate(ota_validation_task, "ota_valid", 3072, NULL, 5, NULL);
+    led_init();
 #if CONFIG_RD03D_ENABLE_MQTT
     mqtt_pub_start();
+#else
+    /* No publisher in this build, so run the same movement decision purely to
+     * drive the LED. Both variants then blink identically - which matters most
+     * here, since the AP image is the one used for placement tests with
+     * nothing attached but the board. */
+    mqtt_throttle_t led_throttle;
+    mqtt_throttle_init(&led_throttle, CONFIG_RD03D_MQTT_MOVE_MM);
 #endif
 
     rd03d_parser_t parser;
@@ -147,6 +157,14 @@ void app_main(void)
                                       parser.bad_frames);
 #if CONFIG_RD03D_ENABLE_MQTT
                 mqtt_pub_frame(&frame);
+#else
+                for (int t = 0; t < RD03D_NUM_TARGETS; t++) {
+                    if (mqtt_throttle_eval(&led_throttle, t,
+                                           &frame.targets[t])
+                            != MQTT_THROTTLE_NONE) {
+                        led_pulse();
+                    }
+                }
 #endif
             }
         }
