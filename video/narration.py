@@ -3,8 +3,8 @@
 SHOTS = [
     ("01_open", "Cold open",
      "This is a staircase light. It comes on before anyone reaches the first step, because a "
-     "24 gigahertz radar in a printed case is watching the approach, and a four-node Node-RED flow "
-     "is holding the relay. That is the whole gadget, and it is not why I made this video. "
+     "24 gigahertz radar in a printed case is watching the approach, and a four node Node-RED flow "
+     "is controlling the relay. That is the whole gadget, and it is not why I made this video. "
      "Over four weeks of evenings, an AI agent wrote the firmware, the web chart you are looking at, "
      "the automation, and the CAD for the enclosure, driving my own copy of Fusion 360 while I "
      "watched. I was the reviewer and the lab tech. This is what that looked like, and where the "

@@ -1,327 +1,327 @@
 1
-00:00:00,600 --> 00:00:02,265
+00:00:00,600 --> 00:00:02,209
 This is a staircase light.
 
 2
-00:00:02,315 --> 00:00:13,746
-It comes on before anyone reaches the first step, because a 24 gigahertz radar in a printed case is watching the approach, and a four-node Node-RED flow is holding the relay.
+00:00:02,259 --> 00:00:13,566
+It comes on before anyone reaches the first step, because a 24 gigahertz radar in a printed case is watching the approach, and a four node Node-RED flow is controlling the relay.
 
 3
-00:00:13,796 --> 00:00:17,837
+00:00:13,616 --> 00:00:17,522
 That is the whole gadget, and it is not why I made this video.
 
 4
-00:00:17,887 --> 00:00:30,505
+00:00:17,572 --> 00:00:29,772
 Over four weeks of evenings, an AI agent wrote the firmware, the web chart you are looking at, the automation, and the CAD for the enclosure, driving my own copy of Fusion 360 while I watched.
 
 5
-00:00:30,555 --> 00:00:32,880
+00:00:29,822 --> 00:00:32,069
 I was the reviewer and the lab tech.
 
 6
-00:00:32,930 --> 00:00:37,499
+00:00:32,119 --> 00:00:36,535
 This is what that looked like, and where the reviewer earned his keep.
 
 7
-00:00:39,049 --> 00:00:53,783
+00:00:38,085 --> 00:00:52,765
 The sensor is an Ai-Thinker RD-03D, a 24 gigahertz frequency-modulated continuous-wave module that tracks up to three targets and reports position and radial velocity over a serial link, thirty bytes per frame.
 
 8
-00:00:53,833 --> 00:00:59,345
+00:00:52,815 --> 00:00:58,306
 It is wired to a Seeed XIAO ESP32-C6, a thumbnail-sized RISC-V board with WiFi.
 
 9
-00:00:59,395 --> 00:01:01,457
+00:00:58,356 --> 00:01:00,411
 The case is two printed parts.
 
 10
-00:01:01,507 --> 00:01:22,577
+00:01:00,461 --> 00:01:21,453
 The back plate is eight millimetres thick and carries the radar bay, posts for the XIAO, five cantilever retention clips, a USB-C power jack with its capacitor cradled inside, and six LEGO Technic holes on an eight millimetre pitch, so the whole thing hangs off a Technic ball joint and can be aimed.
 
 11
-00:01:22,627 --> 00:01:28,913
+00:01:21,503 --> 00:01:27,766
 The shell has a thinned radome step over the antennas and a boss that holds the XIAO down.
 
 12
-00:01:28,963 --> 00:01:35,883
+00:01:27,816 --> 00:01:34,710
 It printed in PETG on a 0.6 millimetre nozzle with no supports, after seven revisions of the plate.
 
 13
-00:01:37,433 --> 00:01:39,776
+00:01:36,260 --> 00:01:38,604
 Every feature followed the same loop.
 
 14
-00:01:39,826 --> 00:01:42,428
+00:01:38,654 --> 00:01:41,256
 I described what I wanted in a paragraph.
 
 15
-00:01:42,478 --> 00:01:50,579
+00:01:41,306 --> 00:01:49,406
 The agent wrote a short design spec, I argued with it, and it wrote a numbered plan and worked through it, testing as it went.
 
 16
-00:01:50,629 --> 00:01:56,853
+00:01:49,456 --> 00:01:55,680
 Ten of those spec and plan pairs are in the repository, dated, and they read like a lab notebook.
 
 17
-00:01:56,903 --> 00:02:11,536
+00:01:55,730 --> 00:02:10,364
 The radar frame parser was written as plain C and tested on the Mac before it touched the board, and the MQTT throttle, which decides when a target has moved enough to be worth publishing, is a pure function with its own tests.
 
 18
-00:02:11,586 --> 00:02:13,283
+00:02:10,414 --> 00:02:12,110
 Nineteen host tests in all.
 
 19
-00:02:13,333 --> 00:02:16,129
+00:02:12,160 --> 00:02:14,956
 Over-the-air updates got a deliberate drill:
 
 20
-00:02:16,179 --> 00:02:24,473
+00:02:15,006 --> 00:02:23,301
 we flashed an image built to fail, watched it boot, miss its ninety-second window, and roll itself back to the previous firmware.
 
 21
-00:02:24,523 --> 00:02:26,931
+00:02:23,351 --> 00:02:25,759
 The agent also walked into real traps.
 
 22
-00:02:26,981 --> 00:02:37,216
+00:02:25,809 --> 00:02:36,044
 The access-point variant rolled back after every update, because the rollback cancel waited for an IP address, and in access-point mode no IP event ever fires.
 
 23
-00:02:37,266 --> 00:02:38,251
+00:02:36,094 --> 00:02:37,078
 One line to fix.
 
 24
-00:02:38,301 --> 00:02:39,480
+00:02:37,128 --> 00:02:38,307
 An evening to find.
 
 25
-00:02:41,030 --> 00:02:44,442
+00:02:39,857 --> 00:02:43,270
 The enclosure was not designed by generating a mesh.
 
 26
-00:02:44,492 --> 00:02:55,694
+00:02:43,320 --> 00:02:54,522
 Autodesk ships a Model Context Protocol server for Fusion 360, a small local endpoint that lets an agent run Python against the live Fusion API inside the open document.
 
 27
-00:02:55,744 --> 00:03:01,487
+00:02:54,572 --> 00:03:00,314
 The agent wrote a driver for it, then built the case as a sequence of numbered scripts:
 
 28
-00:03:01,537 --> 00:03:07,013
+00:03:00,364 --> 00:03:05,840
 set up parameters, build the back plate, build the shell, place the boards, export.
 
 29
-00:03:07,063 --> 00:03:11,873
+00:03:05,890 --> 00:03:10,700
 About nineteen hundred lines of Python, and those scripts are the design.
 
 30
-00:03:11,923 --> 00:03:19,064
+00:03:10,750 --> 00:03:17,891
 Every clip, ramp, counterbore and wire notch is a few lines, with the dimension and the reason side by side.
 
 31
-00:03:19,114 --> 00:03:25,389
+00:03:17,941 --> 00:03:24,216
 Here are the crossbars that carry the radar board, and the comment that records why they moved.
 
 32
-00:03:25,439 --> 00:03:27,319
+00:03:24,266 --> 00:03:26,147
 The last script is read-only.
 
 33
-00:03:27,369 --> 00:03:42,899
+00:03:26,197 --> 00:03:41,726
 It probes the finished bodies with point-containment queries, asking Fusion whether there is material at a coordinate, and asserts that the walls are where the spec says, that the bores are open, and that nothing roofs a Technic hole.
 
 34
-00:03:42,949 --> 00:03:48,492
+00:03:41,776 --> 00:03:47,319
 It caught exactly that, a capacitor rib placed over a pin hole, before I printed it.
 
 35
-00:03:48,542 --> 00:03:50,755
+00:03:47,369 --> 00:03:49,583
 A unit test for a mechanical part.
 
 36
-00:03:50,805 --> 00:03:52,819
+00:03:49,633 --> 00:03:51,647
 None of this depends on Fusion.
 
 37
-00:03:52,869 --> 00:03:57,080
+00:03:51,697 --> 00:03:55,908
 Any CAD package with a scripting API can be driven the same way:
 
 38
-00:03:57,130 --> 00:04:02,074
+00:03:55,958 --> 00:04:00,901
 FreeCAD, OpenSCAD, Onshape, or SolidWorks through its automation interface.
 
 39
-00:04:03,624 --> 00:04:04,873
+00:04:02,451 --> 00:04:03,701
 Now the honest part:
 
 40
-00:04:04,923 --> 00:04:08,642
+00:04:03,751 --> 00:04:07,469
 what the agent got confidently wrong, and how I caught it.
 
 41
-00:04:08,692 --> 00:04:11,631
+00:04:07,519 --> 00:04:10,458
 First, the board was resting on its connector.
 
 42
-00:04:11,681 --> 00:04:19,492
+00:04:10,508 --> 00:04:18,320
 The agent sized the support bars from the board's overall thickness, which includes a connector that sticks out the back.
 
 43
-00:04:19,542 --> 00:04:27,419
+00:04:18,370 --> 00:04:26,246
 The bare PCB is nearly four millimetres further in, so in the first print the radar sat on the connector and nothing else.
 
 44
-00:04:27,469 --> 00:04:36,970
+00:04:26,296 --> 00:04:35,797
 I measured the board's rear profile, found two component-free bands, and the bars moved to bear on bare PCB there, with the connector hanging free.
 
 45
-00:04:37,020 --> 00:04:38,464
+00:04:35,847 --> 00:04:37,292
 Second, the radome gap.
 
 46
-00:04:38,514 --> 00:04:42,103
+00:04:37,342 --> 00:04:40,930
 At 24 gigahertz the wavelength, lambda, equals c over f:
 
 47
-00:04:42,153 --> 00:04:44,052
+00:04:40,980 --> 00:04:42,879
 twelve and a half millimetres.
 
 48
-00:04:44,102 --> 00:04:52,109
+00:04:42,929 --> 00:04:50,936
 The agent had assured me several times that the air gap from the antenna to the inside of the radome was about a millimetre.
 
 49
-00:04:52,159 --> 00:04:56,397
+00:04:50,986 --> 00:04:55,224
 It had measured from the tallest chip, not from the antenna plane.
 
 50
-00:04:56,447 --> 00:05:00,815
+00:04:55,274 --> 00:04:59,642
 The true gap was 3.1 millimetres, and a quarter wavelength is 3.125.
 
 51
-00:05:00,865 --> 00:05:14,264
+00:04:59,692 --> 00:05:13,092
 At a quarter-wave gap, the reflection off the radome travels an extra half wavelength out and back, picks up its phase flip at the plastic, and arrives back at the antenna in phase with the transmitted wave.
 
 52
-00:05:14,314 --> 00:05:16,148
+00:05:13,142 --> 00:05:14,976
 That is the maximum mismatch:
 
 53
-00:05:16,198 --> 00:05:18,877
+00:05:15,026 --> 00:05:17,705
 an anti-reflection coating, run backwards.
 
 54
-00:05:18,927 --> 00:05:19,917
+00:05:17,755 --> 00:05:18,744
 The rule became:
 
 55
-00:05:19,967 --> 00:05:22,711
+00:05:18,794 --> 00:05:21,538
 keep the gap under a tenth of a wavelength.
 
 56
-00:05:22,761 --> 00:05:32,002
+00:05:21,588 --> 00:05:30,829
 The radome came down to 1.21 millimetres over both antenna groups, with 3.1 millimetres of solid plastic in front, and the exterior still flat.
 
 57
-00:05:32,052 --> 00:05:35,575
+00:05:30,879 --> 00:05:34,403
 I caught that from a section view, not from the script.
 
 58
-00:05:35,625 --> 00:05:38,239
+00:05:34,453 --> 00:05:37,066
 Third, the antenna was going in sideways.
 
 59
-00:05:38,289 --> 00:05:52,663
+00:05:37,116 --> 00:05:51,490
 The two receive channels that give the module its angle are spaced across the board's short axis, about half a wavelength apart, so the wide sixty-degree fan opens across the width, and the beam is narrow along the length.
 
 60
-00:05:52,713 --> 00:05:57,471
+00:05:51,540 --> 00:05:56,298
 For a staircase the fan has to be vertical, so the board mounts landscape.
 
 61
-00:05:57,521 --> 00:06:00,460
+00:05:56,348 --> 00:05:59,287
 Fourth, the printer disagreed with the design.
 
 62
-00:06:00,510 --> 00:06:03,838
+00:05:59,337 --> 00:06:02,666
 Walls of 0.6 millimetres on a 0.6 millimetre nozzle.
 
 63
-00:06:03,888 --> 00:06:07,282
+00:06:02,716 --> 00:06:06,109
 A tape recess that turned the first layer into a rim.
 
 64
-00:06:07,332 --> 00:06:15,598
+00:06:06,159 --> 00:06:14,426
 And later, slender slotted clips with a correct two-percent strain analysis, which held the board about as well as a wet noodle.
 
 65
-00:06:15,648 --> 00:06:16,833
+00:06:14,476 --> 00:06:15,660
 The slots came out.
 
 66
-00:06:16,883 --> 00:06:20,146
+00:06:15,710 --> 00:06:18,974
 The clip is now a plain stretch of wall with a lip.
 
 67
-00:06:20,196 --> 00:06:21,511
+00:06:19,024 --> 00:06:20,338
 It takes a firm push.
 
 68
-00:06:21,561 --> 00:06:22,356
+00:06:20,388 --> 00:06:21,183
 That is fine.
 
 69
-00:06:23,906 --> 00:06:27,152
+00:06:22,733 --> 00:06:25,980
 Most of what gets printed in a home shop is a one-off:
 
 70
-00:06:27,202 --> 00:06:33,930
+00:06:26,030 --> 00:06:32,757
 a bracket for a sensor, a jig to hold a board while you solder it, a mount, a box for the thing you just built.
 
 71
-00:06:33,980 --> 00:06:46,568
+00:06:32,807 --> 00:06:45,395
 The loop I ran here, describe the part, have the agent build it parametrically with a probe harness, print it, hold it, correct it, re-run the script, is the loop we already run with a human at the keyboard.
 
 72
-00:06:46,618 --> 00:06:52,856
+00:06:45,445 --> 00:06:51,684
 Except that the keyboard part now takes minutes, and leaves a reviewable script and a self-test behind.
 
 73
-00:06:52,906 --> 00:06:53,772
+00:06:51,734 --> 00:06:52,600
 Three cautions.
 
 74
-00:06:53,822 --> 00:07:01,343
+00:06:52,650 --> 00:07:00,170
 The agent's confidence tells you nothing about its correctness on anything it cannot measure, and in CAD that is everything.
 
 75
-00:07:01,393 --> 00:07:05,006
+00:07:00,220 --> 00:07:03,834
 Every print I did without a section view first, I did twice.
 
 76
-00:07:05,056 --> 00:07:10,379
+00:07:03,884 --> 00:07:09,206
 The physics has to come from somewhere, and the quarter-wave mistake would have shipped.
 
 77
-00:07:10,429 --> 00:07:16,240
+00:07:09,256 --> 00:07:15,068
 And treat the scripts, not the live CAD document, as the source of truth, under version control.
 
 78
-00:07:16,290 --> 00:07:24,177
+00:07:15,118 --> 00:07:23,005
 The one time a parameter was tuned in the Fusion window instead of the script, the next run of the setup script silently reset it.
 
 79
-00:07:25,727 --> 00:07:29,303
+00:07:24,555 --> 00:07:27,980
 The light goes off sixty seconds after the last step.
 
 80
-00:07:29,353 --> 00:07:36,555
+00:07:28,030 --> 00:07:34,931
 The firmware, the Fusion scripts, the Node-RED flow, and the dated design notes are all in the repository.
 
 81
-00:07:36,605 --> 00:07:40,043
+00:07:34,981 --> 00:07:38,275
 Everything you have seen was synthesized from them:
 
 82
-00:07:40,093 --> 00:07:46,406
+00:07:38,325 --> 00:07:44,374
 renders of the actual STL files, a recreation of the live radar chart, and a synthetic voice.
