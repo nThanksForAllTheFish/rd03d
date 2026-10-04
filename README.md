@@ -124,3 +124,7 @@ Three cautions, briefly. First, the agent's confidence is uncorrelated with its 
 ## Video
 
 A synthesised walkthrough of the project, rendered from the STLs, the vendor board models and the real source files in this repository, is on the author's channel: https://www.youtube.com/channel/UCc6NJHDdN5t8mW3xDXUf4Eg. The pipeline that produced it is in `video/`; the board STEP models it uses are third-party downloads and are not redistributed here.
+
+## Licence
+
+Code is MIT (`LICENSE`). The write-up, documents, STL files and figures are CC BY 4.0 (`LICENSE-CC-BY-4.0.md`).
