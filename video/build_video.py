@@ -876,21 +876,36 @@ def diag_orientation(d, t, u, box=(140, 200, 1780, 920)):
     d.text((x0, y0), lab, font=font(32, bold=True), fill=YEL)
     d.text((x0, y0 + 46), "two RX channels across the short axis give the angle; the beam is narrow along the long axis", font=font(24), fill=DIM)
     d.text((x0, y1 - 40), "yellow: angular coverage projected onto the board plane (schematic)", font=font(20), fill=DIM)
-    # staircase side view
-    sx0 = x1 - 640; base = y1 - 80
-    pts = [(sx0, base)]
-    for i in range(8):
-        pts.append((sx0 + i * 70, base - i * 45)); pts.append((sx0 + (i + 1) * 70, base - i * 45))
-    pts.append((sx0 + 8 * 70, base - 8 * 45))
-    d.line(pts, fill=(110, 110, 110), width=4)
-    # sensor on wall at mid height, fan vertical when landscape
-    sxs, sys_ = sx0 + 560, base - 4 * 45 - 60
-    d.rectangle((sxs - 14, sys_ - 10, sxs + 14, sys_ + 10), fill=C3)
+    # staircase side view: two flights in a ">" - landing (and sensor) at the apex on the right,
+    # top and bottom entrances on the left
+    Lx = x1 - 110; mid = (y0 + y1) / 2 + 30          # landing right edge, landing floor height
+    tread, rise, n = 60, 32, 6
+    land_w = 120; grey = (110, 110, 110)
+    px0 = Lx - land_w - n * tread                    # left end of both flights
+    d.line([(Lx - land_w, mid), (Lx, mid)], fill=grey, width=4)                       # landing floor
+    d.line([(Lx, mid - 200), (Lx, mid + 20)], fill=grey, width=4)                     # landing wall (sensor mount)
+    up = [(Lx - land_w, mid)]
+    for i in range(n):                                                                # upper flight: up and to the left
+        x = Lx - land_w - i * tread; y = mid - i * rise
+        up += [(x, y - rise), (x - tread, y - rise)]
+    d.line(up, fill=grey, width=4)
+    dn = [(Lx - land_w, mid)]
+    for i in range(n):                                                                # lower flight: down and to the left
+        x = Lx - land_w - i * tread; y = mid + i * rise
+        dn += [(x - tread, y), (x - tread, y + rise)]
+    d.line(dn, fill=grey, width=4)
+    d.text((px0 - 10, mid - n * rise - 36), "top entrance", font=font(22), fill=FG)
+    d.text((px0 - 10, mid + n * rise + 8), "bottom entrance", font=font(22), fill=FG)
+    d.text((Lx - land_w + 8, mid + 8), "landing", font=font(22), fill=FG)
+    # sensor on the landing wall at about head height, looking left; fan goes vertical as the board turns landscape
+    sxs, sys_ = Lx - 6, mid - 140
+    d.rectangle((sxs - 8, sys_ - 14, sxs + 8, sys_ + 14), fill=C3)
     spread = lerp(8, 60, ease(u))
     for sgn in (-1, 1):
         a = math.radians(180 + sgn * spread)
         d.line([(sxs, sys_), (sxs + 520 * math.cos(a), sys_ - 520 * math.sin(a))], fill=mix(BG, YEL, 0.6), width=3)
-    d.text((sx0, base + 20), "staircase, side view: upstairs and downstairs approaches both need coverage", font=font(22), fill=DIM)
+    paragraph(d, (px0 - 10, mid + n * rise + 48), "two flights in a \">\": the sensor on the landing wall sees both approaches with one vertical fan",
+              font(22), DIM, x1 - px0 + 10)
 
 def diag_clips(d, t, u, box=(140, 200, 1780, 920)):
     x0, y0, x1, y1 = box

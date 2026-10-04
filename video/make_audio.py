@@ -37,7 +37,7 @@ SPOKEN = [
     ("Fusion 360", "Fusion three sixty"),
     ("RD-03D", "R, D zero three D"),
     ("RISC-V", "RISC Five"),
-    ("written as plain C", "written as plain, C"),
+    ("written as plain C and", "written as plain, C, and"),
     ("OpenSCAD", "Open S CAD"),
     ("0.6 millimetre", "point six millimetre"),
     ("0.6 mm", "point six millimetre"),
