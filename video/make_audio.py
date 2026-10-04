@@ -38,6 +38,8 @@ SPOKEN = [
     ("RD-03D", "R, D zero three D"),
     ("RISC-V", "RISC Five"),
     ("written as plain C and", "written as plain, C, and"),
+    ("Node-RED flow,", "Node, Red, flow,"),
+    ("Node-RED flow", "Node, Red, flow,"),
     ("OpenSCAD", "Open S CAD"),
     ("0.6 millimetre", "point six millimetre"),
     ("0.6 mm", "point six millimetre"),
