@@ -21,7 +21,8 @@ W, H, FPS = 1920, 1080, 30
 LEAD = 0.6          # narration delay (s) at the start of each shot
 TAIL = 0.9          # silence after narration
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = "/path/to/rd03d"
+# Repo root, derived from this file so the pipeline runs wherever the repo lives.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FFMPEG = "/opt/homebrew/bin/ffmpeg"
 AUDIO_DIR = os.path.join(HERE, "audio" + SUFFIX)
 SEG_DIR = os.path.join(HERE, "seg" + SUFFIX)
