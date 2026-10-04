@@ -31,9 +31,10 @@ SHOTS = [
      "moved enough to be worth publishing, is a pure function with its own tests. Nineteen host "
      "tests in all. Over-the-air updates got a deliberate drill: we flashed an image built to fail, "
      "watched it boot, miss its ninety-second window, and roll itself back to the previous "
-     "firmware. The agent also walked into real traps. The access-point variant rolled back after "
-     "every update, because the rollback cancel waited for an IP address, and in access-point mode "
-     "no IP event ever fires. One line to fix. An evening to find."),
+     "firmware. The same safety net nearly became a trap. The access-point variant would have "
+     "rolled back after every update, because the rollback cancel waited for an IP address, and in "
+     "access-point mode no IP event ever fires. The agent caught that while writing the design "
+     "note, before any code existed. One line to fix, and nothing to debug."),
 
     ("04_cad", "Fusion, driven live",
      "The enclosure was not designed by generating a mesh. Autodesk ships a Model Context Protocol "
@@ -52,12 +53,13 @@ SHOTS = [
      "automation interface, is if anything the easier target."),
 
     ("05_catches", "Where the human earned his keep",
-     "Now the honest part: what the agent got confidently wrong, and how I caught it. "
+     "Now the honest part: what went confidently wrong, and how each mistake got caught. "
      "First, the board was resting on its connector. The agent sized the support bars from the "
      "board's overall thickness, which includes a connector that sticks out the back. The bare "
-     "PCB is nearly four millimetres further in, so in the first print the radar sat on the "
-     "connector and nothing else. I measured the board's rear profile, found two component-free "
-     "bands, and the bars moved to bear on bare PCB there, with the connector hanging free. "
+     "PCB is nearly four millimetres further in, so as designed the radar sat on the "
+     "connector and nothing else. I spotted that in the Fusion model. The agent then "
+     "probed the vendor's board model, found two component-free bands on the rear of the PCB, and "
+     "moved the bars to bear there, with the connector hanging free. "
      "Second, the radome gap. At 24 gigahertz the wavelength, lambda, equals c over f: twelve and "
      "a half millimetres. The agent had assured me several times that the air gap from the antenna "
      "to the inside of the radome was about a millimetre. It had measured from the tallest chip, "
@@ -68,10 +70,11 @@ SHOTS = [
      "run backwards. The rule became: keep the gap under a tenth of a wavelength. The radome came "
      "down to 1.21 millimetres over both antenna groups, with 3.1 millimetres of solid plastic in "
      "front, and the exterior still flat. I caught that from a section view, not from the script. "
-     "Third, the antenna was going in sideways. The two receive channels that give the module its "
+     "Third, the antenna was going in sideways. That one was mine: I had asked for portrait. The two receive channels that give the module its "
      "angle are spaced across the board's short axis, about half a wavelength apart, so the wide "
      "sixty-degree fan opens across the width, and the beam is narrow along the length. For a "
-     "staircase the fan has to be vertical, so the board mounts landscape. "
+     "staircase the fan has to be vertical, so the board mounts landscape. The agent caught that one "
+     "from the antenna layout. "
      "Fourth, the printer disagreed with the design. Walls of 0.6 millimetres on a 0.6 millimetre "
      "nozzle. A tape recess that turned the first layer into a rim. And later, slender slotted "
      "clips with a correct two-percent strain analysis, which held the board about as well as a "

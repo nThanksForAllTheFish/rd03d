@@ -558,7 +558,7 @@ def shot_03(t, dur):
     img = new_frame(); d = ImageDraw.Draw(img)
     t_spec = cue(key, "wrote a short design spec"); t_ten = cue(key, "Ten of those")
     t_parser = cue(key, "The radar frame parser"); t_tests = cue(key, "Nineteen host")
-    t_ota = cue(key, "Over-the-air"); t_trap = cue(key, "The agent also walked"); t_fix = cue(key, "One line to fix")
+    t_ota = cue(key, "Over-the-air"); t_trap = cue(key, "The same safety net"); t_fix = cue(key, "One line to fix")
     fm = font(22, mono=True)
     request = ("I have an Ai-Thinker RD-03D radar wired to a XIAO ESP32-C6. Read its UART frames, decode the three "
                "targets and print them to the console. Then I want a live radar chart in a browser over WiFi, "
@@ -627,9 +627,9 @@ def shot_03(t, dur):
         y = 200
         y = paragraph(d, (1230, y), "Station image: the IP event sets wifi_link_is_up(), the web server comes up, the image is marked valid.", f, FG, 580)
         a = seg(t, t_trap + 2.0, t_trap + 2.6)
-        y = paragraph(d, (1230, y + 30), "Access-point image: no IP event ever fires. The flag stayed false, the deadline passed, every OTA rolled back. USB flashing kept working, which hid it.", f, mix(BG, RED, a), 580)
+        y = paragraph(d, (1230, y + 30), "Access-point image: no IP event ever fires. The flag would stay false, the deadline would pass, every OTA would roll back. USB flashing would keep working, which would hide it.", f, mix(BG, RED, a), 580)
         b = seg(t, t_fix, t_fix + 0.6)
-        paragraph(d, (1230, y + 30), "Fix: set the flag on WIFI_EVENT_AP_START as well. One line.", f, mix(BG, GREEN, b), 580)
+        paragraph(d, (1230, y + 30), "Caught at design time. Fix: set the flag on WIFI_EVENT_AP_START as well. One line.", f, mix(BG, GREEN, b), 580)
         caption(d, "Real source; lines 81-82 and 89-90 are the gate")
     chapter(d, key, t, 3)
     return fade(img, t, dur)
@@ -945,16 +945,16 @@ def diag_clips(d, t, u, box=(140, 200, 1780, 920)):
 def shot_05(t, dur):
     key = "05_catches"
     img = new_frame(); d = ImageDraw.Draw(img)
-    t1 = cue(key, "First, the board"); t1m = cue(key, "I measured the board")
+    t1 = cue(key, "First, the board"); t1m = cue(key, "The agent then probed")
     t2 = cue(key, "Second, the radome"); t2w = cue(key, "At a quarter-wave gap"); t2f = cue(key, "The radome came down")
     t3 = cue(key, "Third, the antenna"); t3l = cue(key, "so the board mounts landscape")
     t4 = cue(key, "Fourth, the printer")
     if t < t1:
         f1 = font(48, bold=True); f2 = font(32, light=True)
         a = seg(t, 0.8, 1.6)
-        s = "What the agent got confidently wrong"
+        s = "What went confidently wrong"
         d.text(((W - f1.getlength(s)) / 2, 440), s, font=f1, fill=mix(BG, FG, a))
-        s = "and how a reviewer with a caliper and a section view caught it"
+        s = "and how each mistake got caught"
         d.text(((W - f2.getlength(s)) / 2, 515), s, font=f2, fill=mix(BG, DIM, a))
     elif t < t2:
         u = seg(t, t1m + 1.0, t1m + 2.5)

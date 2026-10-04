@@ -87,7 +87,7 @@ Two things about this were new to me. The first is that a scripted design is rev
 
 The honest part of the story is the list of things the agent got confidently wrong and I caught, usually by holding the printed part or staring at the Fusion model. I am including it because it is the real argument for this way of working: the agent is fast and tireless and does not know what it does not know, and a reviewing engineer who does is the thing that makes the pair better than either alone.
 
-The board was resting on its connector. The agent had sized the crossbars under the radar PCB from the board's overall thickness, which includes a 5-pin connector that protrudes rearward. The bare PCB back is actually 3.8 mm further in. So in the first print the radar sat on its connector and nothing else. I measured the board's rear profile, found two component-free bands, and the crossbars moved to bear on bare PCB with the connector hanging free between them.
+The board was resting on its connector. The agent had sized the crossbars under the radar PCB from the board's overall thickness, which includes a 5-pin connector that protrudes rearward. The bare PCB back is actually 3.8 mm further in. So as designed the radar sat on its connector and nothing else. I spotted that in the Fusion model; the agent then probed the vendor's board model, found two component-free bands, and moved the crossbars to bear on bare PCB with the connector hanging free between them.
 
 ![Before and after: the board on its connector, then on the crossbars](video/stills/09_board_on_connector_after.png)
 
