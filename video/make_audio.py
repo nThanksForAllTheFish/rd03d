@@ -28,6 +28,25 @@ AUDIO = "audio" + SUFFIX
 voice = sys.argv[1] if len(sys.argv) > 1 else "Samantha"
 rate = sys.argv[2] if len(sys.argv) > 2 else "172"
 
+# Spoken-form substitutions: applied ONLY to the text sent to `say`. The SRT and the
+# on-screen text keep the written forms. Order matters (longer phrases first).
+SPOKEN = [
+    ("Seeed XIAO ESP32-C6", "Seed Studio SheOw E S P thirty two C 6"),
+    ("XIAO ESP32-C6", "SheOw E S P thirty two C 6"),
+    ("XIAO", "SheOw"),
+    ("Fusion 360", "Fusion three sixty"),
+    ("RD-03D", "R, D zero three D"),
+    ("RISC-V", "RISC Five"),
+    ("written as plain C", "written as plain, C"),
+    ("OpenSCAD", "Open S CAD"),
+    ("0.6 millimetre", "point six millimetre"),
+    ("0.6 mm", "point six millimetre"),
+]
+def spoken(text):
+    for a, b in SPOKEN:
+        text = text.replace(a, b)
+    return text
+
 installed = [ln.split("  ")[0].strip() for ln in subprocess.run(["say", "-v", "?"], capture_output=True, text=True).stdout.splitlines()]
 if voice not in installed:
     sys.exit("voice %r is not installed. `say` would silently use the default instead.\nInstalled English voices:\n  "
@@ -38,7 +57,7 @@ os.makedirs(AUDIO, exist_ok=True)
 durs = {}
 for key, title, text in SHOTS:
     aiff = os.path.join(AUDIO, key + ".aiff")
-    subprocess.run(["say", "-v", voice, "-r", rate, "-o", aiff, text], check=True)
+    subprocess.run(["say", "-v", voice, "-r", rate, "-o", aiff, spoken(text)], check=True)
     out = subprocess.run(["/opt/homebrew/bin/ffprobe", "-v", "error", "-show_entries", "format=duration",
                           "-of", "csv=p=0", aiff], capture_output=True, text=True).stdout.strip()
     durs[key] = float(out)

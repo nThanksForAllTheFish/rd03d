@@ -1038,10 +1038,8 @@ def shot_07(t, dur):
                  "all in the repository"]
         for i, s in enumerate(lines):
             d.text(((W - f2.getlength(s)) / 2, 380 + i * 44), s, font=f2, fill=mix(BG, FG, a))
-        s = "nThanksForAllTheFish"
-        d.text(((W - f2.getlength(s)) / 2, 500), s, font=font(30, bold=True), fill=mix(BG, FG, a))
         s = "github.com/nThanksForAllTheFish"
-        d.text(((W - f2.getlength(s)) / 2, 544), s, font=font(28, mono=True), fill=mix(BG, C1, a))
+        d.text(((W - font(32, mono=True).getlength(s)) / 2, 510), s, font=font(32, mono=True), fill=mix(BG, C1, a))
         b = seg(t, cue(key, "Everything you have seen"), cue(key, "Everything you have seen") + 1.0)
         creds = ["Everything here was synthesized from the repository:",
                  "CAD views rendered from the exported STL files  ·  radar chart recreated from the device's web page",
