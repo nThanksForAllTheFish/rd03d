@@ -98,5 +98,6 @@ SHOTS = [
      "The light goes off sixty seconds after the last step. The firmware, the Fusion scripts, the "
      "Node-RED flow, and the dated design notes are all in the repository. Everything you have seen "
      "was synthesized from them: renders of the actual STL files, a recreation of the live radar "
-     "chart, and a synthetic voice."),
+     "chart, and a synthetic voice. The agent also wrote this script and built the video. I reviewed "
+     "and corrected it."),
 ]

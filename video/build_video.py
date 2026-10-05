@@ -1067,6 +1067,9 @@ def shot_07(t, dur):
                  "narration: macOS text-to-speech"]
         for i, s in enumerate(creds):
             d.text(((W - f3.getlength(s)) / 2, 640 + i * 38), s, font=f3, fill=mix(BG, DIM, b))
+        b2 = seg(t, cue(key, "The agent also wrote"), cue(key, "The agent also wrote") + 1.0)
+        s = "script, video and repository write-up drafted by the AI agent (Claude Code), reviewed and corrected by the author"
+        d.text(((W - f3.getlength(s)) / 2, 640 + len(creds) * 38 + 14), s, font=f3, fill=mix(BG, FG, b2))
     return fade(img, t, dur, fout=1.5)
 
 SHOT_FN = {"01_open": shot_01, "02_thing": shot_02, "03_firmware": shot_03, "04_cad": shot_04,
