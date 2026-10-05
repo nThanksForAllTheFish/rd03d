@@ -42,6 +42,7 @@ SPOKEN = [
     ("OpenSCAD", "Open S CAD"),
     ("0.6 millimetre", "point six millimetre"),
     ("0.6 mm", "point six millimetre"),
+    ("recreation", "re creation"),          # re-creation, not the leisure word
 ]
 def spoken(text):
     for a, b in SPOKEN:
