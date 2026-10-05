@@ -43,6 +43,7 @@ SPOKEN = [
     ("0.6 millimetre", "point six millimetre"),
     ("0.6 mm", "point six millimetre"),
     ("recreation", "re creation"),          # re-creation, not the leisure word
+    ("synthesized from them: renders", "synthesized from them. Renders"),   # a colon makes the voice rise; close the sentence
 ]
 def spoken(text):
     for a, b in SPOKEN:
