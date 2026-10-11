@@ -23,7 +23,7 @@ specs, like the rest of the project.
 
 ## What the staircase scan established
 
-Kevin scanned the staircase with LiDAR (Scaniverse, iPad Pro) on 2026-10-11 and a
+The user scanned the staircase with LiDAR (Scaniverse, iPad Pro) on 2026-10-11 and a
 separate session reduced it to dimensions. The ones the PIR design rests on:
 
 - Switchback stair. The lower flight rises 1.44 m to a landing, turns 180°, and

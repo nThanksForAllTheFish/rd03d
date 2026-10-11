@@ -1093,7 +1093,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - [ ] **Step 5: Import on the user's Node-RED**
 
-This is Kevin's step: import the JSON (Menu → Import → select file, "replace existing" for the Stair Light tab), keep the Tasmota topic he already edited, Deploy. Then `mosquitto_pub -h iotstack.local -t rd03d/pir -m '{"n":1,"t":0,"radar":null}'` from the Mac. Expected: with SOURCE `radar`, no light change and a line in the debug sidebar from the compare log only after a radar event follows; with SOURCE `either`, the light turns on.
+This is the user's step: import the JSON (Menu → Import → select file, "replace existing" for the Stair Light tab), keep the Tasmota topic he already edited, Deploy. Then `mosquitto_pub -h iotstack.local -t rd03d/pir -m '{"n":1,"t":0,"radar":null}'` from the Mac. Expected: with SOURCE `radar`, no light change and a line in the debug sidebar from the compare log only after a radar event follows; with SOURCE `either`, the light turns on.
 
 ---
 
@@ -1118,7 +1118,7 @@ This is Kevin's step: import the JSON (Menu → Import → select file, "replace
 
 So this is not a small can with a lens on top: the lens is Ø20.6 and 11 mm tall, wider than everything below it. The sensor goes into the pod from the FRONT, dome out, flange seated in a recess, neck and can through a bore, and is held by a tube-shaped plug pressed into the bore from the back that bears on the can's underside annulus. The wires come off the pins inside the plug's bore and leave through a pass-through into the XIAO bay.
 
-**Pod geometry.** Shell frame: outer box x ±23, y ±25, z −8 (back rim) to 16 (front face, printed on the bed). Kevin confirmed the case hangs XIAO end (+X) DOWN, so the bore tilts `pirTilt` (18°) from +Z toward +X and the PIR looks outward and 18° down. Depth `d` is measured along the bore axis from the pod's front face into the pod; the sensor's z maps to d = 8.4 − z (its lens base ring top sits on the front face plane).
+**Pod geometry.** Shell frame: outer box x ±23, y ±25, z −8 (back rim) to 16 (front face, printed on the bed). The user confirmed the case hangs XIAO end (+X) DOWN, so the bore tilts `pirTilt` (18°) from +Z toward +X and the PIR looks outward and 18° down. Depth `d` is measured along the bore axis from the pod's front face into the pod; the sensor's z maps to d = 8.4 − z (its lens base ring top sits on the front face plane).
 
 - Pod block: fused to the outer +X wall, full shell depth (z −8..16) so its front face is coplanar with the shell's and prints on the bed. Width along X = 2·(recessR + podWall) + 24·tan(tilt), length along Y = 2·(recessR + podWall).
 - Recess: cylinder r `pirRecessR` = 10.6 (0.3 clearance on the lens base ring), from d −0.5 (outside the face) to d 2.0 (the flange underside at sensor z 6.4). The dome then stands 11 mm proud of the face.
@@ -1300,7 +1300,7 @@ Run: `python3 run_fusion.py script 90_verify.py --read-only 2>&1 | tail -8`. Exp
 
 In `05_export.py`, add `("PirPlug", "rd03d_pir_plug.stl")` to the component tuple. Set `OUT` to the real path for the run and restore the placeholder before committing, as the existing workflow does. Run `python3 run_fusion.py script 05_export.py 2>&1 | tail -4 && ls -la ../*.stl`. Expected: both STLs exported; the shell STL is larger than before.
 
-- [ ] **Step 6: Print check (Kevin)**
+- [ ] **Step 6: Print check (user)**
 
 Slice the shell front-face-down, no supports, PETG, 0.6 mm nozzle. Print the plug. Test-fit the sensor: flange seats in the recess, plug presses in from the back and holds it.
 
@@ -1323,7 +1323,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Walk test**
 
-With the node on the wall, SOURCE set to `radar`, the chart open and the CSV branch deployed, Kevin walks the standard route: approach from downstairs on the left, up the stairs, out the top on the right, out of range, back, past the top, down, out to the left. Then read the CSV:
+With the node on the wall, SOURCE set to `radar`, the chart open and the CSV branch deployed, the user walks the standard route: approach from downstairs on the left, up the stairs, out the top on the right, out of range, back, past the top, down, out to the left. Then read the CSV:
 
 ```bash
 ssh pi@192.168.1.243 'tail -20 ~/IOTstack/volumes/nodered/data/stair_compare.csv'
@@ -1349,4 +1349,4 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 git push -u origin feat/pir-companion
 ```
 
-Merging to `main` is Kevin's call after he has read the numbers.
+Merging to `main` is the user's call after he has read the numbers.
