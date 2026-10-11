@@ -53,6 +53,7 @@ The host tests need nothing but a C compiler:
 cd rd03d_uart/tests
 cc -Wall -Wextra -o test_rd03d test_rd03d.c ../main/rd03d.c && ./test_rd03d
 cc -Wall -Wextra -o test_mqtt_throttle test_mqtt_throttle.c ../main/mqtt_throttle.c && ./test_mqtt_throttle
+cc -Wall -Wextra -o test_pir_gate test_pir_gate.c ../main/pir_gate.c && ./test_pir_gate
 ```
 
 ## A radar stair light, built with an AI co-engineer

@@ -23,6 +23,7 @@ rd03d_uart/build.ap/
 rd03d_uart/tests/test_rd03d
 rd03d_uart/managed_components/
 rd03d_uart/tests/test_mqtt_throttle
+rd03d_uart/tests/test_pir_gate
 
 # Video build outputs (regenerable; large) - keep only the scripts, narration and stills
 video/audio*/
