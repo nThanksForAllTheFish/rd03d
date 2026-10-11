@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Stair Light",
         "disabled": false,
-        "info": "Radar-driven stair lighting: rd03d MQTT events -> zone filter -> 60s hold -> Tasmota relay.\nEdit points: ZONE constants in the zone filter node; device topic in the change node."
+        "info": "Radar-driven stair lighting: rd03d MQTT events -> zone filter -> 60s hold -> Tasmota relay.\nEdit points: ZONE constants in the zone filter node; device topic in the change node.\nPIR companion: rd03d/pir events enter through the source switch (edit SOURCE) and, with the in-zone radar events, feed the compare log, which appends to /data/stair_compare.csv."
     },
     {
         "id": "stairbroker1",
@@ -65,7 +65,7 @@
         "libs": [],
         "x": 330,
         "y": 120,
-        "wires": [["stairtrig1", "stairdbg1"]]
+        "wires": [["stairsrc1", "stairdbg1", "stairlog1"]]
     },
     {
         "id": "stairdbg1",
@@ -229,5 +229,69 @@
         "x": 330,
         "y": 320,
         "wires": []
+    },
+    {
+        "id": "stairpir1",
+        "type": "mqtt in",
+        "z": "stairtab1",
+        "name": "PIR events",
+        "topic": "rd03d/pir",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "stairbroker1",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 200,
+        "wires": [["stairsrc1", "stairlog1"]]
+    },
+    {
+        "id": "stairsrc1",
+        "type": "function",
+        "z": "stairtab1",
+        "name": "source switch (EDIT SOURCE)",
+        "func": "// Which sensor may turn the light on. Edit SOURCE:\n//   \"radar\"  - only in-zone radar events (today's behaviour)\n//   \"pir\"    - only PIR events\n//   \"either\" - whichever fires first\nconst SOURCE = \"radar\";\nconst isPir = msg.topic === \"rd03d/pir\";\nif (SOURCE === \"radar\" && isPir) return null;\nif (SOURCE === \"pir\" && !isPir) return null;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 60,
+        "wires": [["stairtrig1"]]
+    },
+    {
+        "id": "stairlog1",
+        "type": "function",
+        "z": "stairtab1",
+        "name": "compare log",
+        "func": "// One CSV line per trigger episode: which sensor fired first and the\n// delay to the other, plus the radar position the PIR event carried and\n// the one-way latency of the PIR event (needs SNTP on the node; t=0 means\n// unsynced and latency is left blank).\nconst GAP_MS = 60000;              // a new episode starts after this much quiet\nconst now = Date.now();\nlet ep = context.get(\"ep\") || null;\nconst isPir = msg.topic === \"rd03d/pir\";\nlet d = {};\ntry { d = JSON.parse(msg.payload); } catch (e) { d = {}; }\nif (!ep || now - ep.last > GAP_MS) {\n    ep = { start: now, first: isPir ? \"pir\" : \"radar\", other: null, last: now,\n           pirRadar: \"\", pirLatency: \"\" };\n}\nep.last = now;\nconst src = isPir ? \"pir\" : \"radar\";\nif (isPir) {\n    ep.pirRadar = d.radar ? (d.radar.x + \" \" + d.radar.y) : \"none\";\n    ep.pirLatency = d.t ? String(now - d.t) : \"\";\n}\nlet line = null;\nif (ep.other === null && src !== ep.first) {\n    ep.other = src;\n    line = [new Date(ep.start).toISOString(), ep.first, src, now - ep.start,\n            ep.pirRadar, ep.pirLatency].join(\",\");\n}\ncontext.set(\"ep\", ep);\nif (!line) return null;\nmsg.payload = line;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 260,
+        "wires": [["stairfile1"]]
+    },
+    {
+        "id": "stairfile1",
+        "type": "file",
+        "z": "stairtab1",
+        "name": "stair_compare.csv",
+        "filename": "/data/stair_compare.csv",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 560,
+        "y": 260,
+        "wires": [[]]
     }
 ]

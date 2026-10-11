@@ -51,7 +51,7 @@ for n in nodes:
 tgt_in = one("mqtt in", lambda n: n.get("topic") == "rd03d/target/+", "(targets)")
 status_in = one("mqtt in", lambda n: n.get("topic") == "rd03d/status", "(status)")
 
-zone = one("function")
+zone = one("function", lambda n: n.get("name", "").startswith("zone filter"), "zone filter")
 for needle in ("const ZONE", "JSON.parse", "gone", "xMin", "yMax"):
     if needle not in zone["func"]:
         fail(f"zone filter missing '{needle}'")
@@ -84,11 +84,12 @@ debugs = [n for n in nodes if n["type"] == "debug"]
 if len(debugs) != 2:
     fail(f"expected 2 debug nodes, got {len(debugs)}")
 
-# Wiring spine: targets -> zone -> trigger -> rbe -> change -> mqtt out
+# Wiring spine: targets -> zone -> source switch -> trigger -> rbe -> change -> mqtt out
 def wired(a, b):
     return any(b["id"] in out for out in a.get("wires", []))
 
-spine = [tgt_in, zone, trig, rbe, change, out]
+spine_src = one("function", lambda n: n.get("name", "").startswith("source switch"), "source switch")
+spine = [tgt_in, zone, spine_src, trig, rbe, change, out]
 for a, b in zip(spine, spine[1:]):
     if not wired(a, b):
         fail(f"{a['type']} not wired to {b['type']}")
@@ -102,5 +103,23 @@ if not wired(zone, dbg_zone):
     fail("zone filter must also wire to the in-zone debug tap")
 if not wired(status_in, dbg_stat):
     fail("status mqtt in must wire to the sensor status debug")
+
+# PIR companion (2026-10-11)
+pir_in = one("mqtt in", lambda n: n.get("topic") == "rd03d/pir", "for rd03d/pir")
+src = one("function", lambda n: n.get("name", "").startswith("source switch"), "source switch")
+log = one("function", lambda n: n.get("name", "").startswith("compare log"), "compare log")
+csv = one("file", lambda n: True, "CSV file node")
+zone = one("function", lambda n: n.get("name", "").startswith("zone filter"), "zone filter")
+trig = one("trigger")
+if "SOURCE" not in src["func"]:
+    fail("source switch must define SOURCE")
+for name, node, target in (("zone filter", zone, src["id"]), ("pir in", pir_in, src["id"]),
+                           ("source switch", src, trig["id"]), ("compare log", log, csv["id"])):
+    if not any(target in out for out in node.get("wires", [])):
+        fail(f"{name} must wire to {target}")
+if not any(log["id"] in out for out in pir_in.get("wires", [])):
+    fail("pir in must also wire to the compare log")
+if not any(log["id"] in out for out in zone.get("wires", [])):
+    fail("zone filter must also wire to the compare log")
 
 print("flow validation passed")

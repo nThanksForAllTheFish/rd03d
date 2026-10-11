@@ -61,3 +61,18 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
 - The *only changes* (rbe) node is belt-and-suspenders — the trigger already
   alternates ON/OFF strictly. Don't reconfigure it to "per topic" mode; that
   can swallow legitimate ONs.
+
+## PIR companion (2026-10-11)
+
+The flow also subscribes to `rd03d/pir`. Edit `SOURCE` in the "source switch"
+node: `radar` (default) keeps today's behaviour, `pir` runs the light from the
+PIR only, `either` from whichever fires first.
+
+The "compare log" writes `/data/stair_compare.csv` (on the Pi:
+`~/IOTstack/volumes/nodered/data/stair_compare.csv`), one line per trigger
+episode:
+
+    episode start (ISO), first sensor, second sensor, delay ms, radar x y at the PIR event, PIR one-way latency ms
+
+A new episode starts after 60 s of quiet. The latency column is empty until
+the node's SNTP has synced (`t` of 0 in the payload).
