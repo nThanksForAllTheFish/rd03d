@@ -20,6 +20,7 @@
 <div id="hud">
   <span id="status" class="bad">connecting&hellip;</span>
   <span id="targets"></span>
+  <div id="pirlog" style="color:#ffb000"></div>
   <span id="stats"></span>
   <span id="ver" style="color:#777"></span>
 </div>
@@ -42,6 +43,8 @@ let frames = 0;
 let latest = [null, null, null];
 const lastSeen = [0, 0, 0];
 const trails = [[], [], []];
+let pirWasActive = false, pirFlashUntil = 0;
+const pirLog = [];
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
@@ -76,6 +79,16 @@ function drawGrid() {
     ctx.arc(ox, oy, r * s, Math.PI, 2 * Math.PI);
     ctx.stroke();
     ctx.fillText((r / 1000) + " m", ox + 6 * dpr, oy - r * s - 4 * dpr);
+  }
+
+  // PIR event: flash the outer (8 m) arc amber for 400 ms.
+  if (performance.now() < pirFlashUntil) {
+    ctx.strokeStyle = "#ffb000";
+    ctx.lineWidth = 4 * dpr;
+    ctx.beginPath();
+    ctx.arc(ox, oy, RANGE_Y_MM * s, Math.PI, 2 * Math.PI);
+    ctx.stroke();
+    ctx.lineWidth = 1;
   }
 
   ctx.strokeStyle = "#5f5f5f";
@@ -132,7 +145,15 @@ function onMessage(ev) {
     }
   }
   statsEl.textContent =
-    "frames " + frames + " · dropped " + msg.dropped + " · bad " + msg.bad;
+    "frames " + frames + " · dropped " + msg.dropped + " · bad " + msg.bad +
+    " · PIR " + (msg.pir ? "ACTIVE" : "idle");
+  if (msg.pir && !pirWasActive) {
+    pirFlashUntil = performance.now() + 400;
+    pirLog.unshift(new Date().toLocaleTimeString() + " PIR");
+    if (pirLog.length > 6) pirLog.pop();
+    document.getElementById("pirlog").textContent = pirLog.join("  ·  ");
+  }
+  pirWasActive = !!msg.pir;
   targetsEl.innerHTML = msg.t.map(function (t, i) {
     return t
       ? '<span style="color:' + COLORS[i] + '">T' + (i + 1) +

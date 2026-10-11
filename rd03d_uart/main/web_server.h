@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "rd03d.h"
@@ -18,3 +19,7 @@ httpd_handle_t web_server_handle(void);
  * clients whose sends fail are dropped. No server/clients -> no-op. */
 void web_server_send_frame(const rd03d_frame_t *f, uint32_t dropped,
                            uint32_t bad);
+
+/* Latest PIR hold state, folded into every WebSocket frame as "pir":0|1.
+ * Builds without the PIR never call this and the field stays 0. */
+void web_server_set_pir(bool active);

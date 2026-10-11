@@ -19,6 +19,7 @@ extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 #define MAX_WS_CLIENTS 7
 
 static httpd_handle_t s_server;
+static volatile bool s_pir;
 
 typedef struct {
     char json[192];
@@ -159,8 +160,9 @@ void web_server_send_frame(const rd03d_frame_t *f, uint32_t dropped,
     }
     if (off > 0 && off < (int)sizeof(msg->json)) {
         off += snprintf(msg->json + off, sizeof(msg->json) - (size_t)off,
-                        "],\"dropped\":%" PRIu32 ",\"bad\":%" PRIu32 "}",
-                        dropped, bad);
+                        "],\"dropped\":%" PRIu32 ",\"bad\":%" PRIu32
+                        ",\"pir\":%d}",
+                        dropped, bad, s_pir ? 1 : 0);
     }
     if (off <= 0 || off >= (int)sizeof(msg->json)) {
         free(msg); /* formatting error or truncation: drop this frame */
@@ -170,4 +172,9 @@ void web_server_send_frame(const rd03d_frame_t *f, uint32_t dropped,
     if (httpd_queue_work(s_server, ws_send_work, msg) != ESP_OK) {
         free(msg);
     }
+}
+
+void web_server_set_pir(bool active)
+{
+    s_pir = active;
 }
