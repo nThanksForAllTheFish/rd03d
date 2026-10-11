@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-11-pir-companion-design.md`
 
+**Deferred to the battery plan (on purpose):** `RD03D_POWER_MODE`, `RD03D_RADAR_EN_GPIO`, `RD03D_AWAKE_WINDOW_S`, deep/light sleep, the boost converter and cell holder. This plan only makes sure the pin choices leave room for them.
+
 **Working copy:** `~/Documents/rd03d-public` on branch `feat/pir-companion`. The STA build needs `rd03d_uart/sdkconfig` (home WiFi credentials) which lives ONLY in `~/Documents/Code/VSCode/Claude/rd03d_uart/sdkconfig`; copy it and `sdkconfig.ap` into `rd03d_uart/` before building. Both are gitignored. Never commit them, never print their contents.
 
 **Commit convention:** every commit message ends with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Author identity is already set in the clone (`nThanksForAllTheFish`, no-reply address).
@@ -1155,8 +1157,8 @@ Add step 7 in `run()` just before `print("FrontShell bodies:", comp.bRepBodies.c
         raise RuntimeError("no shoulder: lens opening %.2f >= can radius %.2f "
                            "(reduce pirLensClear)" % (lensR * 10, p(des, "pirCanDia") * 5))
     podWall = p(des, "pirPodWall")
-    tilt = math.radians(p(des, "pirTilt") * 180 / math.pi) if p(des, "pirTilt") < 1 else math.radians(18)
-    # p() returns degrees-as-radians for angle params; guard both conventions
+    # Fusion hands angle parameters back in radians (18 deg -> 0.314); the
+    # guard also accepts a value typed in degrees.
     tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))
     sgn = 1.0 if p(des, "pirTiltSign") >= 0 else -1.0
     xOuter = intW / 2 + wall                     # +X outer face of the shell
@@ -1226,8 +1228,6 @@ Add step 7 in `run()` just before `print("FrontShell bodies:", comp.bRepBodies.c
             participants=[pl.bodies.item(0)])
     print("pir plug ok")
 ```
-
-Remove the first (guarded) `tilt = ...` line that references `math.radians(p(...))` twice; keep only the single line `tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))`. (Fusion returns angle parameters in radians from `.value`; `p()` in this file returns `.value`, so 18 deg reads as 0.314.)
 
 Note `wall`, `intW`, `intD`, `backT`, `shell_body`, `comp`, `root` are already defined earlier in `run()`.
 
