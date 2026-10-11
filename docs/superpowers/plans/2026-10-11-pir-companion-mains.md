@@ -1,0 +1,1363 @@
+# PIR Companion (mains mode) Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Add a Panasonic EKMC1603111 PIR to the radar node so both sensors publish events from one firmware, the chart and the Node-RED flow show both, and a CSV log compares them. Mains mode only; the battery/deep-sleep work is a later plan gated on the latency numbers this plan produces.
+
+**Architecture:** A pure-C gate (`pir_gate.c`, host-tested) turns raw edges into one event per pass with a hold; an IDF driver (`pir.c`) feeds it from a GPIO interrupt via a queue and calls one callback. `main.c` wires the callback to the LED and the publisher. The publisher (`mqtt_pub.c`) emits `rd03d/pir` with the radar's nearest target attached and a retained `rd03d/pir/state`. SNTP gives wall-clock timestamps so Node-RED can compute one-way latency. The web page shows PIR state. The case gets a pod on the shell's +X wall, built by the Fusion scripts and checked by the probe harness.
+
+**Tech Stack:** ESP-IDF v5.5 (`source ~/esp/esp-idf-v5.5/export.sh`), target esp32c6, host tests with `cc`, Node-RED flow JSON validated by `node-red/validate_flow.py`, Fusion 360 via `case/fusion_scripts/run_fusion.py`.
+
+**Spec:** `docs/superpowers/specs/2026-10-11-pir-companion-design.md`
+
+**Working copy:** `~/Documents/rd03d-public` on branch `feat/pir-companion`. The STA build needs `rd03d_uart/sdkconfig` (home WiFi credentials) which lives ONLY in `~/Documents/Code/VSCode/Claude/rd03d_uart/sdkconfig`; copy it and `sdkconfig.ap` into `rd03d_uart/` before building. Both are gitignored. Never commit them, never print their contents.
+
+**Commit convention:** every commit message ends with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Author identity is already set in the clone (`nThanksForAllTheFish`, no-reply address).
+
+---
+
+## File map
+
+| file | responsibility |
+| --- | --- |
+| `rd03d_uart/main/pir_gate.h/.c` | pure C: edges in, events out, hold timing; no IDF includes |
+| `rd03d_uart/tests/test_pir_gate.c` | host test for the gate |
+| `rd03d_uart/main/pir.h/.c` | IDF driver: GPIO ISR, queue, task, hold-expiry timer, callback |
+| `rd03d_uart/main/clock_ms.h/.c` | SNTP start + `clock_epoch_ms()` (0 until synced) |
+| `rd03d_uart/main/mqtt_pub.h/.c` | adds `mqtt_pub_pir_event()` and `mqtt_pub_pir_state()`, keeps the last radar frame |
+| `rd03d_uart/main/web_server.h/.c`, `index.html` | `"pir"` field in the WebSocket frame; page lamp + log line |
+| `rd03d_uart/main/main.c` | starts the clock and the PIR driver, wires the callback |
+| `rd03d_uart/main/Kconfig.projbuild`, `CMakeLists.txt` | `RD03D_ENABLE_PIR`, `RD03D_PIR_GPIO`, `RD03D_PIR_HOLD_MS`; conditional sources |
+| `node-red/flows-stair-light.json`, `validate_flow.py`, `README.md` | PIR input, source switch, comparison/latency CSV |
+| `case/fusion_scripts/03_shell.py`, `90_verify.py`, `05_export.py` | pod on the +X wall, plug, probe check, STL export |
+| `README.md`, `rd03d_uart/README.md` | wiring, topics, build notes |
+
+---
+
+### Task 1: PIR gate (pure C) with host test
+
+**Files:**
+- Create: `rd03d_uart/main/pir_gate.h`
+- Create: `rd03d_uart/main/pir_gate.c`
+- Create: `rd03d_uart/tests/test_pir_gate.c`
+
+- [ ] **Step 1: Write the failing test**
+
+```c
+/* rd03d_uart/tests/test_pir_gate.c */
+#include <assert.h>
+#include <stdio.h>
+#include "../main/pir_gate.h"
+
+static void test_first_edge_is_an_event(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    assert(pir_gate_edge(&g, 1000) == PIR_GATE_EVENT);
+    assert(pir_gate_active(&g, 1000));
+}
+
+static void test_edges_inside_hold_are_silent_but_extend(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    pir_gate_edge(&g, 1000);                     /* hold until 1500 */
+    assert(pir_gate_edge(&g, 1400) == PIR_GATE_NONE); /* extends to 1900 */
+    assert(pir_gate_active(&g, 1800));
+    assert(!pir_gate_active(&g, 1900));
+}
+
+static void test_edge_after_hold_is_a_new_event(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    pir_gate_edge(&g, 1000);
+    assert(pir_gate_edge(&g, 1500) == PIR_GATE_EVENT); /* exactly at expiry */
+    assert(pir_gate_edge(&g, 3000) == PIR_GATE_EVENT);
+}
+
+static void test_hold_end_time(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    pir_gate_edge(&g, 1000);
+    assert(pir_gate_hold_end(&g) == 1500);
+    pir_gate_edge(&g, 1200);
+    assert(pir_gate_hold_end(&g) == 1700);
+}
+
+static void test_inactive_before_any_edge(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    assert(!pir_gate_active(&g, 0));
+    assert(!pir_gate_active(&g, 123456789));
+}
+
+static void test_zero_hold_every_edge_is_an_event(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 0);
+    assert(pir_gate_edge(&g, 10) == PIR_GATE_EVENT);
+    assert(pir_gate_edge(&g, 10) == PIR_GATE_EVENT);
+    assert(!pir_gate_active(&g, 10));
+}
+
+static void test_event_count(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    pir_gate_edge(&g, 1000);
+    pir_gate_edge(&g, 1100);
+    pir_gate_edge(&g, 5000);
+    assert(pir_gate_count(&g) == 2);
+}
+
+static void test_wraparound_64bit_not_a_concern_but_large_values_ok(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    int64_t t = 4000000000000LL; /* ~127 years of ms */
+    assert(pir_gate_edge(&g, t) == PIR_GATE_EVENT);
+    assert(pir_gate_active(&g, t + 499));
+    assert(!pir_gate_active(&g, t + 500));
+}
+
+int main(void)
+{
+    test_first_edge_is_an_event();
+    test_edges_inside_hold_are_silent_but_extend();
+    test_edge_after_hold_is_a_new_event();
+    test_hold_end_time();
+    test_inactive_before_any_edge();
+    test_zero_hold_every_edge_is_an_event();
+    test_event_count();
+    test_wraparound_64bit_not_a_concern_but_large_values_ok();
+    printf("all tests passed\n");
+    return 0;
+}
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run:
+```bash
+cd ~/Documents/rd03d-public/rd03d_uart/tests && cc -Wall -Wextra -o test_pir_gate test_pir_gate.c ../main/pir_gate.c && ./test_pir_gate
+```
+Expected: compile error, `../main/pir_gate.h: No such file or directory`.
+
+- [ ] **Step 3: Write the gate**
+
+```c
+/* rd03d_uart/main/pir_gate.h */
+#pragma once
+
+#include <stdbool.h>
+#include <stdint.h>
+
+/* Turns raw PIR output edges into one event per pass.
+ *
+ * The EKMC1603111 output goes high for about 2 s per detection, but a person
+ * crossing several lens zones produces a burst of rising edges. The gate
+ * reports the first edge as an event and swallows edges that land inside a
+ * hold window, extending the window each time. Pure C, no IDF: the caller
+ * supplies time in milliseconds from any monotonic source. */
+
+typedef enum {
+    PIR_GATE_NONE = 0,
+    PIR_GATE_EVENT,
+} pir_gate_action_t;
+
+typedef struct {
+    uint32_t hold_ms;
+    int64_t hold_until_ms;   /* exclusive: active while now < hold_until */
+    bool armed_once;         /* false until the first edge ever */
+    uint32_t count;          /* events reported since init */
+} pir_gate_t;
+
+void pir_gate_init(pir_gate_t *g, uint32_t hold_ms);
+
+/* Feed one rising edge at time now_ms. */
+pir_gate_action_t pir_gate_edge(pir_gate_t *g, int64_t now_ms);
+
+/* True while a hold window is open. */
+bool pir_gate_active(const pir_gate_t *g, int64_t now_ms);
+
+/* End of the current hold window (ms), meaningful after the first edge. */
+int64_t pir_gate_hold_end(const pir_gate_t *g);
+
+uint32_t pir_gate_count(const pir_gate_t *g);
+```
+
+```c
+/* rd03d_uart/main/pir_gate.c */
+#include "pir_gate.h"
+
+void pir_gate_init(pir_gate_t *g, uint32_t hold_ms)
+{
+    g->hold_ms = hold_ms;
+    g->hold_until_ms = 0;
+    g->armed_once = false;
+    g->count = 0;
+}
+
+pir_gate_action_t pir_gate_edge(pir_gate_t *g, int64_t now_ms)
+{
+    bool inside = g->armed_once && now_ms < g->hold_until_ms;
+    g->hold_until_ms = now_ms + (int64_t)g->hold_ms;
+    g->armed_once = true;
+    if (inside) {
+        return PIR_GATE_NONE;       /* same pass: extend only */
+    }
+    g->count++;
+    return PIR_GATE_EVENT;
+}
+
+bool pir_gate_active(const pir_gate_t *g, int64_t now_ms)
+{
+    return g->armed_once && now_ms < g->hold_until_ms;
+}
+
+int64_t pir_gate_hold_end(const pir_gate_t *g)
+{
+    return g->hold_until_ms;
+}
+
+uint32_t pir_gate_count(const pir_gate_t *g)
+{
+    return g->count;
+}
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run the same command as step 2.
+Expected: `all tests passed`.
+
+- [ ] **Step 5: Add the test to both READMEs' test blocks**
+
+In `README.md` (the block under "Quick start", currently two `cc` lines) and `rd03d_uart/README.md` (the block near line 203), add a third line:
+
+```bash
+cc -Wall -Wextra -o test_pir_gate test_pir_gate.c ../main/pir_gate.c && ./test_pir_gate
+```
+
+Also add `rd03d_uart/tests/test_pir_gate` to `.gitignore` next to the other two test binaries.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd ~/Documents/rd03d-public && git add rd03d_uart/main/pir_gate.h rd03d_uart/main/pir_gate.c rd03d_uart/tests/test_pir_gate.c README.md rd03d_uart/README.md .gitignore
+git commit -m "pir: pure-C edge gate with host tests
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 2: Kconfig and CMake for the PIR
+
+**Files:**
+- Modify: `rd03d_uart/main/Kconfig.projbuild` (append before the final `endmenu`)
+- Modify: `rd03d_uart/main/CMakeLists.txt`
+
+- [ ] **Step 1: Add the Kconfig entries**
+
+Insert before `endmenu` at the end of `Kconfig.projbuild`:
+
+```
+config RD03D_ENABLE_PIR
+    bool "PIR companion sensor"
+    default y
+    help
+        Panasonic EKMC1603111 on a GPIO: publishes rd03d/pir events next to
+        the radar's. Off in the AP image (sdkconfig.ap), which has no PIR
+        fitted. When off, pir.c and pir_gate.c are not compiled.
+
+config RD03D_PIR_GPIO
+    int "PIR output GPIO"
+    depends on RD03D_ENABLE_PIR
+    default 1
+    range 0 30
+    help
+        XIAO ESP32-C6 D1 = GPIO1. Keep it in GPIO0..7: those are the LP IOs,
+        the only ones that can wake the chip from deep sleep, which the
+        battery variant will need. The sensor drives the pin high on
+        detection and floats otherwise; the driver enables the internal
+        pull-down.
+
+config RD03D_PIR_HOLD_MS
+    int "PIR hold window (ms)"
+    depends on RD03D_ENABLE_PIR
+    default 500
+    range 0 10000
+    help
+        Edges inside this window after an event are the same pass and do not
+        publish; each one extends the window. rd03d/pir/state is 1 while the
+        window is open.
+```
+
+- [ ] **Step 2: Add the sources conditionally**
+
+In `CMakeLists.txt`, after the `if(CONFIG_RD03D_ENABLE_MQTT)` block:
+
+```cmake
+# pir_gate.c is pure C (host-tested); pir.c is the GPIO driver around it.
+if(CONFIG_RD03D_ENABLE_PIR)
+    list(APPEND rd03d_srcs "pir.c" "pir_gate.c" "clock_ms.c")
+endif()
+```
+
+- [ ] **Step 3: Turn the PIR off in the AP config**
+
+`rd03d_uart/sdkconfig.ap` is gitignored and local. Append one line to it (the file has no PIR entries yet, so there is nothing to replace):
+
+```bash
+cd ~/Documents/rd03d-public/rd03d_uart && grep -q RD03D_ENABLE_PIR sdkconfig.ap || printf '\n# PIR not fitted on the prototype that runs the AP image\nCONFIG_RD03D_ENABLE_PIR=n\n' >> sdkconfig.ap
+```
+
+Expected: no output; `grep RD03D_ENABLE_PIR sdkconfig.ap` prints `CONFIG_RD03D_ENABLE_PIR=n`.
+
+- [ ] **Step 4: Commit** (CMake references files that Tasks 3 and 4 create; the build is checked in Task 7)
+
+```bash
+cd ~/Documents/rd03d-public && git add rd03d_uart/main/Kconfig.projbuild rd03d_uart/main/CMakeLists.txt
+git commit -m "pir: Kconfig switch, GPIO and hold; conditional sources
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 3: Wall-clock milliseconds via SNTP
+
+**Files:**
+- Create: `rd03d_uart/main/clock_ms.h`
+- Create: `rd03d_uart/main/clock_ms.c`
+
+- [ ] **Step 1: Write the header**
+
+```c
+/* rd03d_uart/main/clock_ms.h */
+#pragma once
+
+#include <stdint.h>
+
+/* Starts SNTP (pool.ntp.org) once WiFi is up. Station mode only: an access
+ * point with no uplink has nothing to sync to, and clock_epoch_ms() stays 0. */
+void clock_start(void);
+
+/* Milliseconds since the Unix epoch, or 0 until the first SNTP sync. Node-RED
+ * subtracts this from its own arrival time to get one-way latency, which is
+ * the number the battery variant's deep-sleep gate is decided on. */
+int64_t clock_epoch_ms(void);
+```
+
+- [ ] **Step 2: Write the implementation**
+
+```c
+/* rd03d_uart/main/clock_ms.c */
+#include "clock_ms.h"
+
+#include <sys/time.h>
+#include "esp_log.h"
+#include "esp_netif_sntp.h"
+#include "sdkconfig.h"
+
+static const char *TAG = "clock";
+
+void clock_start(void)
+{
+#if CONFIG_RD03D_NET_MODE_STA
+    esp_sntp_config_t cfg = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    cfg.start = true;              /* sends its first request as soon as the
+                                      interface has an IP; retries on its own */
+    ESP_ERROR_CHECK(esp_netif_sntp_init(&cfg));
+    ESP_LOGI(TAG, "sntp started (pool.ntp.org)");
+#else
+    ESP_LOGI(TAG, "AP mode: no SNTP, timestamps stay 0");
+#endif
+}
+
+int64_t clock_epoch_ms(void)
+{
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) != 0) {
+        return 0;
+    }
+    /* Before the first sync the RTC reads 1970; report 0 so a consumer can
+     * tell "unsynced" from "very early". 1e9 s is 2001-09-09. */
+    if (tv.tv_sec < 1000000000) {
+        return 0;
+    }
+    return (int64_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+```
+
+- [ ] **Step 3: Call it from `main.c`**
+
+In `rd03d_uart/main/main.c`, add `#include "clock_ms.h"` under the `#if CONFIG_RD03D_ENABLE_PIR` include block (created in Task 5; if doing this task first, add the include inside the same guard) and call `clock_start();` right after `wifi_link_start();`. The full `app_main` wiring is shown in Task 5; this step only records where the call goes.
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd ~/Documents/rd03d-public && git add rd03d_uart/main/clock_ms.h rd03d_uart/main/clock_ms.c
+git commit -m "pir: SNTP wall clock for event timestamps
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 4: PIR driver (`pir.c`)
+
+**Files:**
+- Create: `rd03d_uart/main/pir.h`
+- Create: `rd03d_uart/main/pir.c`
+
+- [ ] **Step 1: Write the header**
+
+```c
+/* rd03d_uart/main/pir.h */
+#pragma once
+
+#include <stdbool.h>
+#include <stdint.h>
+
+/* One PIR on one GPIO. A rising edge from the sensor goes ISR -> queue ->
+ * pir task -> pir_gate; the gate's events reach the application through the
+ * callback below, on the pir task, never in interrupt context. The hold
+ * window is tracked so the callback also hears when activity ends. */
+
+typedef struct {
+    uint32_t n;          /* events since boot (pir_gate_count) */
+    int64_t  t_ms;       /* clock_epoch_ms() at the edge, 0 if unsynced */
+} pir_event_t;
+
+typedef void (*pir_event_cb_t)(const pir_event_t *ev);
+typedef void (*pir_state_cb_t)(bool active);
+
+/* Configures the pin (input, pull-down, rising-edge interrupt), creates the
+ * task and the hold-expiry timer. Call once at boot. The state callback
+ * fires with true on each event's first edge and false when the hold ends. */
+void pir_init(pir_event_cb_t on_event, pir_state_cb_t on_state);
+
+/* True while the hold window is open. Safe from any task. */
+bool pir_active(void);
+```
+
+- [ ] **Step 2: Write the driver**
+
+```c
+/* rd03d_uart/main/pir.c */
+#include "pir.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+#include "esp_log.h"
+#include "esp_timer.h"
+#include "sdkconfig.h"
+#include "clock_ms.h"
+#include "pir_gate.h"
+
+static const char *TAG = "pir";
+
+typedef enum { MSG_EDGE, MSG_HOLD_EXPIRED } pir_msg_t;
+
+static QueueHandle_t s_queue;
+static esp_timer_handle_t s_expiry;
+static pir_gate_t s_gate;
+static volatile bool s_active;
+static pir_event_cb_t s_on_event;
+static pir_state_cb_t s_on_state;
+
+static int64_t now_ms(void)
+{
+    return esp_timer_get_time() / 1000;   /* monotonic since boot */
+}
+
+static void IRAM_ATTR pir_isr(void *arg)
+{
+    (void)arg;
+    pir_msg_t m = MSG_EDGE;
+    BaseType_t woken = pdFALSE;
+    xQueueSendFromISR(s_queue, &m, &woken);
+    if (woken) {
+        portYIELD_FROM_ISR();
+    }
+}
+
+static void expiry_cb(void *arg)
+{
+    (void)arg;
+    pir_msg_t m = MSG_HOLD_EXPIRED;
+    xQueueSend(s_queue, &m, 0);
+}
+
+static void arm_expiry(int64_t hold_end_ms)
+{
+    int64_t delay_us = (hold_end_ms - now_ms()) * 1000;
+    if (delay_us < 1000) {
+        delay_us = 1000;
+    }
+    esp_timer_stop(s_expiry);          /* INVALID_STATE when idle: fine */
+    esp_timer_start_once(s_expiry, (uint64_t)delay_us);
+}
+
+static void pir_task(void *arg)
+{
+    (void)arg;
+    pir_msg_t m;
+    for (;;) {
+        if (xQueueReceive(s_queue, &m, portMAX_DELAY) != pdTRUE) {
+            continue;
+        }
+        int64_t t = now_ms();
+        if (m == MSG_EDGE) {
+            pir_gate_action_t act = pir_gate_edge(&s_gate, t);
+            arm_expiry(pir_gate_hold_end(&s_gate));
+            if (act == PIR_GATE_EVENT) {
+                s_active = true;
+                pir_event_t ev = {
+                    .n = pir_gate_count(&s_gate),
+                    .t_ms = clock_epoch_ms(),
+                };
+                ESP_LOGI(TAG, "event %lu", (unsigned long)ev.n);
+                if (s_on_state) {
+                    s_on_state(true);
+                }
+                if (s_on_event) {
+                    s_on_event(&ev);
+                }
+            }
+        } else { /* MSG_HOLD_EXPIRED */
+            if (!pir_gate_active(&s_gate, t)) {
+                if (s_active) {
+                    s_active = false;
+                    if (s_on_state) {
+                        s_on_state(false);
+                    }
+                }
+            } else {
+                arm_expiry(pir_gate_hold_end(&s_gate)); /* extended meanwhile */
+            }
+        }
+    }
+}
+
+void pir_init(pir_event_cb_t on_event, pir_state_cb_t on_state)
+{
+    s_on_event = on_event;
+    s_on_state = on_state;
+    pir_gate_init(&s_gate, CONFIG_RD03D_PIR_HOLD_MS);
+
+    s_queue = xQueueCreate(8, sizeof(pir_msg_t));
+    const esp_timer_create_args_t targs = {
+        .callback = expiry_cb,
+        .name = "pir_hold",
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&targs, &s_expiry));
+
+    gpio_config_t cfg = {
+        .pin_bit_mask = 1ULL << CONFIG_RD03D_PIR_GPIO,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,  /* sensor output floats when idle */
+        .intr_type = GPIO_INTR_POSEDGE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&cfg));
+    /* Shared ISR service; ESP_ERR_INVALID_STATE means another module already
+     * installed it, which is fine. */
+    esp_err_t err = gpio_install_isr_service(0);
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        ESP_ERROR_CHECK(err);
+    }
+    ESP_ERROR_CHECK(gpio_isr_handler_add(CONFIG_RD03D_PIR_GPIO, pir_isr, NULL));
+
+    xTaskCreate(pir_task, "pir", 3072, NULL, 6, NULL);
+    ESP_LOGI(TAG, "PIR on GPIO%d, hold %d ms", CONFIG_RD03D_PIR_GPIO,
+             CONFIG_RD03D_PIR_HOLD_MS);
+}
+
+bool pir_active(void)
+{
+    return s_active;
+}
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+cd ~/Documents/rd03d-public && git add rd03d_uart/main/pir.h rd03d_uart/main/pir.c
+git commit -m "pir: GPIO driver around the gate, event and state callbacks
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 5: Publish `rd03d/pir` and `rd03d/pir/state`; wire `main.c`
+
+**Files:**
+- Modify: `rd03d_uart/main/mqtt_pub.h`
+- Modify: `rd03d_uart/main/mqtt_pub.c`
+- Modify: `rd03d_uart/main/main.c`
+
+- [ ] **Step 1: Extend the publisher header**
+
+Append to `mqtt_pub.h`:
+
+```c
+#include <stdbool.h>
+#include <stdint.h>
+
+/* Publish one PIR event on rd03d/pir (QoS 0, not retained):
+ *   {"n":17,"t":1760190000123,"radar":{"x":-420,"y":2310,"v":38}}
+ * "radar" is the nearest radar target from the last parsed frame, or null.
+ * t_ms is 0 until SNTP has synced. No-op while disconnected. */
+void mqtt_pub_pir_event(uint32_t n, int64_t t_ms);
+
+/* Publish rd03d/pir/state, retained, "1" while the PIR hold is open, "0" when
+ * it closes. No-op while disconnected. */
+void mqtt_pub_pir_state(bool active);
+```
+
+- [ ] **Step 2: Keep the last frame and add the two publishers**
+
+In `mqtt_pub.c`, after the `static mqtt_throttle_t s_throttle;` line add:
+
+```c
+/* Last parsed frame, copied on the radar task and read on the PIR task. The
+ * spinlock makes the copy atomic; a torn read would pair one target's x with
+ * another frame's y. */
+static rd03d_frame_t s_last_frame;
+static portMUX_TYPE s_frame_lock = portMUX_INITIALIZER_UNLOCKED;
+```
+
+At the top of `mqtt_pub_frame()`, before the `if (!s_connected)` check, add:
+
+```c
+    portENTER_CRITICAL(&s_frame_lock);
+    s_last_frame = *f;
+    portEXIT_CRITICAL(&s_frame_lock);
+```
+
+Append to the end of `mqtt_pub.c`:
+
+```c
+void mqtt_pub_pir_event(uint32_t n, int64_t t_ms)
+{
+    esp_mqtt_client_handle_t client = s_client;
+    if (!s_connected || client == NULL) {
+        return;
+    }
+    rd03d_frame_t f;
+    portENTER_CRITICAL(&s_frame_lock);
+    f = s_last_frame;
+    portEXIT_CRITICAL(&s_frame_lock);
+
+    const rd03d_target_t *nearest = NULL;
+    int32_t best = INT32_MAX;
+    for (int i = 0; i < RD03D_NUM_TARGETS; i++) {
+        const rd03d_target_t *t = &f.targets[i];
+        if (!t->present) {
+            continue;
+        }
+        int32_t d2 = (int32_t)t->x_mm * t->x_mm + (int32_t)t->y_mm * t->y_mm;
+        if (d2 < best) {
+            best = d2;
+            nearest = t;
+        }
+    }
+    char payload[128];
+    int len;
+    if (nearest) {
+        len = snprintf(payload, sizeof(payload),
+                       "{\"n\":%lu,\"t\":%lld,\"radar\":{\"x\":%d,\"y\":%d,\"v\":%d}}",
+                       (unsigned long)n, (long long)t_ms,
+                       nearest->x_mm, nearest->y_mm, nearest->speed_cms);
+    } else {
+        len = snprintf(payload, sizeof(payload),
+                       "{\"n\":%lu,\"t\":%lld,\"radar\":null}",
+                       (unsigned long)n, (long long)t_ms);
+    }
+    if (len <= 0 || len >= (int)sizeof(payload)) {
+        return;
+    }
+    if (esp_mqtt_client_enqueue(client, "rd03d/pir", payload, len, 0, 0, true) < 0) {
+        ESP_LOGW(TAG, "pir event %lu dropped", (unsigned long)n);
+    }
+}
+
+void mqtt_pub_pir_state(bool active)
+{
+    esp_mqtt_client_handle_t client = s_client;
+    if (!s_connected || client == NULL) {
+        return;
+    }
+    /* Retained so a fresh Node-RED subscriber learns the current state. */
+    esp_mqtt_client_enqueue(client, "rd03d/pir/state", active ? "1" : "0",
+                            1, 0, 1, true);
+}
+```
+
+Add `#include <stdint.h>` and `#include <limits.h>` to the includes at the top of `mqtt_pub.c` if not already present (INT32_MAX needs `<stdint.h>`).
+
+- [ ] **Step 3: Wire `main.c`**
+
+In `main.c`, after the existing `#include "wifi_link.h"` add:
+
+```c
+#if CONFIG_RD03D_ENABLE_PIR
+#include "clock_ms.h"
+#include "pir.h"
+#endif
+```
+
+Before `app_main`, add the two callbacks:
+
+```c
+#if CONFIG_RD03D_ENABLE_PIR
+/* Runs on the PIR task. One LED flash per event, like a radar publish. */
+static void on_pir_event(const pir_event_t *ev)
+{
+    led_pulse();
+#if CONFIG_RD03D_ENABLE_MQTT
+    mqtt_pub_pir_event(ev->n, ev->t_ms);
+#endif
+}
+
+static void on_pir_state(bool active)
+{
+    web_server_set_pir(active);
+#if CONFIG_RD03D_ENABLE_MQTT
+    mqtt_pub_pir_state(active);
+#endif
+}
+#endif
+```
+
+In `app_main`, replace the block
+
+```c
+    wifi_link_start();
+    web_server_start();
+    ota_update_register(web_server_handle());
+    xTaskCreate(ota_validation_task, "ota_valid", 3072, NULL, 5, NULL);
+    led_init();
+```
+
+with
+
+```c
+    wifi_link_start();
+    web_server_start();
+    ota_update_register(web_server_handle());
+    xTaskCreate(ota_validation_task, "ota_valid", 3072, NULL, 5, NULL);
+    led_init();
+#if CONFIG_RD03D_ENABLE_PIR
+    clock_start();
+    pir_init(on_pir_event, on_pir_state);
+#endif
+```
+
+(`web_server_set_pir` is created in Task 6; the build is first attempted after that task.)
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd ~/Documents/rd03d-public && git add rd03d_uart/main/mqtt_pub.h rd03d_uart/main/mqtt_pub.c rd03d_uart/main/main.c
+git commit -m "pir: publish rd03d/pir with the nearest radar target, retained state
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 6: PIR state on the chart page
+
+**Files:**
+- Modify: `rd03d_uart/main/web_server.h`
+- Modify: `rd03d_uart/main/web_server.c:133-175` (`web_server_send_frame`)
+- Modify: `rd03d_uart/main/index.html:121-141` (`onMessage`) and the HUD markup
+
+- [ ] **Step 1: Add the setter to the header**
+
+Append to `web_server.h`:
+
+```c
+/* Latest PIR hold state, folded into every WebSocket frame as "pir":0|1.
+ * Builds without the PIR never call this and the field stays 0. */
+void web_server_set_pir(bool active);
+```
+
+Add `#include <stdbool.h>` to the header's includes.
+
+- [ ] **Step 2: Fold the state into the frame**
+
+In `web_server.c`, near the other statics add `static volatile bool s_pir;` and at the end of the file:
+
+```c
+void web_server_set_pir(bool active)
+{
+    s_pir = active;
+}
+```
+
+In `web_server_send_frame`, change the closing `snprintf` from
+
+```c
+        off += snprintf(msg->json + off, sizeof(msg->json) - (size_t)off,
+                        "],\"dropped\":%" PRIu32 ",\"bad\":%" PRIu32 "}",
+                        dropped, bad);
+```
+
+to
+
+```c
+        off += snprintf(msg->json + off, sizeof(msg->json) - (size_t)off,
+                        "],\"dropped\":%" PRIu32 ",\"bad\":%" PRIu32
+                        ",\"pir\":%d}",
+                        dropped, bad, s_pir ? 1 : 0);
+```
+
+Check `ws_msg_t.json` has room: find its declaration (`char json[...]`) and confirm the size is at least 160 bytes; the longest frame is now about 110 characters.
+
+- [ ] **Step 3: Show it on the page**
+
+In `index.html`, find the stats line `statsEl.textContent = "frames " + ...` and append the PIR state:
+
+```javascript
+  statsEl.textContent =
+    "frames " + frames + " · dropped " + msg.dropped + " · bad " + msg.bad +
+    " · PIR " + (msg.pir ? "ACTIVE" : "idle");
+  if (msg.pir && !pirWasActive) {
+    pirFlashUntil = performance.now() + 400;
+    pirLog.unshift(new Date().toLocaleTimeString() + " PIR");
+    if (pirLog.length > 6) pirLog.pop();
+    document.getElementById("pirlog").textContent = pirLog.join("  ·  ");
+  }
+  pirWasActive = !!msg.pir;
+```
+
+Declare the state near the other page globals (next to `let frames = 0` or equivalent):
+
+```javascript
+let pirWasActive = false, pirFlashUntil = 0;
+const pirLog = [];
+```
+
+In `drawGrid()` (the function that draws the range arcs), after the arcs are drawn, add a flash of the outer ring:
+
+```javascript
+  if (performance.now() < pirFlashUntil) {
+    ctx.strokeStyle = "#ffb000";
+    ctx.lineWidth = 4 * dpr;
+    ctx.beginPath();
+    ctx.arc(ox, oy, 8 * s, Math.PI, 2 * Math.PI);
+    ctx.stroke();
+  }
+```
+
+(`ox, oy, s, dpr` are the existing origin, scale and pixel-ratio variables used by the arcs in that function; `8 * s` is the 8 m outer arc.)
+
+Add a line to the HUD markup, next to the element with id `targets`:
+
+```html
+<div id="pirlog" style="color:#ffb000"></div>
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd ~/Documents/rd03d-public && git add rd03d_uart/main/web_server.h rd03d_uart/main/web_server.c rd03d_uart/main/index.html
+git commit -m "chart: PIR state in the WebSocket frame, ring flash and event log
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 7: Build both images, flash, bench test
+
+**Files:** none new. Needs the sensor wired: VDD→3V3, GND→GND, OUT→D1, 0.1 µF across VDD/GND at the sensor.
+
+- [ ] **Step 1: Bring in the local configs**
+
+```bash
+cp ~/Documents/Code/VSCode/Claude/rd03d_uart/sdkconfig ~/Documents/rd03d-public/rd03d_uart/sdkconfig
+cp ~/Documents/Code/VSCode/Claude/rd03d_uart/sdkconfig.ap ~/Documents/rd03d-public/rd03d_uart/sdkconfig.ap
+cd ~/Documents/rd03d-public && git status --short | grep sdkconfig || echo "sdkconfig files are ignored: ok"
+```
+
+Expected: `sdkconfig files are ignored: ok`. Then redo Task 2 step 3 (the AP line) if `sdkconfig.ap` was overwritten.
+
+- [ ] **Step 2: Build the station image**
+
+```bash
+cd ~/Documents/rd03d-public/rd03d_uart && source ~/esp/esp-idf-v5.5/export.sh >/dev/null && idf.py build 2>&1 | tail -5
+```
+
+Expected: `Project build complete.` with the binary size line. Fix compile errors in place; the usual ones are a missing include or the `ws_msg_t.json` buffer size.
+
+- [ ] **Step 3: Build the AP image**
+
+```bash
+cd ~/Documents/rd03d-public/rd03d_uart && source ~/esp/esp-idf-v5.5/export.sh >/dev/null && idf.py -B build.ap -D SDKCONFIG=sdkconfig.ap build 2>&1 | tail -3
+```
+
+Expected: `Project build complete.`; `grep -c pir build.ap/compile_commands.json` prints `0` (PIR sources not compiled in the AP image).
+
+- [ ] **Step 4: Run the host tests**
+
+```bash
+cd ~/Documents/rd03d-public/rd03d_uart/tests && for t in test_rd03d test_mqtt_throttle test_pir_gate; do src=${t#test_}; cc -Wall -Wextra -o $t $t.c ../main/$src.c && ./$t; done
+```
+
+Expected: three lines of `all tests passed`.
+
+- [ ] **Step 5: Flash the staircase node over OTA**
+
+Only after the sensor is wired to that XIAO (the deployed node is the one with the PIR). Commit first so the version string is clean (no `-dirty`):
+
+```bash
+cd ~/Documents/rd03d-public && git status --short
+```
+
+Expected: empty. Then:
+
+```bash
+cd ~/Documents/rd03d-public/rd03d_uart && curl -4 -X POST --data-binary @build/rd03d_uart.bin http://rd03d.local/update && sleep 100 && curl -4 http://rd03d.local/version
+```
+
+Expected: the version string of the new commit. If the node is on the bench over USB instead, use `idf.py -p /dev/cu.usbmodem101 flash monitor` (port may differ; `ls /dev/cu.usbmodem*`).
+
+- [ ] **Step 6: Bench test**
+
+With `mosquitto_sub -h iotstack.local -t 'rd03d/pir/#' -v` running on the Mac and the chart open at `http://rd03d.local`:
+
+1. Wave a hand at about 1 m, then 3 m, then 5 m in front of the sensor. Expected per pass: one `rd03d/pir` line with increasing `n`, a `rd03d/pir/state 1` then `0` about half a second later, one LED flash, the chart's outer ring flashes amber and a line appears in the PIR log.
+2. Stand still for 10 s in view. Expected: no events (PIR needs motion).
+3. `t` in the payload is a 13-digit number after about a minute of uptime (SNTP synced). If it stays 0, check the log for `sntp` lines.
+
+Record the three ranges that triggered in the walk-test note (Task 10).
+
+---
+
+### Task 8: Node-RED: PIR input, source switch, comparison CSV
+
+**Files:**
+- Modify: `node-red/flows-stair-light.json`
+- Modify: `node-red/validate_flow.py`
+- Modify: `node-red/README.md`
+
+- [ ] **Step 1: Write the validator checks first**
+
+Append to `validate_flow.py` before its final success print (the script ends with a success message; place these checks above it):
+
+```python
+# PIR companion (2026-10-11)
+pir_in = one("mqtt in", lambda n: n.get("topic") == "rd03d/pir", "for rd03d/pir")
+src = one("function", lambda n: n.get("name", "").startswith("source switch"), "source switch")
+log = one("function", lambda n: n.get("name", "").startswith("compare log"), "compare log")
+csv = one("file", lambda n: True, "CSV file node")
+zone = one("function", lambda n: n.get("name", "").startswith("zone filter"), "zone filter")
+trig = one("trigger")
+if "SOURCE" not in src["func"]:
+    fail("source switch must define SOURCE")
+for name, node, target in (("zone filter", zone, src["id"]), ("pir in", pir_in, src["id"]),
+                           ("source switch", src, trig["id"]), ("compare log", log, csv["id"])):
+    if not any(target in out for out in node.get("wires", [])):
+        fail(f"{name} must wire to {target}")
+if not any(log["id"] in out for out in pir_in.get("wires", [])):
+    fail("pir in must also wire to the compare log")
+if not any(log["id"] in out for out in zone.get("wires", [])):
+    fail("zone filter must also wire to the compare log")
+```
+
+Run: `python3 node-red/validate_flow.py` — Expected: `FAIL: expected exactly one mqtt in for rd03d/pir, got 0`.
+
+- [ ] **Step 2: Add the nodes to the flow**
+
+Edit `flows-stair-light.json` with a small script so the JSON stays valid:
+
+```bash
+cd ~/Documents/rd03d-public/node-red && python3 - <<'PY'
+import json
+p = "flows-stair-light.json"
+nodes = json.load(open(p))
+by = {n["id"]: n for n in nodes}
+
+# zone filter now feeds the source switch and the compare log instead of the trigger directly
+by["stairzone1"]["wires"] = [["stairsrc1", "stairdbg1", "stairlog1"]]
+
+SRC = r'''// Which sensor may turn the light on. Edit SOURCE:
+//   "radar"  - only in-zone radar events (today's behaviour)
+//   "pir"    - only PIR events
+//   "either" - whichever fires first
+const SOURCE = "radar";
+const isPir = msg.topic === "rd03d/pir";
+if (SOURCE === "radar" && isPir) return null;
+if (SOURCE === "pir" && !isPir) return null;
+return msg;'''
+
+LOG = r'''// One CSV line per trigger episode: which sensor fired first and the
+// delay to the other, plus the radar position the PIR event carried and
+// the one-way latency of the PIR event (needs SNTP on the node; t=0 means
+// unsynced and latency is left blank).
+const GAP_MS = 60000;              // a new episode starts after this much quiet
+const now = Date.now();
+let ep = context.get("ep") || null;
+const isPir = msg.topic === "rd03d/pir";
+let d = {};
+try { d = JSON.parse(msg.payload); } catch (e) { d = {}; }
+if (!ep || now - ep.last > GAP_MS) {
+    ep = { start: now, first: isPir ? "pir" : "radar", other: null, last: now,
+           pirRadar: "", pirLatency: "" };
+}
+ep.last = now;
+const src = isPir ? "pir" : "radar";
+if (isPir) {
+    ep.pirRadar = d.radar ? (d.radar.x + " " + d.radar.y) : "none";
+    ep.pirLatency = d.t ? String(now - d.t) : "";
+}
+let line = null;
+if (ep.other === null && src !== ep.first) {
+    ep.other = src;
+    line = [new Date(ep.start).toISOString(), ep.first, src, now - ep.start,
+            ep.pirRadar, ep.pirLatency].join(",");
+}
+context.set("ep", ep);
+if (!line) return null;
+msg.payload = line;
+return msg;'''
+
+nodes += [
+  {"id": "stairpir1", "type": "mqtt in", "z": "stairtab1", "name": "PIR events",
+   "topic": "rd03d/pir", "qos": "0", "datatype": "utf8", "broker": "stairbroker1",
+   "nl": False, "rap": True, "rh": 0, "inputs": 0, "x": 130, "y": 200,
+   "wires": [["stairsrc1", "stairlog1"]]},
+  {"id": "stairsrc1", "type": "function", "z": "stairtab1", "name": "source switch (EDIT SOURCE)",
+   "func": SRC, "outputs": 1, "timeout": 0, "noerr": 0, "initialize": "", "finalize": "",
+   "libs": [], "x": 360, "y": 120, "wires": [["stairtrig1"]]},
+  {"id": "stairlog1", "type": "function", "z": "stairtab1", "name": "compare log",
+   "func": LOG, "outputs": 1, "timeout": 0, "noerr": 0, "initialize": "", "finalize": "",
+   "libs": [], "x": 360, "y": 260, "wires": [["stairfile1"]]},
+  {"id": "stairfile1", "type": "file", "z": "stairtab1", "name": "stair_compare.csv",
+   "filename": "/data/stair_compare.csv", "filenameType": "str", "appendNewline": True,
+   "createDir": True, "overwriteFile": "false", "encoding": "none", "x": 600, "y": 260,
+   "wires": [[]]},
+]
+# move the trigger's old input: it now comes from the source switch only
+json.dump(nodes, open(p, "w"), indent=2)
+open(p, "a").write("\n")
+PY
+python3 validate_flow.py
+```
+
+Expected: the validator's success message. (Node-RED in the IOTstack container writes `/data/stair_compare.csv`, which is `~/IOTstack/volumes/nodered/data/stair_compare.csv` on the Pi.)
+
+- [ ] **Step 3: Document the import and the CSV**
+
+In `node-red/README.md` add a section:
+
+```markdown
+## PIR companion (2026-10-11)
+
+The flow also subscribes to `rd03d/pir`. Edit `SOURCE` in the "source switch"
+node: `radar` (default) keeps today's behaviour, `pir` runs the light from the
+PIR only, `either` from whichever fires first.
+
+The "compare log" writes `/data/stair_compare.csv` (on the Pi:
+`~/IOTstack/volumes/nodered/data/stair_compare.csv`), one line per trigger
+episode:
+
+    episode start (ISO), first sensor, second sensor, delay ms, radar x y at the PIR event, PIR one-way latency ms
+
+A new episode starts after 60 s of quiet. The latency column is empty until
+the node's SNTP has synced (`t` of 0 in the payload).
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd ~/Documents/rd03d-public && git add node-red/flows-stair-light.json node-red/validate_flow.py node-red/README.md
+git commit -m "flow: PIR input, source switch, radar-vs-PIR comparison CSV
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+- [ ] **Step 5: Import on the user's Node-RED**
+
+This is Kevin's step: import the JSON (Menu → Import → select file, "replace existing" for the Stair Light tab), keep the Tasmota topic he already edited, Deploy. Then `mosquitto_pub -h iotstack.local -t rd03d/pir -m '{"n":1,"t":0,"radar":null}'` from the Mac. Expected: with SOURCE `radar`, no light change and a line in the debug sidebar from the compare log only after a radar event follows; with SOURCE `either`, the light turns on.
+
+---
+
+### Task 9: Case: pod on the shell's +X wall, plug, probe check, export
+
+**Files:**
+- Modify: `case/fusion_scripts/03_shell.py` (new step 7 before the final `print("FrontShell bodies:...`)
+- Modify: `case/fusion_scripts/90_verify.py`
+- Modify: `case/fusion_scripts/05_export.py`
+
+**Geometry.** The shell is a box, outer x ±23, y ±25, z from −8 (back rim) to 16 (front face, printed on the bed). The XIAO sits at the +X end. The pod is a rectangular block fused to the outer +X wall, spanning the full shell depth so its z = 16 face is coplanar with the shell's front face and prints on the bed with it. The sensor sits in a bore whose axis is tilted `pirTilt` (18°) from +Z toward +X, in the XZ plane, so with the case on the wall XIAO-end-down the PIR looks outward and 18° downward. The bore opens at the back face (z = −8) for insertion; a flange shoulder near the front stops the can with the lens apex 0.5 mm proud of the front face; a 3 mm wire hole runs from the bore through the +X wall into the XIAO bay; a separate printed plug closes the back of the bore and holds the sensor.
+
+**Orientation assumption to confirm with Kevin before printing:** the case hangs with the XIAO end (+X) at the bottom. If it is at the top, set `pirTiltSign` to −1 and the bore tilts toward −X instead. Ask with a photo of the mounted case; do not guess.
+
+- [ ] **Step 1: Measure the sensor and set the parameters**
+
+With calipers on the EKMC1603111, measure and write into the `ensure_params` spec below: can diameter (`pirCanDia`), lens dome diameter at the can's top rim (`pirLensDia`), lens apex height above the can's top rim (`pirLensH`), can height from its base to its top rim (`pirCanH`), pin length below the base (`pirPinL`). The values in the code are Panasonic's nominal drawing values and are replaced by the measurements.
+
+- [ ] **Step 2: Add the parameters and the pod to `03_shell.py`**
+
+Add after the imports:
+
+```python
+def ensure_params(des):
+    """PIR pod parameters. Not in 01_setup.py: re-running that resets hand-tuned values."""
+    spec = [
+        ("pirCanDia", "9.8 mm", "EKMC1603111 can diameter (measured)"),
+        ("pirLensDia", "7.6 mm", "EKMC lens dome diameter at the can rim (measured)"),
+        ("pirLensH", "4.3 mm", "lens apex above the can rim (measured)"),
+        ("pirCanH", "7.5 mm", "can base to can rim (measured)"),
+        ("pirPinL", "3.5 mm", "pin length below the can base (measured)"),
+        ("pirTilt", "18 deg", "bore tilt from the shell normal, toward +X"),
+        ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall; -1: up"),
+        ("pirFit", "0.15 mm", "radial clearance can-to-bore (FDM 0.6 nozzle)"),
+        ("pirLensClear", "1.0 mm", "radial clearance lens-to-opening"),
+        ("pirPodWall", "2.0 mm", "pod wall around the bore"),
+        ("pirWireDia", "3.0 mm", "wire pass-through into the XIAO bay"),
+    ]
+    ups = des.userParameters
+    for name, expr, comment in spec:
+        if ups.itemByName(name) is None:
+            unit = "deg" if "deg" in expr else ("" if expr.lstrip("-").isdigit() else "mm")
+            ups.add(name, adsk.core.ValueInput.createByString(expr), unit, comment)
+            print("added", name, "=", expr)
+```
+
+Call `ensure_params(des)` in `run()` right after `root = des.rootComponent`.
+
+Add step 7 in `run()` just before `print("FrontShell bodies:", comp.bRepBodies.count)`:
+
+```python
+    # 7. PIR POD (2026-10-11): block on the outer +X wall, full shell depth
+    # so its front face prints on the bed with the shell. The sensor bore is
+    # tilted pirTilt toward +X so the PIR looks 18 deg down when the case
+    # hangs XIAO-end-down. Bore opens at the back for insertion; a shoulder
+    # stops the can with the lens apex 0.5 mm proud of the front face.
+    import math
+    canR = p(des, "pirCanDia") / 2 + p(des, "pirFit")
+    lensR = p(des, "pirLensDia") / 2 + p(des, "pirLensClear")
+    if lensR + 0.06 > p(des, "pirCanDia") / 2:
+        raise RuntimeError("no shoulder: lens opening %.2f >= can radius %.2f "
+                           "(reduce pirLensClear)" % (lensR * 10, p(des, "pirCanDia") * 5))
+    podWall = p(des, "pirPodWall")
+    tilt = math.radians(p(des, "pirTilt") * 180 / math.pi) if p(des, "pirTilt") < 1 else math.radians(18)
+    # p() returns degrees-as-radians for angle params; guard both conventions
+    tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))
+    sgn = 1.0 if p(des, "pirTiltSign") >= 0 else -1.0
+    xOuter = intW / 2 + wall                     # +X outer face of the shell
+    zTop, zBack = intD + wall, -backT
+    depth = zTop - zBack
+    # bore footprint along X grows with the tilt: the axis shifts by depth*tan(tilt)
+    podW = 2 * (canR + podWall) + depth * math.tan(tilt)
+    podL = 2 * (canR + podWall)
+    podCx = xOuter + podW / 2
+
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    rect(sk, podCx, 0, podW, podL)
+    extrude(comp, sk.profiles.item(0), zBack, zTop,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    print("pir pod block ok (%.1f x %.1f mm at x=%.1f)" % (podW * 10, podL * 10, podCx * 10))
+
+    # bore axis: passes through the pod centre at the front face, direction
+    # (sgn*sin t, 0, cos t). Points along the axis at distance s from the
+    # front face, measured INTO the pod (negative z direction).
+    ax = adsk.core.Vector3D.create(sgn * math.sin(tilt), 0.0, math.cos(tilt))
+    front_pt = adsk.core.Point3D.create(podCx, 0.0, zTop)
+    def along(s):
+        return adsk.core.Point3D.create(front_pt.x - ax.x * s, 0.0, front_pt.z - ax.z * s)
+
+    tbm = adsk.fusion.TemporaryBRepManager.get()
+    base = comp.features.baseFeatures.add()
+    base.startEdit()
+    # lens opening: from 2 mm outside the front face to the shoulder
+    shoulder_s = p(des, "pirLensH") - 0.05          # apex 0.5 mm proud
+    lens_cyl = tbm.createCylinderOrCone(along(-0.2), lensR, along(shoulder_s), lensR)
+    # can bore: from the shoulder through the back face (plus margin)
+    can_cyl = tbm.createCylinderOrCone(along(shoulder_s), canR,
+                                       along(depth / math.cos(tilt) + 0.3), canR)
+    # wire pass-through: horizontal (-X) from the bore axis into the XIAO bay,
+    # at the level of the pins (behind the can base)
+    pin_s = shoulder_s + p(des, "pirCanH") + p(des, "pirPinL") / 2
+    wp = along(pin_s)
+    wire_cyl = tbm.createCylinderOrCone(
+        adsk.core.Point3D.create(wp.x, 0.0, wp.z), p(des, "pirWireDia") / 2,
+        adsk.core.Point3D.create(intW / 2 - 0.15, 0.0, wp.z), p(des, "pirWireDia") / 2)
+    tools = [comp.bRepBodies.add(b, base) for b in (lens_cyl, can_cyl, wire_cyl)]
+    base.finishEdit()
+    ci = comp.features.combineFeatures.createInput(shell_body, collection(tools))
+    ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
+    ci.isKeepToolBodies = False
+    comp.features.combineFeatures.add(ci)
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("pir bore split the shell: %d bodies" % comp.bRepBodies.count)
+    print("pir bore ok (lens r=%.2f, can r=%.2f, shoulder %.2f mm in, tilt %.1f deg)"
+          % (lensR * 10, canR * 10, shoulder_s * 10, math.degrees(tilt)))
+
+    # 7b. PLUG: separate body, pressed into the back of the bore to hold the
+    # sensor. Cylinder canR - 0.1 radius, 4 mm long, with a flat for the
+    # wires. Exported as its own STL.
+    plug_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+    plug = plug_occ.component
+    plug.name = "PirPlug"
+    sk = plug.sketches.add(plug.xYConstructionPlane)
+    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), canR - 0.01)
+    pl = extrude(plug, sk.profiles.item(0), 0, 0.4,
+                 adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    sk = plug.sketches.add(plug.xYConstructionPlane)
+    rect(sk, 0, canR - 0.1, p(des, "pirWireDia"), 0.4)          # wire flat
+    extrude(plug, sk.profiles.item(0), 0, 0.4,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[pl.bodies.item(0)])
+    print("pir plug ok")
+```
+
+Remove the first (guarded) `tilt = ...` line that references `math.radians(p(...))` twice; keep only the single line `tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))`. (Fusion returns angle parameters in radians from `.value`; `p()` in this file returns `.value`, so 18 deg reads as 0.314.)
+
+Note `wall`, `intW`, `intD`, `backT`, `shell_body`, `comp`, `root` are already defined earlier in `run()`.
+
+- [ ] **Step 3: Run the shell script and look at it**
+
+Fusion must be open on the `rd-03d_case` document with the MCP server running. Do NOT run `01_setup.py`.
+
+```bash
+cd ~/Documents/rd03d-public/case/fusion_scripts && python3 run_fusion.py script 03_shell.py 2>&1 | tail -15
+python3 run_fusion.py screenshot ../pir_pod_iso.png iso && python3 run_fusion.py screenshot ../pir_pod_right.png right
+```
+
+Expected: the step prints `pir pod block ok`, `pir bore ok`, `pir plug ok`, `FrontShell bodies: 1`. Look at both screenshots: the pod is a block on the +X side with an elliptical opening on the front face; the bore reaches the back rim.
+
+- [ ] **Step 4: Add the probe check to `90_verify.py`**
+
+Add after `check_radar_cable_exit`:
+
+```python
+def check_pir_pod(shell, des):
+    """Pod on the +X wall: opening clear, shoulder present, bore open at the
+    back, wire hole into the bay, pod walls solid."""
+    import math
+    def pv(n): return des.userParameters.itemByName(n).value
+    wall, intW, intD, backT = pv("wall"), pv("intW"), pv("intD"), pv("backT")
+    canR = pv("pirCanDia") / 2 + pv("pirFit")
+    lensR = pv("pirLensDia") / 2 + pv("pirLensClear")
+    tilt = pv("pirTilt") if pv("pirTilt") < 1.6 else math.radians(pv("pirTilt"))
+    sgn = 1.0 if pv("pirTiltSign") >= 0 else -1.0
+    xOuter = intW / 2 + wall
+    zTop, zBack = intD + wall, -backT
+    depth = zTop - zBack
+    podW = 2 * (canR + pv("pirPodWall")) + depth * math.tan(tilt)
+    podCx = xOuter + podW / 2
+    ax = (sgn * math.sin(tilt), math.cos(tilt))
+    def along(s, r=0.0, side=0.0):           # mm in, mm radial along Y
+        return ((podCx - ax[0] * s) * 10, side * 10, (zTop - ax[1] * s) * 10)
+    shoulder = pv("pirLensH") - 0.05
+    # lens opening is void just inside the front face, out to lensR - 0.3
+    x, y, z = along(0.05); void(shell, x, y, z, "lens opening centre")
+    x, y, z = along(0.05, side=lensR - 0.03); void(shell, x, y, z, "lens opening edge")
+    # shoulder ring is solid: between lensR and canR, just in front of the shoulder
+    ring = (lensR + canR) / 2
+    x, y, z = along(shoulder - 0.05, side=ring); solid(shell, x, y, z, "shoulder ring")
+    # can bore is void behind the shoulder, out to canR
+    x, y, z = along(shoulder + 0.2, side=canR - 0.03); void(shell, x, y, z, "can bore")
+    x, y, z = along(depth / math.cos(tilt) - 0.1); void(shell, x, y, z, "bore open at the back")
+    # pod wall solid beside the bore
+    x, y, z = along(shoulder + 0.2, side=canR + pv("pirPodWall") / 2); solid(shell, x, y, z, "pod wall +Y")
+    x, y, z = along(shoulder + 0.2, side=-(canR + pv("pirPodWall") / 2)); solid(shell, x, y, z, "pod wall -Y")
+    # wire hole: void in the +X shell wall at pin level, on the axis plane
+    pin_s = shoulder + pv("pirCanH") + pv("pirPinL") / 2
+    xw, _, zw = along(pin_s)
+    void(shell, (intW / 2 + wall / 2) * 10, 0.0, zw, "wire hole through +X wall")
+    # the hole must land inside the cavity, not in the plate's back-rim band
+    if not (-backT * 10 + 2 < zw < intD * 10 - 1):
+        FAILURES.append("wire hole at z=%.1f mm is outside the usable cavity depth" % zw)
+```
+
+In `run()`, pass `des` and add the call after `check_no_shell_notch(shell)`:
+
+```python
+    check_pir_pod(shell, des)
+```
+
+(`des` is already created in `run()` as `des = adsk.fusion.Design.cast(app.activeProduct)`.)
+
+Run:
+```bash
+cd ~/Documents/rd03d-public/case/fusion_scripts && python3 run_fusion.py script 90_verify.py --read-only 2>&1 | tail -8
+```
+Expected: no `EXPECTED` lines and no `verification failure(s)`; the volume line prints and the script ends normally. Fix the shell script, not the probes, if a probe fails.
+
+- [ ] **Step 5: Export the shell and the plug**
+
+In `05_export.py`, add `("PirPlug", "rd03d_pir_plug.stl")` to the tuple of components. Set `OUT` to the real path (`/Users/kevinarthurgomez/Documents/rd03d-public/case`) for the run and restore the placeholder before committing, as the existing workflow does. Run:
+
+```bash
+cd ~/Documents/rd03d-public/case/fusion_scripts && python3 run_fusion.py script 05_export.py 2>&1 | tail -4 && ls -la ../*.stl
+```
+
+Expected: `exported rd03d_case_shell.stl` and `exported rd03d_pir_plug.stl`; the shell STL is larger than before.
+
+- [ ] **Step 6: Print check (Kevin)**
+
+Slice the shell front-face-down, no supports, PETG, 0.6 mm nozzle, same profile as before. Expected: the slicer shows no support-needed regions on the pod; the bore prints as a tilted hole. Print the plug with the flat on the bed.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd ~/Documents/rd03d-public && git add case/fusion_scripts/03_shell.py case/fusion_scripts/90_verify.py case/fusion_scripts/05_export.py case/rd03d_case_shell.stl case/rd03d_pir_plug.stl
+git commit -m "case: PIR pod on the shell's +X wall, tilted bore, plug, probe check
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 10: Walk test, numbers, docs
+
+**Files:**
+- Create: `docs/2026-10-pir-companion-notes.md`
+- Modify: `README.md` (Parts list, firmware topics), `rd03d_uart/README.md` (wiring, Kconfig, topics)
+
+- [ ] **Step 1: Walk test**
+
+With the node on the wall, SOURCE set to `radar`, the chart open and the CSV branch deployed, Kevin walks the standard route: approach from downstairs on the left, up the stairs, out the top on the right, out of range, back, past the top, down, out to the left. Then read the CSV:
+
+```bash
+ssh pi@192.168.1.243 'tail -20 ~/IOTstack/volumes/nodered/data/stair_compare.csv'
+```
+
+Expected: one line per approach; the "first sensor" column and the delay in ms say which sensor led on each approach; the latency column holds a number (tens of ms on the LAN).
+
+- [ ] **Step 2: Write the note**
+
+`docs/2026-10-pir-companion-notes.md`, plain prose, with: bench ranges from Task 7, the walk-test lines pasted as a table (episode, first, delay, radar position), the median PIR latency, and the sentence that the battery gate needs: the mains-mode baseline latency in ms. End with the orientation that was actually used (XIAO end down or up) and the `pirTiltSign` that matched it.
+
+- [ ] **Step 3: Update the READMEs**
+
+`rd03d_uart/README.md`: add the PIR wiring table (VDD→3V3, OUT→D1/GPIO1 with internal pull-down, GND→GND, 0.1 µF at the sensor), the three Kconfig options, the two topics with their payloads, and the line that the AP image leaves the PIR out. `README.md`: add `Panasonic EKMC1603111 PIR` to the Parts list and one sentence under "What is in this repository" pointing at the spec and the notes.
+
+- [ ] **Step 4: Commit and push the branch**
+
+```bash
+cd ~/Documents/rd03d-public && git add docs/2026-10-pir-companion-notes.md README.md rd03d_uart/README.md
+git commit -m "docs: PIR companion wiring, topics, walk-test and latency numbers
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git push -u origin feat/pir-companion
+```
+
+Merging to `main` is Kevin's call after he has read the numbers.
