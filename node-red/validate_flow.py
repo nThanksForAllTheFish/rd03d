@@ -106,11 +106,9 @@ if not wired(status_in, dbg_stat):
 
 # PIR companion (2026-10-11)
 pir_in = one("mqtt in", lambda n: n.get("topic") == "rd03d/pir", "for rd03d/pir")
-src = one("function", lambda n: n.get("name", "").startswith("source switch"), "source switch")
+src = spine_src
 log = one("function", lambda n: n.get("name", "").startswith("compare log"), "compare log")
 csv = one("file", lambda n: True, "CSV file node")
-zone = one("function", lambda n: n.get("name", "").startswith("zone filter"), "zone filter")
-trig = one("trigger")
 if "SOURCE" not in src["func"]:
     fail("source switch must define SOURCE")
 for name, node, target in (("zone filter", zone, src["id"]), ("pir in", pir_in, src["id"]),
@@ -121,5 +119,11 @@ if not any(log["id"] in out for out in pir_in.get("wires", [])):
     fail("pir in must also wire to the compare log")
 if not any(log["id"] in out for out in zone.get("wires", [])):
     fail("zone filter must also wire to the compare log")
+if wired(zone, trig) or wired(pir_in, trig):
+    fail("only the source switch may feed the trigger")
+if csv.get("overwriteFile") != "false" or csv.get("appendNewline") is not True:
+    fail("CSV file node must append with a newline")
+if csv.get("filename") != "/data/stair_compare.csv":
+    fail("CSV file node must write /data/stair_compare.csv")
 
 print("flow validation passed")

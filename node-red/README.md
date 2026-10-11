@@ -9,16 +9,18 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
 2. Menu (☰) → **Import** → select `flows-stair-light.json` (or paste its
    contents) → Import → **Deploy**.
 
-## Configure (3 edit points)
+## Configure (4 edit points)
 
 1. **Broker** — the flow ships with an `iotstack` broker config node
    (`iotstack.local:1883`, anonymous). If your Node-RED already has a broker
-   config for the same server, you can repoint the three MQTT nodes at it
+   config for the same server, you can repoint the four MQTT nodes at it
    instead.
 2. **Device topic** — double-click *"to Tasmota topic (EDIT DEVICE)"* and
    replace `stairlight` in `cmnd/stairlight/POWER` with your relay's topic.
 3. **Zone** — double-click *"zone filter (EDIT ZONE)"* and set the four
    `ZONE` numbers (mm). Tune them with the walk test below.
+4. **Source** — double-click *"source switch (EDIT SOURCE)"* and set
+   `SOURCE` to `radar`, `pir` or `either` (see the PIR section below).
 
 ## Zone tuning walk test
 
@@ -40,7 +42,8 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
   (arguments are positional; `--wait-off` may appear anywhere)
 
   Run it while the radar's view is quiet — real in-zone motion breaks the
-  out-of-zone check and extends the hold.
+  out-of-zone check and extends the hold. The harness assumes `SOURCE` is
+  `radar` or `either`.
 
 ## Behavior notes
 
@@ -72,7 +75,10 @@ The "compare log" writes `/data/stair_compare.csv` (on the Pi:
 `~/IOTstack/volumes/nodered/data/stair_compare.csv`), one line per trigger
 episode:
 
-    episode start (ISO), first sensor, second sensor, delay ms, radar x y at the PIR event, PIR one-way latency ms
+    episode start (ISO, UTC), first sensor, second sensor, delay ms, radar x y at the PIR event, PIR one-way latency ms
 
-A new episode starts after 60 s of quiet. The latency column is empty until
-the node's SNTP has synced (`t` of 0 in the payload).
+A new episode starts after 60 s of quiet. If the other sensor never fired
+during the episode, the second-sensor and delay columns are blank, and the row
+is written when the next episode begins. The radar column reads `none` when
+the PIR event carried no radar target. The latency column is empty until the
+node's SNTP has synced (`t` of 0 in the payload).
