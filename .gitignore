@@ -35,3 +35,6 @@ video/check_*.png
 video/durations.json
 # Third-party board models (GrabCAD uploads) - licence not cleared for redistribution
 video/models/
+
+# Vendor sensor models (third-party downloads, not redistributed)
+case/models/

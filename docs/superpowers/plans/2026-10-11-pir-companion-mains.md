@@ -1097,22 +1097,39 @@ This is Kevin's step: import the JSON (Menu → Import → select file, "replace
 
 ---
 
-### Task 9: Case: pod on the shell's +X wall, plug, probe check, export
+### Task 9: Case: pod on the shell's +X wall for the long-distance lens, plug, probe check, export
 
 **Files:**
 - Modify: `case/fusion_scripts/03_shell.py` (new step 7 before the final `print("FrontShell bodies:...`)
 - Modify: `case/fusion_scripts/90_verify.py`
 - Modify: `case/fusion_scripts/05_export.py`
+- Local only (gitignored): `case/models/EKMC1603111.STEP`, Panasonic's model of the sensor, used for the interference check
 
-**Geometry.** The shell is a box, outer x ±23, y ±25, z from −8 (back rim) to 16 (front face, printed on the bed). The XIAO sits at the +X end. The pod is a rectangular block fused to the outer +X wall, spanning the full shell depth so its z = 16 face is coplanar with the shell's front face and prints on the bed with it. The sensor sits in a bore whose axis is tilted `pirTilt` (18°) from +Z toward +X, in the XZ plane, so with the case on the wall XIAO-end-down the PIR looks outward and 18° downward. The bore opens at the back face (z = −8) for insertion; a flange shoulder near the front stops the can with the lens apex 0.5 mm proud of the front face; a 3 mm wire hole runs from the bore through the +X wall into the XIAO bay; a separate printed plug closes the back of the bore and holds the sensor.
+**The sensor, measured from Panasonic's STEP (2026-10-11, "PaPIRs WL VZ Long Distance Detection Type"; native frame: Z is the lens axis, z = 0 is the metal base):**
 
-**Orientation assumption to confirm with Kevin before printing:** the case hangs with the XIAO end (+X) at the bottom. If it is at the top, set `pirTiltSign` to −1 and the bore tilts toward −X instead. Ask with a photo of the mounted case; do not guess.
+| feature | value |
+| --- | --- |
+| lens dome | sphere R 10.89 centred on the axis at z 8.4; apex at z 19.29 |
+| lens base ring | Ø20.6 (r 10.3), z 7.4..8.4 |
+| flange | Ø18.8 (r 9.4) round plate, z 6.4..7.4, with four small tabs reaching r ≈ 10.6 at the corners |
+| neck | plastic, tapering 4° from r 5.0 at z 6.4 to r ≈ 4.6 at z 0.95 |
+| metal can | r 4.65, z −0.9..0.95; underside is an annulus r 3.67..4.65 at z −0.9 |
+| pins | three, Ø0.45, on a 2.5 mm radius circle, z −5.5..0 |
 
-- [ ] **Step 1: Measure the sensor and set the parameters**
+So this is not a small can with a lens on top: the lens is Ø20.6 and 11 mm tall, wider than everything below it. The sensor goes into the pod from the FRONT, dome out, flange seated in a recess, neck and can through a bore, and is held by a tube-shaped plug pressed into the bore from the back that bears on the can's underside annulus. The wires come off the pins inside the plug's bore and leave through a pass-through into the XIAO bay.
 
-With calipers on the EKMC1603111, measure and write into the `ensure_params` spec below: can diameter (`pirCanDia`), lens dome diameter at the can's top rim (`pirLensDia`), lens apex height above the can's top rim (`pirLensH`), can height from its base to its top rim (`pirCanH`), pin length below the base (`pirPinL`). The values in the code are Panasonic's nominal drawing values and are replaced by the measurements.
+**Pod geometry.** Shell frame: outer box x ±23, y ±25, z −8 (back rim) to 16 (front face, printed on the bed). Kevin confirmed the case hangs XIAO end (+X) DOWN, so the bore tilts `pirTilt` (18°) from +Z toward +X and the PIR looks outward and 18° down. Depth `d` is measured along the bore axis from the pod's front face into the pod; the sensor's z maps to d = 8.4 − z (its lens base ring top sits on the front face plane).
 
-- [ ] **Step 2: Add the parameters and the pod to `03_shell.py`**
+- Pod block: fused to the outer +X wall, full shell depth (z −8..16) so its front face is coplanar with the shell's and prints on the bed. Width along X = 2·(recessR + podWall) + 24·tan(tilt), length along Y = 2·(recessR + podWall).
+- Recess: cylinder r `pirRecessR` = 10.6 (0.3 clearance on the lens base ring), from d −0.5 (outside the face) to d 2.0 (the flange underside at sensor z 6.4). The dome then stands 11 mm proud of the face.
+- Bore: cylinder r `pirBoreR` = 5.3 from d 2.0 through the back face. Neck (r ≤ 5.0) and can (r 4.65) pass with ≥ 0.3 clearance.
+- Plug (separate body `PirPlug`): tube OD `pirPlugOD` = 10.5 (0.05 per side interference in the Ø10.6 bore; tune by sanding or scale in the slicer), ID 7.0, length 6.0, inserted from the back; its front rim bears on the can's underside annulus (r 3.67..4.65) at d 9.3. The three pins and the wires run inside the plug's Ø7 bore.
+- Wire pass-through: Ø`pirWireDia` = 3.0, horizontal (−X) from the bore axis at d 13 (behind the plug's front, in the wire space) into the XIAO bay, ending at x = intW/2 − 0.15.
+- Printing: front face on the bed; the recess is a pocket in the bed-side face and the bore is a hole tilted 18° from the print axis, both fine without supports.
+
+**Interference check against the real sensor:** import `case/models/EKMC1603111.STEP` as an occurrence, place it with its Z axis along the bore axis and its z 8.4 plane on the pod front face (rotation about Y by −tilt·sign so +Z tips toward +X, then translate to the front-face point), and run `des.analyzeInterference` between the sensor body and the shell: must report zero. `04_boards.py` shows the import, placement and interference pattern; copy its approach, not its code, since the rotation axis differs (Y here, X there).
+
+- [ ] **Step 1: Add the parameters and the pod to `03_shell.py`**
 
 Add after the imports:
 
@@ -1120,17 +1137,17 @@ Add after the imports:
 def ensure_params(des):
     """PIR pod parameters. Not in 01_setup.py: re-running that resets hand-tuned values."""
     spec = [
-        ("pirCanDia", "9.8 mm", "EKMC1603111 can diameter (measured)"),
-        ("pirLensDia", "7.6 mm", "EKMC lens dome diameter at the can rim (measured)"),
-        ("pirLensH", "4.3 mm", "lens apex above the can rim (measured)"),
-        ("pirCanH", "7.5 mm", "can base to can rim (measured)"),
-        ("pirPinL", "3.5 mm", "pin length below the can base (measured)"),
+        ("pirRecessR", "10.6 mm", "recess radius: lens base ring r10.3 + 0.3"),
+        ("pirRecessD", "2.0 mm", "recess depth: lens ring + flange (sensor z 6.4..8.4)"),
+        ("pirBoreR", "5.3 mm", "bore radius for the neck (r5.0) and can (r4.65)"),
         ("pirTilt", "18 deg", "bore tilt from the shell normal, toward +X"),
-        ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall; -1: up"),
-        ("pirFit", "0.15 mm", "radial clearance can-to-bore (FDM 0.6 nozzle)"),
-        ("pirLensClear", "1.0 mm", "radial clearance lens-to-opening"),
-        ("pirPodWall", "2.0 mm", "pod wall around the bore"),
+        ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up"),
+        ("pirPodWall", "2.0 mm", "pod wall around the recess"),
         ("pirWireDia", "3.0 mm", "wire pass-through into the XIAO bay"),
+        ("pirWireD", "13.0 mm", "pass-through depth along the bore axis from the front face"),
+        ("pirPlugOD", "10.5 mm", "plug tube OD: light interference in the Ø10.6 bore"),
+        ("pirPlugID", "7.0 mm", "plug tube ID: pins on r2.5 and their wires pass"),
+        ("pirPlugL", "6.0 mm", "plug tube length"),
     ]
     ups = des.userParameters
     for name, expr, comment in spec:
@@ -1146,17 +1163,15 @@ Add step 7 in `run()` just before `print("FrontShell bodies:", comp.bRepBodies.c
 
 ```python
     # 7. PIR POD (2026-10-11): block on the outer +X wall, full shell depth
-    # so its front face prints on the bed with the shell. The sensor bore is
-    # tilted pirTilt toward +X so the PIR looks 18 deg down when the case
-    # hangs XIAO-end-down. Bore opens at the back for insertion; a shoulder
-    # stops the can with the lens apex 0.5 mm proud of the front face.
+    # so its front face prints on the bed with the shell. The EKMC1603111's
+    # lens (Ø20.6, 11 mm tall) is wider than its neck, so the sensor enters
+    # from the FRONT: lens base ring + flange in a 2 mm recess, neck and can
+    # through a bore, a plug tube pressed in from the back holds it. The bore
+    # tilts pirTilt toward +X so the PIR looks 18 deg down with the case
+    # hanging XIAO-end-down.
     import math
-    canR = p(des, "pirCanDia") / 2 + p(des, "pirFit")
-    lensR = p(des, "pirLensDia") / 2 + p(des, "pirLensClear")
-    if lensR + 0.06 > p(des, "pirCanDia") / 2:
-        raise RuntimeError("no shoulder: lens opening %.2f >= can radius %.2f "
-                           "(reduce pirLensClear)" % (lensR * 10, p(des, "pirCanDia") * 5))
-    podWall = p(des, "pirPodWall")
+    recessR, recessD = p(des, "pirRecessR"), p(des, "pirRecessD")
+    boreR, podWall = p(des, "pirBoreR"), p(des, "pirPodWall")
     # Fusion hands angle parameters back in radians (18 deg -> 0.314); the
     # guard also accepts a value typed in degrees.
     tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))
@@ -1164,9 +1179,8 @@ Add step 7 in `run()` just before `print("FrontShell bodies:", comp.bRepBodies.c
     xOuter = intW / 2 + wall                     # +X outer face of the shell
     zTop, zBack = intD + wall, -backT
     depth = zTop - zBack
-    # bore footprint along X grows with the tilt: the axis shifts by depth*tan(tilt)
-    podW = 2 * (canR + podWall) + depth * math.tan(tilt)
-    podL = 2 * (canR + podWall)
+    podW = 2 * (recessR + podWall) + depth * math.tan(tilt)
+    podL = 2 * (recessR + podWall)
     podCx = xOuter + podW / 2
 
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -1176,31 +1190,24 @@ Add step 7 in `run()` just before `print("FrontShell bodies:", comp.bRepBodies.c
             participants=[shell_body])
     print("pir pod block ok (%.1f x %.1f mm at x=%.1f)" % (podW * 10, podL * 10, podCx * 10))
 
-    # bore axis: passes through the pod centre at the front face, direction
-    # (sgn*sin t, 0, cos t). Points along the axis at distance s from the
-    # front face, measured INTO the pod (negative z direction).
+    # bore axis through the pod centre at the front face, direction
+    # (sgn*sin t, 0, cos t); along(d) is the axis point d into the pod.
     ax = adsk.core.Vector3D.create(sgn * math.sin(tilt), 0.0, math.cos(tilt))
     front_pt = adsk.core.Point3D.create(podCx, 0.0, zTop)
-    def along(s):
-        return adsk.core.Point3D.create(front_pt.x - ax.x * s, 0.0, front_pt.z - ax.z * s)
+    def along(d):
+        return adsk.core.Point3D.create(front_pt.x - ax.x * d, 0.0, front_pt.z - ax.z * d)
 
     tbm = adsk.fusion.TemporaryBRepManager.get()
     base = comp.features.baseFeatures.add()
     base.startEdit()
-    # lens opening: from 2 mm outside the front face to the shoulder
-    shoulder_s = p(des, "pirLensH") - 0.05          # apex 0.5 mm proud
-    lens_cyl = tbm.createCylinderOrCone(along(-0.2), lensR, along(shoulder_s), lensR)
-    # can bore: from the shoulder through the back face (plus margin)
-    can_cyl = tbm.createCylinderOrCone(along(shoulder_s), canR,
-                                       along(depth / math.cos(tilt) + 0.3), canR)
-    # wire pass-through: horizontal (-X) from the bore axis into the XIAO bay,
-    # at the level of the pins (behind the can base)
-    pin_s = shoulder_s + p(des, "pirCanH") + p(des, "pirPinL") / 2
-    wp = along(pin_s)
+    recess_cyl = tbm.createCylinderOrCone(along(-0.05), recessR, along(recessD), recessR)
+    bore_cyl = tbm.createCylinderOrCone(along(recessD - 0.01), boreR,
+                                        along(depth / math.cos(tilt) + 0.3), boreR)
+    wp = along(p(des, "pirWireD"))
     wire_cyl = tbm.createCylinderOrCone(
         adsk.core.Point3D.create(wp.x, 0.0, wp.z), p(des, "pirWireDia") / 2,
-        adsk.core.Point3D.create(intW / 2 - 0.15, 0.0, wp.z), p(des, "pirWireDia") / 2)
-    tools = [comp.bRepBodies.add(b, base) for b in (lens_cyl, can_cyl, wire_cyl)]
+        adsk.core.Point3D.create(intW / 2 - 0.015, 0.0, wp.z), p(des, "pirWireDia") / 2)
+    tools = [comp.bRepBodies.add(b, base) for b in (recess_cyl, bore_cyl, wire_cyl)]
     base.finishEdit()
     ci = comp.features.combineFeatures.createInput(shell_body, collection(tools))
     ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
@@ -1208,39 +1215,46 @@ Add step 7 in `run()` just before `print("FrontShell bodies:", comp.bRepBodies.c
     comp.features.combineFeatures.add(ci)
     if comp.bRepBodies.count != 1:
         raise RuntimeError("pir bore split the shell: %d bodies" % comp.bRepBodies.count)
-    print("pir bore ok (lens r=%.2f, can r=%.2f, shoulder %.2f mm in, tilt %.1f deg)"
-          % (lensR * 10, canR * 10, shoulder_s * 10, math.degrees(tilt)))
+    print("pir recess r=%.2f d=%.2f, bore r=%.2f, tilt %.1f deg ok"
+          % (recessR * 10, recessD * 10, boreR * 10, math.degrees(tilt)))
 
-    # 7b. PLUG: separate body, pressed into the back of the bore to hold the
-    # sensor. Cylinder canR - 0.1 radius, 4 mm long, with a flat for the
-    # wires. Exported as its own STL.
+    # 7b. PLUG: tube pressed into the bore from the back; its front rim bears
+    # on the can's underside annulus (r 3.67..4.65). Separate component,
+    # exported as its own STL, printed standing on either end.
     plug_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     plug = plug_occ.component
     plug.name = "PirPlug"
     sk = plug.sketches.add(plug.xYConstructionPlane)
-    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), canR - 0.01)
-    pl = extrude(plug, sk.profiles.item(0), 0, 0.4,
-                 adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    sk = plug.sketches.add(plug.xYConstructionPlane)
-    rect(sk, 0, canR - 0.1, p(des, "pirWireDia"), 0.4)          # wire flat
-    extrude(plug, sk.profiles.item(0), 0, 0.4,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[pl.bodies.item(0)])
-    print("pir plug ok")
+    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugOD") / 2)
+    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugID") / 2)
+    ring = None
+    for i in range(sk.profiles.count):            # the annular profile, not the inner disc
+        pr = sk.profiles.item(i)
+        if ring is None or pr.areaProperties().area > ring.areaProperties().area:
+            ring = pr
+    extrude(plug, ring, 0, p(des, "pirPlugL"),
+            adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    print("pir plug ok (OD %.1f ID %.1f L %.1f)" % (p(des, "pirPlugOD") * 10, p(des, "pirPlugID") * 10, p(des, "pirPlugL") * 10))
 ```
 
-Note `wall`, `intW`, `intD`, `backT`, `shell_body`, `comp`, `root` are already defined earlier in `run()`.
+`wall`, `intW`, `intD`, `backT`, `shell_body`, `comp`, `root` are already defined earlier in `run()`. If `03_shell.py` deletes and rebuilds `FrontShell` at its start, also delete any existing `PirPlug` and `EKMC` occurrences there the same way (rename-then-delete, as the file does for FrontShell).
 
-- [ ] **Step 3: Run the shell script and look at it**
+- [ ] **Step 2: Run the shell script and look at it**
 
-Fusion must be open on the `rd-03d_case` document with the MCP server running. Do NOT run `01_setup.py`.
+Fusion is open on `rd-03d_case` with the MCP server running. Do NOT run `01_setup.py`; do not save, close or discard the document.
 
 ```bash
 cd ~/Documents/rd03d-public/case/fusion_scripts && python3 run_fusion.py script 03_shell.py 2>&1 | tail -15
 python3 run_fusion.py screenshot ../pir_pod_iso.png iso && python3 run_fusion.py screenshot ../pir_pod_right.png right
 ```
 
-Expected: the step prints `pir pod block ok`, `pir bore ok`, `pir plug ok`, `FrontShell bodies: 1`. Look at both screenshots: the pod is a block on the +X side with an elliptical opening on the front face; the bore reaches the back rim.
+Expected: `pir pod block ok`, `pir recess ... ok`, `pir plug ok`, `FrontShell bodies: 1`. Look at both screenshots (Read the PNGs): a block on the +X side, a large elliptical recess on its front face with a smaller bore inside it, the bore reaching the back rim. Delete the two PNGs afterwards (they are not deliverables).
+
+- [ ] **Step 3: Place the real sensor and check interference (new script `91_pir_fit.py`)**
+
+Create `case/fusion_scripts/91_pir_fit.py`: imports `case/models/EKMC1603111.STEP` (path relative to the repo; resolve from `__file__` as `run_fusion.py` scripts do, or hard-code the absolute path as `05_export.py` does with `OUT`), deletes any prior `EKMC` occurrence first, then places it: build `adsk.core.Matrix3D`, `setToRotation(-sgn * tilt, Vector3D(0,1,0), Point3D(0,0,0))` so the model's +Z tips toward +X by `tilt`, then translate so the model's point (0,0,8.4 mm) lands on `front_pt` (same `podCx`, `zTop` formulas as `03_shell.py`; recompute them from the parameters). Snapshot (`des.snapshots.add()` if pending) and run `des.analyzeInterference` on the sensor body + the shell body; print the result count and the interfering volume. Expected: 0 results. If not zero, print which z range interferes and stop; the pod script is what gets fixed, never the sensor.
+
+Run: `python3 run_fusion.py script 91_pir_fit.py 2>&1 | tail -8`.
 
 - [ ] **Step 4: Add the probe check to `90_verify.py`**
 
@@ -1248,78 +1262,53 @@ Add after `check_radar_cable_exit`:
 
 ```python
 def check_pir_pod(shell, des):
-    """Pod on the +X wall: opening clear, shoulder present, bore open at the
-    back, wire hole into the bay, pod walls solid."""
+    """Pod on the +X wall: recess and bore void, recess floor and pod walls
+    solid, bore open at the back, wire hole into the bay."""
     import math
     def pv(n): return des.userParameters.itemByName(n).value
     wall, intW, intD, backT = pv("wall"), pv("intW"), pv("intD"), pv("backT")
-    canR = pv("pirCanDia") / 2 + pv("pirFit")
-    lensR = pv("pirLensDia") / 2 + pv("pirLensClear")
+    recessR, recessD, boreR, podWall = pv("pirRecessR"), pv("pirRecessD"), pv("pirBoreR"), pv("pirPodWall")
     tilt = pv("pirTilt") if pv("pirTilt") < 1.6 else math.radians(pv("pirTilt"))
     sgn = 1.0 if pv("pirTiltSign") >= 0 else -1.0
     xOuter = intW / 2 + wall
     zTop, zBack = intD + wall, -backT
     depth = zTop - zBack
-    podW = 2 * (canR + pv("pirPodWall")) + depth * math.tan(tilt)
+    podW = 2 * (recessR + podWall) + depth * math.tan(tilt)
     podCx = xOuter + podW / 2
     ax = (sgn * math.sin(tilt), math.cos(tilt))
-    def along(s, r=0.0, side=0.0):           # mm in, mm radial along Y
-        return ((podCx - ax[0] * s) * 10, side * 10, (zTop - ax[1] * s) * 10)
-    shoulder = pv("pirLensH") - 0.05
-    # lens opening is void just inside the front face, out to lensR - 0.3
-    x, y, z = along(0.05); void(shell, x, y, z, "lens opening centre")
-    x, y, z = along(0.05, side=lensR - 0.03); void(shell, x, y, z, "lens opening edge")
-    # shoulder ring is solid: between lensR and canR, just in front of the shoulder
-    ring = (lensR + canR) / 2
-    x, y, z = along(shoulder - 0.05, side=ring); solid(shell, x, y, z, "shoulder ring")
-    # can bore is void behind the shoulder, out to canR
-    x, y, z = along(shoulder + 0.2, side=canR - 0.03); void(shell, x, y, z, "can bore")
+    def along(d, side=0.0):            # cm along the axis in, cm sideways in Y -> mm tuple
+        return ((podCx - ax[0] * d) * 10, side * 10, (zTop - ax[1] * d) * 10)
+    x, y, z = along(0.1); void(shell, x, y, z, "recess centre")
+    x, y, z = along(0.1, side=recessR - 0.03); void(shell, x, y, z, "recess edge")
+    x, y, z = along(recessD + 0.05, side=(boreR + recessR) / 2); solid(shell, x, y, z, "recess floor ring")
+    x, y, z = along(recessD + 0.2); void(shell, x, y, z, "bore just behind the floor")
+    x, y, z = along(1.0, side=boreR - 0.03); void(shell, x, y, z, "bore edge mid-depth")
     x, y, z = along(depth / math.cos(tilt) - 0.1); void(shell, x, y, z, "bore open at the back")
-    # pod wall solid beside the bore
-    x, y, z = along(shoulder + 0.2, side=canR + pv("pirPodWall") / 2); solid(shell, x, y, z, "pod wall +Y")
-    x, y, z = along(shoulder + 0.2, side=-(canR + pv("pirPodWall") / 2)); solid(shell, x, y, z, "pod wall -Y")
-    # wire hole: void in the +X shell wall at pin level, on the axis plane
-    pin_s = shoulder + pv("pirCanH") + pv("pirPinL") / 2
-    xw, _, zw = along(pin_s)
+    x, y, z = along(1.0, side=recessR + podWall / 2); solid(shell, x, y, z, "pod wall +Y")
+    x, y, z = along(1.0, side=-(recessR + podWall / 2)); solid(shell, x, y, z, "pod wall -Y")
+    xw, _, zw = along(pv("pirWireD"))
     void(shell, (intW / 2 + wall / 2) * 10, 0.0, zw, "wire hole through +X wall")
-    # the hole must land inside the cavity, not in the plate's back-rim band
     if not (-backT * 10 + 2 < zw < intD * 10 - 1):
         FAILURES.append("wire hole at z=%.1f mm is outside the usable cavity depth" % zw)
 ```
 
-In `run()`, pass `des` and add the call after `check_no_shell_notch(shell)`:
+In `run()`, add `check_pir_pod(shell, des)` after `check_no_shell_notch(shell)` (`des` already exists there).
 
-```python
-    check_pir_pod(shell, des)
-```
-
-(`des` is already created in `run()` as `des = adsk.fusion.Design.cast(app.activeProduct)`.)
-
-Run:
-```bash
-cd ~/Documents/rd03d-public/case/fusion_scripts && python3 run_fusion.py script 90_verify.py --read-only 2>&1 | tail -8
-```
-Expected: no `EXPECTED` lines and no `verification failure(s)`; the volume line prints and the script ends normally. Fix the shell script, not the probes, if a probe fails.
+Run: `python3 run_fusion.py script 90_verify.py --read-only 2>&1 | tail -8`. Expected: no `EXPECTED` lines, no `verification failure(s)`. Fix `03_shell.py`, not the probes, if one fails.
 
 - [ ] **Step 5: Export the shell and the plug**
 
-In `05_export.py`, add `("PirPlug", "rd03d_pir_plug.stl")` to the tuple of components. Set `OUT` to the real path (`/Users/kevinarthurgomez/Documents/rd03d-public/case`) for the run and restore the placeholder before committing, as the existing workflow does. Run:
-
-```bash
-cd ~/Documents/rd03d-public/case/fusion_scripts && python3 run_fusion.py script 05_export.py 2>&1 | tail -4 && ls -la ../*.stl
-```
-
-Expected: `exported rd03d_case_shell.stl` and `exported rd03d_pir_plug.stl`; the shell STL is larger than before.
+In `05_export.py`, add `("PirPlug", "rd03d_pir_plug.stl")` to the component tuple. Set `OUT` to the real path for the run and restore the placeholder before committing, as the existing workflow does. Run `python3 run_fusion.py script 05_export.py 2>&1 | tail -4 && ls -la ../*.stl`. Expected: both STLs exported; the shell STL is larger than before.
 
 - [ ] **Step 6: Print check (Kevin)**
 
-Slice the shell front-face-down, no supports, PETG, 0.6 mm nozzle, same profile as before. Expected: the slicer shows no support-needed regions on the pod; the bore prints as a tilted hole. Print the plug with the flat on the bed.
+Slice the shell front-face-down, no supports, PETG, 0.6 mm nozzle. Print the plug. Test-fit the sensor: flange seats in the recess, plug presses in from the back and holds it.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd ~/Documents/rd03d-public && git add case/fusion_scripts/03_shell.py case/fusion_scripts/90_verify.py case/fusion_scripts/05_export.py case/rd03d_case_shell.stl case/rd03d_pir_plug.stl
-git commit -m "case: PIR pod on the shell's +X wall, tilted bore, plug, probe check
+cd ~/Documents/rd03d-public && git add .gitignore case/fusion_scripts/03_shell.py case/fusion_scripts/90_verify.py case/fusion_scripts/91_pir_fit.py case/fusion_scripts/05_export.py case/rd03d_case_shell.stl case/rd03d_pir_plug.stl
+git commit -m "case: PIR pod on the shell's +X wall for the EKMC long-distance lens, plug, fit check
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
