@@ -29,12 +29,15 @@ The living design is in your Fusion; save it to your own project.
   the lens's two latch hooks (which reach 0.9 mm below the flange), so the
   sensor can go in at any rotation. The neck and Ø11 base pass through a
   Ø11.8 bore tilted 18° toward +X, so the PIR looks outward and 18° down
-  when the case hangs XIAO-end-down. A Ø3 pass-through from the bore into
-  the XIAO bay takes the three sensor wires.
+  when the case hangs XIAO-end-down. A Ø3 pass-through for the three
+  sensor wires leaves the bore's −X wall centred on the pin tips (about
+  13.9 mm down the bore, inside the plug's span, so it opens straight onto
+  the plug's slot) and runs horizontally through the shell wall into the
+  XIAO bay at about z 4.6 mm, just above the XIAO's top face.
 - `rd03d_pir_plug.stl` — the PIR retaining plug: a Ø11.7 × 6 mm tube with
-  a Ø7 bore, pressed into the pod's bore from the **back** until its front
+  a Ø8 bore, pressed into the pod's bore from the **back** until its front
   rim bears on the sensor's base, which holds the flange against its
-  ledge. The pins and wires run inside the Ø7, and a 3.2 mm slot runs the
+  ledge. The pins and wires run inside the Ø8, and a 3.2 mm slot runs the
   full length of one wall so the wires can leave radially: **insert the
   plug with its slot facing the case (toward −X)** so it lines up with the
   wire hole into the XIAO bay. The slot also lets the tube squeeze a
@@ -45,7 +48,11 @@ The living design is in your Fusion; save it to your own project.
 
 **PETG preferred** — the five retention clips are live springs and PLA is
 brittle enough to snap one on the first insertion. 0.4–0.6 mm nozzle,
-0.2 mm layers, no supports.
+0.2 mm layers. No supports, with one exception since 2026-10-11: the
+shell needs supports **inside the PIR recess only** — the Ø23 pocket in the
+front face opens onto the bed, so its floor (the ledge the sensor's flange
+seats on) is an overhang. Paint-on or tree supports in that pocket; the
+surface they touch is hidden under the flange. Nothing else changed.
 Back plate: print flat (back face down). Shell: print open-side-up.
 Print the **shell at high or solid infill** (≥50 %, ideally 100 % over the
 front wall): the 3.1 mm radome in front of the antennas should be
@@ -218,7 +225,10 @@ at y ±4. The six centres are (0.95, ±12), (0.95, ±4) and (8.95, ±4).)
 Open the design in Fusion → Modify → Change Parameters. `boardClear`,
 `rimGap`, and `snapBump` are the fit-critical ones; `legoHole` is the
 Technic pin hole diameter (tune ±0.1 mm if pins are too tight/loose after
-a test print). No metal or foil in front of the radar, ever.
+a test print). `pirPlugOD` is the PIR plug's press fit: nominally 0.05 mm
+of clearance per side in the Ø11.8 bore, relying on printed holes coming
+out a little undersize — drop it 0.1 if the plug will not go in, raise it
+if it falls out. No metal or foil in front of the radar, ever.
 The retention clips and the radome step are local constants inside
 `fusion_scripts/02_backplate.py` and `03_shell.py` (grab amounts, lip
 heights, `RADOME_Z0`), not user parameters — edit them there and re-run

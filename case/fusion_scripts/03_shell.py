@@ -25,10 +25,15 @@ def ensure_params(des):
         ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up"),
         ("pirPodWall", "2.0 mm", "pod wall around the recess"),
         ("pirWireDia", "3.0 mm", "wire pass-through into the XIAO bay"),
-        ("pirWireD", "13.0 mm", "pass-through depth along the bore axis from the front face"),
-        ("pirPlugOD", "11.7 mm", "plug tube OD: bore dia - 0.1, a light press in a printed hole"),
-        ("pirPlugID", "7.0 mm", "plug tube ID: pins on r2.5 and their wires pass"),
+        # The horizontal hole meets the -X bore wall pirBoreR*tan(pirTilt)
+        # = 5.9*tan18 = 1.9 mm deeper than its axis point. The opening is
+        # centred on the pin tips (sensor z -5.5 = d 13.9), inside the plug
+        # span d 9.3..15.3 where the plug's slot is: 13.9 - 1.9 = 12.0.
+        ("pirWireD", "12.0 mm", "pass-through axis point depth: pin tips d 13.9 minus boreR*tan(tilt) 1.9"),
+        ("pirPlugOD", "11.7 mm", "plug tube OD: nominal 0.05 clearance per side in the bore; the press fit relies on printed holes coming out undersize"),
+        ("pirPlugID", "8.0 mm", "plug tube ID: pins on r2.5 plus room for three soldered joints"),
         ("pirPlugL", "6.0 mm", "plug tube length"),
+        ("pirSeatD", "9.3 mm", "plug front rim depth: the base's underside (sensor z -0.9); read by 03_shell.py and 91_pir_fit.py"),
         ("pirPlugSlotW", "3.2 mm", "lengthwise slot through one plug wall: wire exit into the pass-through, and a little compliance for the press fit"),
     ]
     ups = des.userParameters
@@ -414,6 +419,12 @@ def run(_context: str):
     # a bore, a plug tube pressed in from the back holds it. The bore
     # tilts pirTilt toward +X so the PIR looks 18 deg down with the case
     # hanging XIAO-end-down.
+    # PRINTING (review 2026-10-11): the recess opens onto the bed, so its
+    # floor (the flange ledge and the groove floor) is an unsupported
+    # overhang in the face-down orientation. Accepted: the shell now needs
+    # supports INSIDE THE PIR RECESS ONLY (paint-on or tree supports in the
+    # dia 23 pocket; the surface they touch is hidden under the sensor's
+    # flange). Everything else prints as before, without supports.
     # Built AFTER 6a-6c on purpose: those count the shell's perimeter edges
     # (4, 8, 8) and would see the pod's edges too. The pod sits on the flat
     # part of the +X face (|y| <= 12.6, corner fillets start at |y| = 22.5)
@@ -510,6 +521,9 @@ def run(_context: str):
         if ring is None or pr.areaProperties().area > ring.areaProperties().area:
             ring = pr
     plugL = p(des, "pirPlugL")
+    slotWall = (p(des, "pirPlugOD") - p(des, "pirPlugID")) / 2
+    if slotWall < 0.12:
+        raise RuntimeError("plug wall %.2f mm is under 1.2 mm" % (slotWall * 10))
     plug_ext = extrude(plug, ring, 0, plugL,
                        adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
     plug_body = plug_ext.bodies.item(0)
@@ -539,8 +553,11 @@ def run(_context: str):
     inward = adsk.core.Vector3D.create(-ax.x, 0.0, -ax.z)
     xloc = adsk.core.Vector3D.create(math.cos(tilt), 0.0, -sgn * math.sin(tilt))
     yloc = inward.crossProduct(xloc)
-    seat = along(0.84 + 0.09)
+    seat = along(p(des, "pirSeatD"))
     m.setWithCoordinateSystem(seat, xloc, yloc, inward)
+    # guard for future edits of the frame above: the slot (local -X) must
+    # end up on the case side, where the wire hole is, or the README's
+    # insertion rule and the fit check stop describing the same thing
     chk = adsk.core.Point3D.create(-odR, 0, 0)
     chk.transformBy(m)
     if chk.x >= seat.x:
@@ -548,6 +565,8 @@ def run(_context: str):
     plug_occ.transform2 = m
     if des.snapshots.hasPendingSnapshot:
         des.snapshots.add()
-    print("pir plug ok (OD %.1f ID %.1f L %.1f)" % (p(des, "pirPlugOD") * 10, p(des, "pirPlugID") * 10, p(des, "pirPlugL") * 10))
+    print("pir plug ok (OD %.1f ID %.1f L %.1f, wall %.2f, rim at d %.1f)"
+          % (p(des, "pirPlugOD") * 10, p(des, "pirPlugID") * 10, plugL * 10,
+             slotWall * 10, p(des, "pirSeatD") * 10))
 
     print("FrontShell bodies:", comp.bRepBodies.count)

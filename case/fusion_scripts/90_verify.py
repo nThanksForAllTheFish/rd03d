@@ -265,16 +265,20 @@ def check_no_shell_notch(shell):
     Restored 2026-10-11: the def was dropped by mistake in f295adf while
     its call in run() stayed, so the harness had been dying with NameError.
     """
-    for z in (-6.0, -2.0, 2.0, 6.0):
+    # z 6.0 -> 7.0 on 2026-10-11: the PIR wire hole (dia 3, horizontal,
+    # y 0) now legitimately pierces this wall over z 3.1..6.1; the old
+    # notch ran to z 8, so z 7 still guards it. check_pir_pod owns the hole.
+    for z in (-6.0, -2.0, 2.0, 7.0):
         solid(shell, 22.0, 0.0, z, "+X wall solid at z=%.1f" % z)
     solid(shell, 22.0, 4.0, 0.0, "+X wall solid at y=4")
     solid(shell, 22.0, -4.0, 0.0, "+X wall solid at y=-4")
     void(shell, 19.0, 0.0, 7.0, "cavity still open inside the +X wall")
 
 
-def check_pir_pod(shell, des):
+def check_pir_pod(shell, plate, des):
     """Pod on the +X wall: recess and bore void, recess floor and pod walls
-    solid, bore open at the back, wire hole into the bay."""
+    solid, bore open at the back, wire hole into the bay with nothing of
+    the plate in its way, lens cone edges clear."""
     import math
     def pv(n): return des.userParameters.itemByName(n).value
     wall, intW, intD, backT = pv("wall"), pv("intW"), pv("intD"), pv("backT")
@@ -291,8 +295,9 @@ def check_pir_pod(shell, des):
     # parameters above are cm, so along() converts on the way out.
     def along(d, side=0.0):            # cm along the axis in, cm sideways in Y -> mm tuple
         return ((podCx - ax[0] * d) * 10, side * 10, (zTop - ax[1] * d) * 10)
-    x, y, z = along(0.1); void(shell, x, y, z, "recess centre")
+    x, y, z = along(0.1); void(shell, x, y, z, "recess centre")   # passes trivially: the bore is under it
     x, y, z = along(0.1, side=recessR - 0.03); void(shell, x, y, z, "recess edge")
+    x, y, z = along(recessD - 0.05, side=recessR - 0.03); void(shell, x, y, z, "recess full depth at its edge (too-shallow recess)")
     flangeR, hookD = pv("pirFlangeR"), pv("pirHookD")
     x, y, z = along(recessD + 0.05, side=(boreR + flangeR) / 2); solid(shell, x, y, z, "flange ledge")
     x, y, z = along(recessD + 0.05, side=(flangeR + recessR) / 2); void(shell, x, y, z, "latch hook groove open below the ledge")
@@ -305,8 +310,16 @@ def check_pir_pod(shell, des):
     x, y, z = along(1.0, side=-(recessR + podWall / 2)); solid(shell, x, y, z, "pod wall -Y")
     xw, _, zw = along(pv("pirWireD"))
     void(shell, (intW / 2 + wall / 2) * 10, 0.0, zw, "wire hole through +X wall")
+    void(plate, (intW / 2 - 0.05) * 10, 0.0, zw, "plate clear where the wire hole enters the bay")
     if not (-backT * 10 + 2 < zw < intD * 10 - 1):
         FAILURES.append("wire hole at z=%.1f mm is outside the usable cavity depth" % zw)
+    # lens cone edges: rays from the front-face axis point at +/-25 deg from
+    # the bore axis in the XZ plane, probed 15 mm out, must be in free air
+    for a in (25.0, -25.0):
+        ang = tilt + math.radians(a)
+        px = (podCx + sgn * math.sin(ang) * 1.5) * 10
+        pz = (zTop + math.cos(ang) * 1.5) * 10
+        void(shell, px, 0.0, pz, "lens cone edge %+.0f deg clear 15 mm out" % a)
 
 
 def run(_context: str):
@@ -327,7 +340,7 @@ def run(_context: str):
     check_fence_walls_continuous(plate)
     check_radar_cable_exit(plate)
     check_no_shell_notch(shell)
-    check_pir_pod(shell, des)
+    check_pir_pod(shell, plate, des)
 
     if FAILURES:
         for f in FAILURES:

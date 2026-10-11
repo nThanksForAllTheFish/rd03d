@@ -203,8 +203,10 @@ scripts must satisfy and the probe harness must check:
   pod and is retained by a printed clip, not glue.
 - A 3 mm wire pass-through from the pod into the XIAO bay, placed where it
   misses the XIAO hold-down boss and the +X radome band, verified by probes.
-- Printable without supports in the same orientation as the shell; the pod's
-  downward tilt must not create an overhang steeper than 45° on its outer face.
+- Printable without supports in the same orientation as the shell, except
+  inside the PIR recess (its floor is an overhang onto the bed; supports there
+  only, accepted 2026-10-11); the pod's downward tilt must not create an
+  overhang steeper than 45° on its outer face.
 - The pod must not shadow the radar's field: nothing new within the TX/RX bands'
   projection at the shell front.
 
@@ -240,7 +242,8 @@ sensors reacting on one screen.
   up, out the top on the right, back, down, out the left), with the CSV branch
   running. Success: the PIR fires before the first step on both approaches, and
   the first-fire delay against the radar is reported per approach.
-- Case: probe harness passes; the pod prints without supports; the dome sees the
+- Case: probe harness passes; the pod prints without supports except inside the
+  PIR recess; the dome sees the
   whole wedge when the case is on the wall (check with the chart's PIR lamp while
   walking the extremes).
 

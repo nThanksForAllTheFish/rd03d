@@ -85,6 +85,9 @@ def run(_context: str):
     imp = app.importManager
     before = root.occurrences.count
     imp.importToTarget(imp.createSTEPImportOptions(SENSOR), root)
+    if root.occurrences.count != before + 1:
+        raise RuntimeError("STEP import added %d occurrences, expected 1"
+                           % (root.occurrences.count - before))
     sensor = root.occurrences.item(before)
     print("imported:", sensor.name, "| component:", sensor.component.name,
           "| bodies:", len(all_bodies(sensor)))
@@ -109,6 +112,10 @@ def run(_context: str):
             print("rotation about Y by %+.1f deg tips +Z toward %s"
                   % (math.degrees(ang), "+X" if sgn > 0 else "-X"))
             break
+    if rot is None:
+        raise RuntimeError("neither rotation sign about Y tips the sensor's "
+                           "+Z toward %+.0fX; check pirTilt/pirTiltSign"
+                           % sgn)
     # translate so the model's (0, 0, SEAT_Z) lands on the front-face axis point
     seat = adsk.core.Point3D.create(0, 0, SEAT_Z)
     seat.transformBy(rot)
@@ -124,6 +131,27 @@ def run(_context: str):
           "~%.1f mm proud of z=%.1f" % (front_pt.x * 10, front_pt.z * 10,
                                         (1.929 - SEAT_Z) * 10 * math.cos(tilt),
                                         zTop * 10))
+
+    # --- plug seat: pirSeatD (shared with 03_shell.py, which parks the plug's
+    # front rim there) must be the base's underside. Probe the sensor body
+    # 0.5 mm either side of it, at a radius inside the rim's bearing annulus.
+    seatD = p(des, "pirSeatD")
+    ax = adsk.core.Vector3D.create(sgn * math.sin(tilt), 0, math.cos(tilt))
+    rimR = (p(des, "pirPlugID") + p(des, "pirPlugOD")) / 4
+    sbody = all_bodies(sensor)[0]
+    IN = adsk.fusion.PointContainment.PointInsidePointContainment
+    def sensor_solid(d, side):
+        pt = adsk.core.Point3D.create(front_pt.x - ax.x * d, side,
+                                      front_pt.z - ax.z * d)
+        return sbody.pointContainment(pt) == IN
+    if not sensor_solid(seatD - 0.05, rimR):
+        raise RuntimeError("no sensor base 0.5 mm in front of pirSeatD at r %.1f"
+                           % (rimR * 10))
+    if sensor_solid(seatD + 0.05, rimR):
+        raise RuntimeError("sensor body behind pirSeatD at r %.1f: the plug "
+                           "rim would clash" % (rimR * 10))
+    print("plug rim at d %.1f bears on the base underside (r %.1f) ok"
+          % (seatD * 10, rimR * 10))
 
     # --- interference: sensor vs shell (and the plug, parked in the bore) ---
     shell = find_occ(root, ("FrontShell",))
