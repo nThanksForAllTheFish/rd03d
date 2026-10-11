@@ -20,7 +20,22 @@ The living design is in your Fusion; save it to your own project.
   plastic there, exterior face still perfectly flat), a hold-down boss
   over the XIAO, four snap bumps engage the plate's edge grooves. Its
   side walls are unbroken: the old side USB notch is **gone** — see the
-  USB-C base jack section below.
+  USB-C base jack section below. Since 2026-10-11 it also carries a
+  **PIR pod** on its +X wall (the end that hangs down): a 34.8 × 27 mm
+  block, full case depth, for a Panasonic EKMC1603111 PaPIRs with the
+  long-distance lens. The sensor goes in from the **front**, dome out: the
+  lens ring and flange drop into an 11.5 mm-radius recess and the flange
+  seats on a ledge 2 mm down; an annular groove outside the ledge clears
+  the lens's two latch hooks (which reach 0.9 mm below the flange), so the
+  sensor can go in at any rotation. The neck and Ø11 base pass through a
+  Ø11.8 bore tilted 18° toward +X, so the PIR looks outward and 18° down
+  when the case hangs XIAO-end-down. A Ø3 pass-through from the bore into
+  the XIAO bay takes the three sensor wires.
+- `rd03d_pir_plug.stl` — the PIR retaining plug: a Ø11.7 × 6 mm tube with
+  a Ø7 bore, pressed into the pod's bore from the **back** until its front
+  rim bears on the sensor's base, which holds the flange against its
+  ledge. The pins and wires run inside the Ø7. Print it standing on either
+  end; sand or scale it if the printed bore comes out tight.
 
 ## Printing
 
@@ -208,9 +223,17 @@ The eight `usbJack*` / `cap*` parameters are created by `02_backplate.py`,
 not by `01_setup.py`, so they only exist once that script has run.
 Re-export STLs after edits (File → 3D Print, or re-run
 `fusion_scripts/05_export.py` via `run_fusion.py`).
+The `pir*` parameters (recess, ledge, groove, bore, tilt, plug) are created
+by `03_shell.py` the same way; the radii come from point-probing Panasonic's
+STEP of the sensor (base r 5.5, flange r 9.3, latch tabs r 11.1), not from
+its datasheet drawing, with 0.3 mm of clearance on each.
 `fusion_scripts/90_verify.py` is a read-only probe harness that asserts the
-jack, cradle, notches, clips and the absent shell notch with
+jack, cradle, notches, clips, the absent shell notch and the PIR pod with
 `pointContainment`; run it after any change and expect `VERIFY OK`.
+`fusion_scripts/91_pir_fit.py` imports the sensor's STEP (a local vendor
+download under `case/models/`, not in the repo), seats it in the pod and runs
+Fusion's interference analysis against the shell and the plug; expect
+`PIR FIT OK` (zero pairs).
 
 ## Design notes
 

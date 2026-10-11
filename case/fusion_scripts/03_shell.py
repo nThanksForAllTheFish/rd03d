@@ -1,9 +1,41 @@
+import math
+
 import adsk.core
 import adsk.fusion
 
 
 def p(des, name):
     return des.userParameters.itemByName(name).value  # cm
+
+
+def ensure_params(des):
+    """PIR pod parameters. Not in 01_setup.py: re-running that resets hand-tuned values."""
+    spec = [
+        # radii measured on Panasonic's STEP by point probing (2026-10-11):
+        # base/can r 5.5 (not the 4.65 first assumed), neck r 5.3 -> 5.0,
+        # flange r 9.3 with its underside at z 6.4..6.6, lens ring r 10.3,
+        # and TWO lens latch tabs at 45/225 deg reaching r 11.1 over
+        # z 6.6..8.4 whose hook lips (r 9.6..10.7) hang down to z 5.5.
+        ("pirRecessR", "11.5 mm", "recess radius: latch tabs r 11.1 + 0.3 (lens ring is r 10.3)"),
+        ("pirRecessD", "2.0 mm", "recess depth to the flange ledge (flange underside at sensor z 6.4..6.6)"),
+        ("pirFlangeR", "9.3 mm", "flange radius: the sensor seats on the ledge r pirBoreR..pirFlangeR"),
+        ("pirHookD", "3.3 mm", "groove depth outside the ledge for the latch hook lips (bottom at z 5.5 -> d 2.9)"),
+        ("pirBoreR", "5.9 mm", "bore radius: base/can r 5.5 + 0.3; neck r 5.3..5.0 passes"),
+        ("pirTilt", "18 deg", "bore tilt from the shell normal, toward +X"),
+        ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up"),
+        ("pirPodWall", "2.0 mm", "pod wall around the recess"),
+        ("pirWireDia", "3.0 mm", "wire pass-through into the XIAO bay"),
+        ("pirWireD", "13.0 mm", "pass-through depth along the bore axis from the front face"),
+        ("pirPlugOD", "11.7 mm", "plug tube OD: bore dia - 0.1, a light press in a printed hole"),
+        ("pirPlugID", "7.0 mm", "plug tube ID: pins on r2.5 and their wires pass"),
+        ("pirPlugL", "6.0 mm", "plug tube length"),
+    ]
+    ups = des.userParameters
+    for name, expr, comment in spec:
+        if ups.itemByName(name) is None:
+            unit = "deg" if "deg" in expr else ("" if expr.lstrip("-").isdigit() else "mm")
+            ups.add(name, adsk.core.ValueInput.createByString(expr), unit, comment)
+            print("added", name, "=", expr)
 
 
 def rect(sk, cx, cy, w, h):
@@ -41,15 +73,22 @@ def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
     root = des.rootComponent
+    ensure_params(des)
 
     for occ in list(root.occurrences):
-        if occ.component.name.startswith("FrontShell"):
+        name = occ.component.name
+        if name.startswith(("FrontShell", "PirPlug")):
             # rename before deleting: the dead component keeps its name
             # reserved in the document's name registry (until save), which
             # would force the rebuilt component to "FrontShell (1)"
-            occ.component.name = "FrontShell_deleted"
+            occ.component.name = name + "_deleted"
             occ.deleteMe()
-            print("removed existing FrontShell")
+            print("removed existing", name)
+        elif name.startswith(("EKMC", "PaPIRs")):
+            # the PIR sensor placed by 91_pir_fit.py; it is re-imported
+            # against the rebuilt shell by re-running that script
+            occ.deleteMe()
+            print("removed prior sensor import:", name)
 
     occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     comp = occ.component
@@ -364,5 +403,125 @@ def run(_context: str):
                            "gone, found %d" % len(rim))
     add_fillet(rim, soft)
     print("rim fillet ok (r=%.2f mm on %d edges)" % (soft * 10, len(rim)))
+
+    # 7. PIR POD (2026-10-11): block on the outer +X wall, full shell depth
+    # so its front face prints on the bed with the shell. The EKMC1603111's
+    # lens (Ø20.6, 11 mm tall) is wider than its neck, so the sensor enters
+    # from the FRONT: lens ring + flange in a 2 mm recess, the flange seated
+    # on a ledge with an annular groove outside it for the lens's two latch
+    # hooks (so the sensor can go in at any rotation), neck and base through
+    # a bore, a plug tube pressed in from the back holds it. The bore
+    # tilts pirTilt toward +X so the PIR looks 18 deg down with the case
+    # hanging XIAO-end-down.
+    # Built AFTER 6a-6c on purpose: those count the shell's perimeter edges
+    # (4, 8, 8) and would see the pod's edges too. The pod sits on the flat
+    # part of the +X face (|y| <= 12.6, corner fillets start at |y| = 22.5)
+    # and swallows the front chamfer and rim fillet over its own footprint.
+    recessR, recessD = p(des, "pirRecessR"), p(des, "pirRecessD")
+    boreR, podWall = p(des, "pirBoreR"), p(des, "pirPodWall")
+    flangeR, hookD = p(des, "pirFlangeR"), p(des, "pirHookD")
+    # Fusion hands angle parameters back in radians (18 deg -> 0.314); the
+    # guard also accepts a value typed in degrees.
+    tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))
+    sgn = 1.0 if p(des, "pirTiltSign") >= 0 else -1.0
+    xOuter = intW / 2 + wall                     # +X outer face of the shell
+    zTop, zBack = intD + wall, -backT
+    depth = zTop - zBack
+    podW = 2 * (recessR + podWall) + depth * math.tan(tilt)
+    podL = 2 * (recessR + podWall)
+    podCx = xOuter + podW / 2
+
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    rect(sk, podCx, 0, podW, podL)
+    extrude(comp, sk.profiles.item(0), zBack, zTop,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("pir pod did not merge with the shell: %d bodies"
+                           % comp.bRepBodies.count)
+    print("pir pod block ok (%.1f x %.1f mm at x=%.1f)" % (podW * 10, podL * 10, podCx * 10))
+
+    # bore axis through the pod centre at the front face, direction
+    # (sgn*sin t, 0, cos t); along(d) is the axis point d into the pod.
+    ax = adsk.core.Vector3D.create(sgn * math.sin(tilt), 0.0, math.cos(tilt))
+    front_pt = adsk.core.Point3D.create(podCx, 0.0, zTop)
+
+    def along(d):
+        return adsk.core.Point3D.create(front_pt.x - ax.x * d, 0.0, front_pt.z - ax.z * d)
+
+    # read every parameter BEFORE startEdit(): inside a base feature the
+    # design is in direct-modelling mode and userParameters raises
+    # "this is not a parametric design".
+    wireR, wp = p(des, "pirWireDia") / 2, along(p(des, "pirWireD"))
+    tbm = adsk.fusion.TemporaryBRepManager.get()
+    base = comp.features.baseFeatures.add()
+    base.startEdit()
+    # The recess is a TILTED cylinder, so its +X rim exits the flat front
+    # face recessR*tan(tilt) (~3.7 mm) further out along the axis than its
+    # -X rim does. Starting the cut only 0.5 mm outside the face left a
+    # crescent of pod under the dome's +X flank (180 mm^3 of interference
+    # with the real sensor, 2026-10-11). Start it where the cylinder has
+    # cleared the face plane entirely; beyond that it cuts only air.
+    recess_out = recessR * math.tan(tilt) + 0.1
+    recess_cyl = tbm.createCylinderOrCone(along(-recess_out), recessR, along(recessD), recessR)
+    # latch-hook groove: the recess floor stays at recessD only over the
+    # flange ledge (r boreR..flangeR); outside it the floor drops to hookD
+    groove = tbm.createCylinderOrCone(along(recessD - 0.01), recessR, along(hookD), recessR)
+    ledge = tbm.createCylinderOrCone(along(recessD - 0.02), flangeR, along(hookD + 0.01), flangeR)
+    tbm.booleanOperation(groove, ledge, adsk.fusion.BooleanTypes.DifferenceBooleanType)
+    bore_cyl = tbm.createCylinderOrCone(along(recessD - 0.01), boreR,
+                                        along(depth / math.cos(tilt) + 0.3), boreR)
+    wire_cyl = tbm.createCylinderOrCone(
+        adsk.core.Point3D.create(wp.x, 0.0, wp.z), wireR,
+        adsk.core.Point3D.create(intW / 2 - 0.015, 0.0, wp.z), wireR)
+    for b in (recess_cyl, groove, bore_cyl, wire_cyl):
+        comp.bRepBodies.add(b, base)
+    base.finishEdit()
+    # the proxies returned by bRepBodies.add() go stale when the edit
+    # closes (Combine fails with ALL_TOOL_BODY_REFERENCE_LOST); use the
+    # base feature's own body list instead
+    tools = [base.bodies.item(i) for i in range(base.bodies.count)]
+    if len(tools) != 4:
+        raise RuntimeError("expected 4 pir tool bodies, found %d" % len(tools))
+    ci = comp.features.combineFeatures.createInput(shell_body, collection(tools))
+    ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
+    ci.isKeepToolBodies = False
+    comp.features.combineFeatures.add(ci)
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("pir bore split the shell: %d bodies" % comp.bRepBodies.count)
+    print("pir recess r=%.2f d=%.2f (ledge r %.2f..%.2f, hook groove to d %.2f), "
+          "bore r=%.2f, tilt %.1f deg ok"
+          % (recessR * 10, recessD * 10, boreR * 10, flangeR * 10, hookD * 10,
+             boreR * 10, math.degrees(tilt)))
+
+    # 7b. PLUG: tube pressed into the bore from the back; its front rim bears
+    # on the base's underside (r up to 5.5, pins inside r 2.5). Separate component,
+    # exported as its own STL, printed standing on either end.
+    plug_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+    plug = plug_occ.component
+    plug.name = "PirPlug"
+    sk = plug.sketches.add(plug.xYConstructionPlane)
+    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugOD") / 2)
+    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugID") / 2)
+    ring = None
+    for i in range(sk.profiles.count):            # the annular profile, not the inner disc
+        pr = sk.profiles.item(i)
+        if ring is None or pr.areaProperties().area > ring.areaProperties().area:
+            ring = pr
+    extrude(plug, ring, 0, p(des, "pirPlugL"),
+            adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    # park the occurrence in the bore where it will sit: local +Z along the
+    # bore (deeper = -Z of the shell), local z=0 (the front rim) at d 9.3,
+    # the can's underside (sensor z -0.9). Purely for the picture and for
+    # 91_pir_fit.py's interference check; the STL is exported in local coords.
+    m = adsk.core.Matrix3D.create()
+    inward = adsk.core.Vector3D.create(-ax.x, 0.0, -ax.z)
+    m.setToRotateTo(adsk.core.Vector3D.create(0, 0, 1), inward)
+    seat = along(0.84 + 0.09)
+    m.translation = adsk.core.Vector3D.create(seat.x, seat.y, seat.z)
+    plug_occ.transform2 = m
+    if des.snapshots.hasPendingSnapshot:
+        des.snapshots.add()
+    print("pir plug ok (OD %.1f ID %.1f L %.1f)" % (p(des, "pirPlugOD") * 10, p(des, "pirPlugID") * 10, p(des, "pirPlugL") * 10))
 
     print("FrontShell bodies:", comp.bRepBodies.count)
