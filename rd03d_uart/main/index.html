@@ -8,8 +8,11 @@
   html, body { margin: 0; height: 100%; background: #121212; color: #ddd;
                font: 14px system-ui, sans-serif; overflow: hidden; }
   #hud { height: 56px; box-sizing: border-box; padding: 8px 12px;
-         display: flex; flex-wrap: wrap; gap: 2px 18px; align-items: baseline; }
+         display: flex; flex-wrap: wrap; gap: 2px 18px; align-items: baseline;
+         overflow: hidden; }
   #status { font-weight: 600; }
+  #pirlog { flex: 0 0 100%; min-width: 0; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; color: #ffb000; }
   .ok { color: #4cd47a; }
   .bad { color: #ff6b6b; }
   canvas { display: block; width: 100vw; height: calc(100vh - 56px);
@@ -20,9 +23,9 @@
 <div id="hud">
   <span id="status" class="bad">connecting&hellip;</span>
   <span id="targets"></span>
-  <div id="pirlog" style="color:#ffb000"></div>
   <span id="stats"></span>
   <span id="ver" style="color:#777"></span>
+  <div id="pirlog"></div>
 </div>
 <canvas id="chart"></canvas>
 <script>
@@ -38,6 +41,7 @@ const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
 const targetsEl = document.getElementById("targets");
 const statsEl = document.getElementById("stats");
+const pirLogEl = document.getElementById("pirlog");
 
 let frames = 0;
 let latest = [null, null, null];
@@ -151,7 +155,7 @@ function onMessage(ev) {
     pirFlashUntil = performance.now() + 400;
     pirLog.unshift(new Date().toLocaleTimeString() + " PIR");
     if (pirLog.length > 6) pirLog.pop();
-    document.getElementById("pirlog").textContent = pirLog.join("  ·  ");
+    pirLogEl.textContent = pirLog.join("  ·  ");
   }
   pirWasActive = !!msg.pir;
   targetsEl.innerHTML = msg.t.map(function (t, i) {

@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "mdns.h"
 #include "mqtt_client.h"
 #include "sdkconfig.h"
@@ -31,6 +32,12 @@ static mqtt_throttle_t s_throttle;
  * another frame's y. */
 static rd03d_frame_t s_last_frame;
 static portMUX_TYPE s_frame_lock = portMUX_INITIALIZER_UNLOCKED;
+static int64_t s_last_frame_us;
+/* Latest PIR hold state, kept even while disconnected so it can be
+ * republished on connect (the retained copy may be stale by then). */
+static volatile bool s_pir_state;
+
+#define PIR_FRAME_MAX_AGE_US 300000
 
 static void on_mqtt_event(void *arg, esp_event_base_t base, int32_t id,
                           void *data)
@@ -42,6 +49,10 @@ static void on_mqtt_event(void *arg, esp_event_base_t base, int32_t id,
         s_reset_pending = true; /* throttle reset runs on the radar task */
         s_connected = true;
         esp_mqtt_client_publish(s_client, STATUS_TOPIC, "online", 0, 0, 1);
+#if CONFIG_RD03D_ENABLE_PIR
+        esp_mqtt_client_publish(s_client, "rd03d/pir/state",
+                                s_pir_state ? "1" : "0", 1, 1, 1);
+#endif
         ESP_LOGI(TAG, "connected to broker");
     } else if (id == MQTT_EVENT_DISCONNECTED) {
         s_connected = false;
@@ -129,6 +140,7 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
 {
     portENTER_CRITICAL(&s_frame_lock);
     s_last_frame = *f;
+    s_last_frame_us = esp_timer_get_time();
     portEXIT_CRITICAL(&s_frame_lock);
 
     if (!s_connected) {
@@ -184,18 +196,25 @@ void mqtt_pub_pir_event(uint32_t n, int64_t t_ms)
         return;
     }
     rd03d_frame_t f;
+    int64_t frame_us;
     portENTER_CRITICAL(&s_frame_lock);
     f = s_last_frame;
+    frame_us = s_last_frame_us;
     portEXIT_CRITICAL(&s_frame_lock);
 
+    /* A stalled radar must not be reported as a current target. */
+    bool fresh = frame_us != 0 &&
+                 esp_timer_get_time() - frame_us <= PIR_FRAME_MAX_AGE_US;
+
     const rd03d_target_t *nearest = NULL;
-    int32_t best = INT32_MAX;
+    uint32_t best = UINT32_MAX;
     for (int i = 0; i < RD03D_NUM_TARGETS; i++) {
         const rd03d_target_t *t = &f.targets[i];
-        if (!t->present) {
+        if (!fresh || !t->present) {
             continue;
         }
-        int32_t d2 = (int32_t)t->x_mm * t->x_mm + (int32_t)t->y_mm * t->y_mm;
+        uint32_t d2 = (uint32_t)((int32_t)t->x_mm * t->x_mm) +
+                      (uint32_t)((int32_t)t->y_mm * t->y_mm);
         if (d2 < best) {
             best = d2;
             nearest = t;
@@ -223,11 +242,14 @@ void mqtt_pub_pir_event(uint32_t n, int64_t t_ms)
 
 void mqtt_pub_pir_state(bool active)
 {
+    s_pir_state = active;
     esp_mqtt_client_handle_t client = s_client;
     if (!s_connected || client == NULL) {
         return;
     }
     /* Retained so a fresh Node-RED subscriber learns the current state. */
-    esp_mqtt_client_enqueue(client, "rd03d/pir/state", active ? "1" : "0",
-                            1, 0, 1, true);
+    if (esp_mqtt_client_enqueue(client, "rd03d/pir/state", active ? "1" : "0",
+                                1, 1, 1, true) < 0) {
+        ESP_LOGW(TAG, "pir state %d dropped", active ? 1 : 0);
+    }
 }

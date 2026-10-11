@@ -136,7 +136,7 @@ void pir_init(pir_event_cb_t on_event, pir_state_cb_t on_state)
     }
     ESP_ERROR_CHECK(gpio_isr_handler_add(CONFIG_RD03D_PIR_GPIO, pir_isr, NULL));
 
-    if (xTaskCreate(pir_task, "pir", 3072, NULL, 6, NULL) != pdPASS) {
+    if (xTaskCreate(pir_task, "pir", 4096, NULL, 6, NULL) != pdPASS) {
         ESP_LOGE(TAG, "task creation failed; PIR disabled");
         gpio_isr_handler_remove(CONFIG_RD03D_PIR_GPIO);
         return;
