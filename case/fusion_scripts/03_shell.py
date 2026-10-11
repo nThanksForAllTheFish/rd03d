@@ -29,6 +29,7 @@ def ensure_params(des):
         ("pirPlugOD", "11.7 mm", "plug tube OD: bore dia - 0.1, a light press in a printed hole"),
         ("pirPlugID", "7.0 mm", "plug tube ID: pins on r2.5 and their wires pass"),
         ("pirPlugL", "6.0 mm", "plug tube length"),
+        ("pirPlugSlotW", "3.2 mm", "lengthwise slot through one plug wall: wire exit into the pass-through, and a little compliance for the press fit"),
     ]
     ups = des.userParameters
     for name, expr, comment in spec:
@@ -508,17 +509,42 @@ def run(_context: str):
         pr = sk.profiles.item(i)
         if ring is None or pr.areaProperties().area > ring.areaProperties().area:
             ring = pr
-    extrude(plug, ring, 0, p(des, "pirPlugL"),
-            adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    plugL = p(des, "pirPlugL")
+    plug_ext = extrude(plug, ring, 0, plugL,
+                       adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    plug_body = plug_ext.bodies.item(0)
+    # lengthwise slot through the -X wall, full length: the wires leave the
+    # pins radially through it into the pass-through (which runs -X from
+    # the bore axis), and the split lets the tube compress a little for the
+    # press fit. The parking frame below maps local -X toward the case
+    # (world -X), so "slot toward the case" is the insertion rule.
+    slotW, odR = p(des, "pirPlugSlotW"), p(des, "pirPlugOD") / 2
+    sk = plug.sketches.add(plug.xYConstructionPlane)
+    rect(sk, -(odR + 0.1) / 2, 0, odR + 0.1, slotW)      # x -(odR+1mm)..0
+    extrude(plug, sk.profiles.item(0), -0.05, plugL + 0.05,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plug_body])
+    if plug.bRepBodies.count != 1:
+        raise RuntimeError("plug slot left %d bodies" % plug.bRepBodies.count)
+    print("pir plug slot ok (%.1f mm wide, -X wall, full length)" % (slotW * 10))
     # park the occurrence in the bore where it will sit: local +Z along the
     # bore (deeper = -Z of the shell), local z=0 (the front rim) at d 9.3,
     # the can's underside (sensor z -0.9). Purely for the picture and for
     # 91_pir_fit.py's interference check; the STL is exported in local coords.
+    # Explicit frame rather than setToRotateTo(): that would spin the tube
+    # 162 deg about -Y and put the slot on the +X side. Local Z = inward
+    # along the bore, local X = the in-plane direction that keeps -X
+    # pointing at the case, Y = Z x X.
     m = adsk.core.Matrix3D.create()
     inward = adsk.core.Vector3D.create(-ax.x, 0.0, -ax.z)
-    m.setToRotateTo(adsk.core.Vector3D.create(0, 0, 1), inward)
+    xloc = adsk.core.Vector3D.create(math.cos(tilt), 0.0, -sgn * math.sin(tilt))
+    yloc = inward.crossProduct(xloc)
     seat = along(0.84 + 0.09)
-    m.translation = adsk.core.Vector3D.create(seat.x, seat.y, seat.z)
+    m.setWithCoordinateSystem(seat, xloc, yloc, inward)
+    chk = adsk.core.Point3D.create(-odR, 0, 0)
+    chk.transformBy(m)
+    if chk.x >= seat.x:
+        raise RuntimeError("plug parked with its slot away from the case")
     plug_occ.transform2 = m
     if des.snapshots.hasPendingSnapshot:
         des.snapshots.add()

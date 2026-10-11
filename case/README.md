@@ -34,8 +34,12 @@ The living design is in your Fusion; save it to your own project.
 - `rd03d_pir_plug.stl` — the PIR retaining plug: a Ø11.7 × 6 mm tube with
   a Ø7 bore, pressed into the pod's bore from the **back** until its front
   rim bears on the sensor's base, which holds the flange against its
-  ledge. The pins and wires run inside the Ø7. Print it standing on either
-  end; sand or scale it if the printed bore comes out tight.
+  ledge. The pins and wires run inside the Ø7, and a 3.2 mm slot runs the
+  full length of one wall so the wires can leave radially: **insert the
+  plug with its slot facing the case (toward −X)** so it lines up with the
+  wire hole into the XIAO bay. The slot also lets the tube squeeze a
+  little for the press fit. Print it standing on either end; sand or scale
+  it if the printed bore comes out tight.
 
 ## Printing
 
