@@ -29,6 +29,16 @@ static void test_edge_after_hold_is_a_new_event(void)
     assert(pir_gate_edge(&g, 3000) == PIR_GATE_EVENT);
 }
 
+static void test_extension_swallows_edge_past_original_window(void)
+{
+    pir_gate_t g;
+    pir_gate_init(&g, 500);
+    pir_gate_edge(&g, 1000);                            /* until 1500 */
+    assert(pir_gate_edge(&g, 1400) == PIR_GATE_NONE);   /* until 1900 */
+    assert(pir_gate_edge(&g, 1600) == PIR_GATE_NONE);   /* past 1500, inside 1900 */
+    assert(pir_gate_edge(&g, 2100) == PIR_GATE_EVENT);
+}
+
 static void test_hold_end_time(void)
 {
     pir_gate_t g;
@@ -81,6 +91,7 @@ int main(void)
     test_first_edge_is_an_event();
     test_edges_inside_hold_are_silent_but_extend();
     test_edge_after_hold_is_a_new_event();
+    test_extension_swallows_edge_past_original_window();
     test_hold_end_time();
     test_inactive_before_any_edge();
     test_zero_hold_every_edge_is_an_event();

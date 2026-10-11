@@ -10,7 +10,7 @@ void pir_gate_init(pir_gate_t *g, uint32_t hold_ms)
 
 pir_gate_action_t pir_gate_edge(pir_gate_t *g, int64_t now_ms)
 {
-    bool inside = g->armed_once && now_ms < g->hold_until_ms;
+    bool inside = pir_gate_active(g, now_ms);
     g->hold_until_ms = now_ms + (int64_t)g->hold_ms;
     g->armed_once = true;
     if (inside) {
