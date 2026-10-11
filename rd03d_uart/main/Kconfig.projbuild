@@ -108,4 +108,34 @@ config RD03D_LED_MS
         Long enough to see, far shorter than the ~90 ms radar frame period,
         so it cannot pile up during continuous movement.
 
+config RD03D_ENABLE_PIR
+    bool "PIR companion sensor"
+    default y
+    help
+        Panasonic EKMC1603111 on a GPIO: publishes rd03d/pir events next to
+        the radar's. Off in the AP image (sdkconfig.ap), which has no PIR
+        fitted. When off, pir.c and pir_gate.c are not compiled.
+
+config RD03D_PIR_GPIO
+    int "PIR output GPIO"
+    depends on RD03D_ENABLE_PIR
+    default 1
+    range 0 30
+    help
+        XIAO ESP32-C6 D1 = GPIO1. Keep it in GPIO0..7: those are the LP IOs,
+        the only ones that can wake the chip from deep sleep, which the
+        battery variant will need. The sensor drives the pin high on
+        detection and floats otherwise; the driver enables the internal
+        pull-down.
+
+config RD03D_PIR_HOLD_MS
+    int "PIR hold window (ms)"
+    depends on RD03D_ENABLE_PIR
+    default 500
+    range 0 10000
+    help
+        Edges inside this window after an event are the same pass and do not
+        publish; each one extends the window. rd03d/pir/state is 1 while the
+        window is open.
+
 endmenu
