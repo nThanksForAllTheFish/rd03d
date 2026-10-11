@@ -16,6 +16,10 @@
 #include "rd03d.h"
 #include "web_server.h"
 #include "wifi_link.h"
+#if CONFIG_RD03D_ENABLE_PIR
+#include "clock_ms.h"
+#include "pir.h"
+#endif
 
 /* XIAO ESP32-C6, ESP side: D6 = GPIO16 (UART1 TX), D7 = GPIO17 (UART1 RX). */
 #define RADAR_UART_NUM   UART_NUM_1
@@ -96,6 +100,25 @@ static void ota_validation_task(void *arg)
     esp_restart();
 }
 
+#if CONFIG_RD03D_ENABLE_PIR
+/* Runs on the PIR task. One LED flash per event, like a radar publish. */
+static void on_pir_event(const pir_event_t *ev)
+{
+    led_pulse();
+#if CONFIG_RD03D_ENABLE_MQTT
+    mqtt_pub_pir_event(ev->n, ev->t_ms);
+#endif
+}
+
+static void on_pir_state(bool active)
+{
+    web_server_set_pir(active);
+#if CONFIG_RD03D_ENABLE_MQTT
+    mqtt_pub_pir_state(active);
+#endif
+}
+#endif
+
 void app_main(void)
 {
     const uart_config_t cfg = {
@@ -130,6 +153,10 @@ void app_main(void)
     ota_update_register(web_server_handle());
     xTaskCreate(ota_validation_task, "ota_valid", 3072, NULL, 5, NULL);
     led_init();
+#if CONFIG_RD03D_ENABLE_PIR
+    clock_start();
+    pir_init(on_pir_event, on_pir_state);
+#endif
 #if CONFIG_RD03D_ENABLE_MQTT
     mqtt_pub_start();
 #else

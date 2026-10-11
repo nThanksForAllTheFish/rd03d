@@ -1,5 +1,6 @@
 #include "mqtt_pub.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -24,6 +25,12 @@ static esp_mqtt_client_handle_t s_client;
 static volatile bool s_connected;
 static volatile bool s_reset_pending;
 static mqtt_throttle_t s_throttle;
+
+/* Last parsed frame, copied on the radar task and read on the PIR task. The
+ * spinlock makes the copy atomic; a torn read would pair one target's x with
+ * another frame's y. */
+static rd03d_frame_t s_last_frame;
+static portMUX_TYPE s_frame_lock = portMUX_INITIALIZER_UNLOCKED;
 
 static void on_mqtt_event(void *arg, esp_event_base_t base, int32_t id,
                           void *data)
@@ -120,6 +127,10 @@ void mqtt_pub_start(void)
 
 void mqtt_pub_frame(const rd03d_frame_t *f)
 {
+    portENTER_CRITICAL(&s_frame_lock);
+    s_last_frame = *f;
+    portEXIT_CRITICAL(&s_frame_lock);
+
     if (!s_connected) {
         return;
     }
@@ -164,4 +175,59 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
             led_pulse();
         }
     }
+}
+
+void mqtt_pub_pir_event(uint32_t n, int64_t t_ms)
+{
+    esp_mqtt_client_handle_t client = s_client;
+    if (!s_connected || client == NULL) {
+        return;
+    }
+    rd03d_frame_t f;
+    portENTER_CRITICAL(&s_frame_lock);
+    f = s_last_frame;
+    portEXIT_CRITICAL(&s_frame_lock);
+
+    const rd03d_target_t *nearest = NULL;
+    int32_t best = INT32_MAX;
+    for (int i = 0; i < RD03D_NUM_TARGETS; i++) {
+        const rd03d_target_t *t = &f.targets[i];
+        if (!t->present) {
+            continue;
+        }
+        int32_t d2 = (int32_t)t->x_mm * t->x_mm + (int32_t)t->y_mm * t->y_mm;
+        if (d2 < best) {
+            best = d2;
+            nearest = t;
+        }
+    }
+    char payload[128];
+    int len;
+    if (nearest) {
+        len = snprintf(payload, sizeof(payload),
+                       "{\"n\":%lu,\"t\":%lld,\"radar\":{\"x\":%d,\"y\":%d,\"v\":%d}}",
+                       (unsigned long)n, (long long)t_ms,
+                       nearest->x_mm, nearest->y_mm, nearest->speed_cms);
+    } else {
+        len = snprintf(payload, sizeof(payload),
+                       "{\"n\":%lu,\"t\":%lld,\"radar\":null}",
+                       (unsigned long)n, (long long)t_ms);
+    }
+    if (len <= 0 || len >= (int)sizeof(payload)) {
+        return;
+    }
+    if (esp_mqtt_client_enqueue(client, "rd03d/pir", payload, len, 0, 0, true) < 0) {
+        ESP_LOGW(TAG, "pir event %lu dropped", (unsigned long)n);
+    }
+}
+
+void mqtt_pub_pir_state(bool active)
+{
+    esp_mqtt_client_handle_t client = s_client;
+    if (!s_connected || client == NULL) {
+        return;
+    }
+    /* Retained so a fresh Node-RED subscriber learns the current state. */
+    esp_mqtt_client_enqueue(client, "rd03d/pir/state", active ? "1" : "0",
+                            1, 0, 1, true);
 }
