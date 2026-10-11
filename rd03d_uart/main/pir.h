@@ -10,7 +10,8 @@
 
 typedef struct {
     uint32_t n;          /* events since boot (pir_gate_count) */
-    int64_t  t_ms;       /* clock_epoch_ms() at the edge, 0 if unsynced */
+    int64_t  t_ms;       /* clock_epoch_ms() when the pir task dequeued the
+                          edge (microseconds after it), 0 if unsynced */
 } pir_event_t;
 
 typedef void (*pir_event_cb_t)(const pir_event_t *ev);

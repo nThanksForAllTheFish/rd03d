@@ -31,6 +31,9 @@ static void IRAM_ATTR pir_isr(void *arg)
     (void)arg;
     pir_msg_t m = MSG_EDGE;
     BaseType_t woken = pdFALSE;
+    /* Result deliberately ignored. A dropped edge would have been swallowed
+     * by the hold window anyway, and every dequeued edge re-arms the expiry
+     * timer, so the state cannot stick even if a MSG_HOLD_EXPIRED was lost. */
     xQueueSendFromISR(s_queue, &m, &woken);
     if (woken) {
         portYIELD_FROM_ISR();
@@ -51,7 +54,10 @@ static void arm_expiry(int64_t hold_end_ms)
         delay_us = 1000;
     }
     esp_timer_stop(s_expiry);          /* INVALID_STATE when idle: fine */
-    esp_timer_start_once(s_expiry, (uint64_t)delay_us);
+    esp_err_t err = esp_timer_start_once(s_expiry, (uint64_t)delay_us);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "hold timer start failed (%s)", esp_err_to_name(err));
+    }
 }
 
 static void pir_task(void *arg)
@@ -68,6 +74,8 @@ static void pir_task(void *arg)
             arm_expiry(pir_gate_hold_end(&s_gate));
             if (act == PIR_GATE_EVENT) {
                 s_active = true;
+                /* Stamped when the task dequeues the edge, microseconds after
+                 * the pin changed at priority 6. */
                 pir_event_t ev = {
                     .n = pir_gate_count(&s_gate),
                     .t_ms = clock_epoch_ms(),
@@ -102,6 +110,10 @@ void pir_init(pir_event_cb_t on_event, pir_state_cb_t on_state)
     pir_gate_init(&s_gate, CONFIG_RD03D_PIR_HOLD_MS);
 
     s_queue = xQueueCreate(8, sizeof(pir_msg_t));
+    if (s_queue == NULL) {
+        ESP_LOGE(TAG, "queue allocation failed; PIR disabled");
+        return;
+    }
     const esp_timer_create_args_t targs = {
         .callback = expiry_cb,
         .name = "pir_hold",
@@ -124,7 +136,11 @@ void pir_init(pir_event_cb_t on_event, pir_state_cb_t on_state)
     }
     ESP_ERROR_CHECK(gpio_isr_handler_add(CONFIG_RD03D_PIR_GPIO, pir_isr, NULL));
 
-    xTaskCreate(pir_task, "pir", 3072, NULL, 6, NULL);
+    if (xTaskCreate(pir_task, "pir", 3072, NULL, 6, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "task creation failed; PIR disabled");
+        gpio_isr_handler_remove(CONFIG_RD03D_PIR_GPIO);
+        return;
+    }
     ESP_LOGI(TAG, "PIR on GPIO%d, hold %d ms", CONFIG_RD03D_PIR_GPIO,
              CONFIG_RD03D_PIR_HOLD_MS);
 }

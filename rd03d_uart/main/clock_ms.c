@@ -11,9 +11,17 @@ void clock_start(void)
 {
 #if CONFIG_RD03D_NET_MODE_STA
     esp_sntp_config_t cfg = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
-    cfg.start = true;              /* sends its first request as soon as the
-                                      interface has an IP; retries on its own */
-    ESP_ERROR_CHECK(esp_netif_sntp_init(&cfg));
+    cfg.wait_for_sync = false;     /* nothing waits on the sync semaphore */
+    /* Started here, before WiFi is up. lwIP sends its first request after the
+     * interface has an address, with a short random startup delay and
+     * exponential retry, so the first sync lands some seconds after the IP. */
+    esp_err_t err = esp_netif_sntp_init(&cfg);
+    if (err != ESP_OK) {
+        /* A missing clock must not take the radar node down. */
+        ESP_LOGW(TAG, "sntp init failed (%s); timestamps stay 0",
+                 esp_err_to_name(err));
+        return;
+    }
     ESP_LOGI(TAG, "sntp started (pool.ntp.org)");
 #else
     ESP_LOGI(TAG, "AP mode: no SNTP, timestamps stay 0");

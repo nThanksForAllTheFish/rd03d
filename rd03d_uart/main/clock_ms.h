@@ -2,7 +2,8 @@
 
 #include <stdint.h>
 
-/* Starts SNTP (pool.ntp.org) once WiFi is up. Station mode only: an access
+/* Starts SNTP (pool.ntp.org). Call it before WiFi is up; lwIP sends its first
+ * request once the interface has an address. Station mode only: an access
  * point with no uplink has nothing to sync to, and clock_epoch_ms() stays 0. */
 void clock_start(void);
 
