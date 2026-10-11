@@ -114,7 +114,7 @@ config RD03D_ENABLE_PIR
     help
         Panasonic EKMC1603111 on a GPIO: publishes rd03d/pir events next to
         the radar's. Off in the AP image (sdkconfig.ap), which has no PIR
-        fitted. When off, pir.c and pir_gate.c are not compiled.
+        fitted. When off, pir.c, pir_gate.c and clock_ms.c are not compiled.
 
 config RD03D_PIR_GPIO
     int "PIR output GPIO"
@@ -124,9 +124,9 @@ config RD03D_PIR_GPIO
     help
         XIAO ESP32-C6 D1 = GPIO1. Keep it in GPIO0..7: those are the LP IOs,
         the only ones that can wake the chip from deep sleep, which the
-        battery variant will need. The sensor drives the pin high on
-        detection and floats otherwise; the driver enables the internal
-        pull-down.
+        battery variant will need. On the XIAO only D0..D2 (GPIO0..2) of
+        those are brought out. The sensor drives the pin high on detection
+        and floats otherwise; the driver enables the internal pull-down.
 
 config RD03D_PIR_HOLD_MS
     int "PIR hold window (ms)"
