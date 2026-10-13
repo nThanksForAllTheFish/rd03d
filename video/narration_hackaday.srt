@@ -311,21 +311,17 @@ And treat the scripts, not the live CAD document, as the source of truth, under 
 The one time a parameter was tuned in the Fusion window instead of the script, the next run of the setup script silently reset it.
 
 79
-00:08:38,301 --> 00:08:42,263
+00:08:38,301 --> 00:08:42,187
 The light goes off sixty seconds after the last step.
 
 80
-00:08:42,313 --> 00:08:50,288
+00:08:42,237 --> 00:08:50,060
 The firmware, the Fusion scripts, the Node-RED flow, and the dated design notes are all in the repository.
 
 81
-00:08:50,338 --> 00:08:54,149
+00:08:50,110 --> 00:08:53,848
 Everything you have seen was synthesized from them:
 
 82
-00:08:54,199 --> 00:09:01,644
+00:08:53,898 --> 00:09:01,201
 renders of the actual STL files, a recreation of the live radar chart, and the real code on screen.
-
-83
-00:09:01,694 --> 00:09:03,006
-The voice is mine.
