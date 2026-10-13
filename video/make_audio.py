@@ -70,19 +70,18 @@ UV = os.path.expanduser("~/.local/bin/uv")
 AV_CMD = [UV, "run", "--quiet", "--with", "pyobjc-framework-AVFoundation", "python3",
           os.path.join(os.path.dirname(os.path.abspath(__file__)), "av_speak.py")]
 engine = "say"
-if voice not in installed:
-    # Not a `say` voice. A macOS Personal Voice (the user's own recorded voice) is only
-    # reachable through AVFoundation; see av_speak.py. Check there before giving up.
-    av_list = subprocess.run(AV_CMD + ["--list"], capture_output=True, text=True).stdout
-    hits = [ln for ln in av_list.splitlines() if ln.startswith(voice + " ") or (" " + voice) in ln]
-    if hits and "[personal]" in hits[0]:
-        # Apple only lets a Personal Voice be spoken aloud: capture the speaker output instead.
-        engine = "capture"
-        AV_CMD = [UV, "run", "--quiet", "--with", "pyobjc-framework-AVFoundation", "--with", "pyobjc-framework-ScreenCaptureKit",
-                  "--with", "pyobjc-framework-CoreMedia", "python3",
-                  os.path.join(os.path.dirname(os.path.abspath(__file__)), "pv_capture.py")]
-        print("Personal Voice: capturing from the speaker output in real time; keep the Mac silent.")
-    elif hits:
+# Personal Voices first: once authorized they also appear in `say -v '?'`, but `say` silently
+# drops any sentence over ~150 characters with them (verified 2026-10-13), so never use it.
+av_list = subprocess.run(AV_CMD + ["--list"], capture_output=True, text=True).stdout
+hits = [ln for ln in av_list.splitlines() if ln.startswith(voice + " ") or (" " + voice) in ln]
+if hits and "[personal]" in hits[0]:
+    engine = "capture"
+    AV_CMD = [UV, "run", "--quiet", "--with", "pyobjc-framework-AVFoundation", "--with", "pyobjc-framework-ScreenCaptureKit",
+              "--with", "pyobjc-framework-CoreMedia", "python3",
+              os.path.join(os.path.dirname(os.path.abspath(__file__)), "pv_capture.py")]
+    print("Personal Voice: capturing from the speaker output in real time; keep the Mac silent.")
+elif voice not in installed:
+    if hits:
         engine = "av"
     else:
         sys.exit("voice %r is not installed. `say` would silently use the default instead.\n"
