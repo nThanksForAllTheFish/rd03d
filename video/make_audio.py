@@ -51,16 +51,34 @@ def spoken(text):
     return text
 
 installed = [ln.split("  ")[0].strip() for ln in subprocess.run(["say", "-v", "?"], capture_output=True, text=True).stdout.splitlines()]
+UV = os.path.expanduser("~/.local/bin/uv")
+AV_CMD = [UV, "run", "--quiet", "--with", "pyobjc-framework-AVFoundation", "python3",
+          os.path.join(os.path.dirname(os.path.abspath(__file__)), "av_speak.py")]
+engine = "say"
 if voice not in installed:
-    sys.exit("voice %r is not installed. `say` would silently use the default instead.\nInstalled English voices:\n  "
-             % voice + "\n  ".join(v for v in installed if v))
+    # Not a `say` voice. A macOS Personal Voice (the user's own recorded voice) is only
+    # reachable through AVFoundation; see av_speak.py. Check there before giving up.
+    av_list = subprocess.run(AV_CMD + ["--list"], capture_output=True, text=True).stdout
+    if any(ln.startswith(voice + " ") or (" " + voice) in ln for ln in av_list.splitlines()):
+        engine = "av"
+    else:
+        sys.exit("voice %r is not installed. `say` would silently use the default instead.\n"
+                 "Installed `say` voices:\n  " % voice + "\n  ".join(v for v in installed if v)
+                 + "\n\nAVFoundation voices (Personal Voice shows here once authorized):\n" + av_list)
+print("engine:", engine)
 
 LEAD, TAIL = 0.6, 0.9      # must match build_video.py
 os.makedirs(AUDIO, exist_ok=True)
 durs = {}
 for key, title, text in SHOTS:
     aiff = os.path.join(AUDIO, key + ".aiff")
-    subprocess.run(["say", "-v", voice, "-r", rate, "-o", aiff, spoken(text)], check=True)
+    if engine == "say":
+        subprocess.run(["say", "-v", voice, "-r", rate, "-o", aiff, spoken(text)], check=True)
+    else:
+        caf = aiff[:-5] + ".caf"
+        subprocess.run(AV_CMD + [voice, rate, caf, spoken(text)], check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["/opt/homebrew/bin/ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", caf, aiff], check=True)
+        os.remove(caf)
     out = subprocess.run(["/opt/homebrew/bin/ffprobe", "-v", "error", "-show_entries", "format=duration",
                           "-of", "csv=p=0", aiff], capture_output=True, text=True).stdout.strip()
     durs[key] = float(out)
