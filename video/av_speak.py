@@ -25,7 +25,7 @@ def authorize():
     st = AV.AVSpeechSynthesizer.personalVoiceAuthorizationStatus()
     if st == 0:  # notDetermined -> ask (macOS shows a dialog attributed to the running process)
         box = {}
-        AV.AVSpeechSynthesizer.requestPersonalVoiceAuthorization_(lambda s: box.__setitem__("s", s))
+        AV.AVSpeechSynthesizer.requestPersonalVoiceAuthorizationWithCompletionHandler_(lambda s: box.__setitem__("s", s))
         t0 = time.time()
         while "s" not in box and time.time() - t0 < 120: pump(0.2)
         st = box.get("s", st)
