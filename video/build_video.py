@@ -383,10 +383,19 @@ def tokens(line):
 OVERFLOW = []   # (title, line no, length, limit) for lines truncated to fit; read by the layout audit
 
 def code_pane(d, box, lines, first, fnt, lang="py", hl=(), title=None, in_block_comment=False):
+    """Draw a code pane. Rendered into its own image and pasted, so text is clipped at the pane edge."""
+    bx0, by0, bx1, by1 = box
+    pane = Image.new("RGB", (int(bx1 - bx0), int(by1 - by0)), BG)
+    pd = ImageDraw.Draw(pane)
+    _code_pane_inner(pd, (0, 0, bx1 - bx0, by1 - by0), lines, first, fnt, lang, hl, title)
+    d._image.paste(pane, (int(bx0), int(by0)))
+
+def _code_pane_inner(d, box, lines, first, fnt, lang="py", hl=(), title=None):
     x0, y0, x1, y1 = box
     rrect(d, box, 10, fill=PANE)
     if title:
-        d.rectangle((x0, y0, x1, y0 + 40), fill=PANE2)
+        d.rectangle((x0, y0 + 10, x1, y0 + 40), fill=PANE2)
+        rrect(d, (x0, y0, x1, y0 + 20), 10, fill=PANE2)
         d.text((x0 + 16, y0 + 8), title, font=font(22, mono=True), fill=DIM)
         y0 += 44
     lh = int(fnt.size * 1.3)
@@ -645,30 +654,34 @@ def shot_04(t, dur):
     t_lines = cue(key, "About nineteen"); t_cross = cue(key, "Here are the crossbars")
     t_verify = cue(key, "The last script"); t_caught = cue(key, "It caught exactly")
     t_unit = cue(key, "A unit test"); t_sw = cue(key, "None of this depends")
-    fm = font(21, mono=True); fs = font(19, mono=True)
+    fm = font(19, mono=True)
     az = 20 + 8 * t
     if t < t_scripts:
         # architecture diagram
-        boxes = [("AI agent", "Claude Code on the Mac", 160), ("MCP server", "Autodesk adapter\nlocalhost:27182", 780), ("Fusion 360", "live document\nrd-03d_case", 1400)]
+        BW, GAP = 380, 250
+        xs = [140, 140 + BW + GAP, 140 + 2 * (BW + GAP)]
+        boxes = [("AI agent", "Claude Code on the Mac", xs[0]), ("MCP server", "Autodesk adapter\nlocalhost:27182", xs[1]), ("Fusion 360", "live document\nrd-03d_case", xs[2])]
         for i, (a, b, x) in enumerate(boxes):
             u = seg(t, 0.6 + i * 0.5, 1.2 + i * 0.5)
-            rrect(d, (x, 380, x + 360, 560), 18, fill=mix(BG, PANE2, u), outline=mix(BG, C1 if i != 1 else C3, u), width=3)
-            d.text((x + 24, 400), a, font=font(36, bold=True), fill=mix(BG, FG, u))
+            rrect(d, (x, 380, x + BW, 560), 18, fill=mix(BG, PANE2, u), outline=mix(BG, C1 if i != 1 else C3, u), width=3)
+            fa = font(36, bold=True); fb = font(26, light=True)
+            d.text((x + (BW - fa.getlength(a)) / 2, 398), a, font=fa, fill=mix(BG, FG, u))
             yy = 452
             for ln in b.split("\n"):
-                d.text((x + 24, yy), ln, font=font(26, light=True), fill=mix(BG, DIM, u)); yy += 34
-        for x in (520, 1140):
-            u = seg(t, 1.8, 2.4); gap = 260; fl = font(22)
-            arrow(d, (x + 14, 450), (x + gap - 14, 450), mix(BG, FG, u), width=4, head=16)
-            arrow(d, (x + gap - 14, 490), (x + 14, 490), mix(BG, DIM, u), width=4, head=16)
-            for lab, yy, colr in (("Python script", 405, FG), ("result / screenshot", 500, DIM)):
-                d.text((x + (gap - fl.getlength(lab)) / 2, yy), lab, font=fl, fill=mix(BG, colr, u))
+                d.text((x + (BW - fb.getlength(ln)) / 2, yy), ln, font=fb, fill=mix(BG, DIM, u)); yy += 34
+        fl = font(22)
+        for gx in (xs[0] + BW, xs[1] + BW):
+            u = seg(t, 1.8, 2.4)
+            arrow(d, (gx + 14, 450), (gx + GAP - 14, 450), mix(BG, FG, u), width=4, head=16)
+            arrow(d, (gx + GAP - 14, 490), (gx + 14, 490), mix(BG, DIM, u), width=4, head=16)
+            for label, ly, col in (("Python script", 418, FG), ("result / screenshot", 498, DIM)):
+                d.text((gx + (GAP - fl.getlength(label)) / 2, ly), label, font=fl, fill=mix(BG, col, u))
         if t >= t_driver:
             src = read_lines("case/fusion_scripts/run_fusion.py")
             code_pane(d, (160, 620, 1760, 980), src, 0, fm, lang="py", title="case/fusion_scripts/run_fusion.py  -  the driver (JSON-RPC over HTTP)")
         caption(d, "Fusion API unit is centimetres; every script carries an MM constant. The live session was not recorded.")
     elif t < t_cross:
-        R = view(az, 36); sc = 9.5; c = (1450, 560)
+        R = view(az, 36); sc = 9.5; c = (1480, 560)
         render_meshes(d, plate_parts(), R, sc, c)
         scripts = ["00_smoke.py", "01_setup.py", "02_backplate.py", "03_shell.py", "04_boards.py", "05_export.py", "90_verify.py", "run_fusion.py"]
         counts = {}
@@ -685,28 +698,28 @@ def shot_04(t, dur):
         if t >= t_lines + 1.0:
             src = read_lines("case/fusion_scripts/02_backplate.py")
             first = 86 + (t - t_lines - 1.0) * 1.4
-            code_pane(d, (140, 640, 1190, 980), src, first, fs, lang="py", title="02_backplate.py  -  clip(): raise wall, thin finger, lip + lead-in")
+            code_pane(d, (140, 640, 1080, 980), src, first, fm, lang="py", title="02_backplate.py  -  clip(): raise wall, thin finger, lip + lead-in")
         caption(d, "Scripts are the construction record; the render is the exported plate", "right")
     elif t < t_verify:
-        R = view(az, 40); sc = 12; c = (1490, 560)
+        R = view(az, 40); sc = 12; c = (1480, 560)
         render_meshes(d, plate_parts(), R, sc, c)
         a = seg(t, t_cross + 0.5, t_cross + 1.1)
         colA = mix(BG, C3, a)
         wire_box(d, R, sc, c, (-21, -2.5, -12.8, -11.2, 0, 10.46), colA, width=3)
         wire_box(d, R, sc, c, (-21, -2.5, 17.7, 19.8, 0, 10.46), colA, width=3)
-        callout(d, project((-11, -12, 10.46), R, sc, c), (1150, 950), "crossbar A  y −12.8…−11.2, top z = 10.46", color=C3, a=a, side="right")
-        callout(d, project((-11, 18.7, 10.46), R, sc, c), (1150, 190), "crossbar B  y +17.7…+19.8", color=C3, a=a, side="right")
+        callout(d, project((-11, -12, 10.46), R, sc, c), (1150, 190), "crossbar A  y −12.8…−11.2, top z = 10.46", color=C3, a=a, side="right")
+        callout(d, project((-11, 18.7, 10.46), R, sc, c), (1150, 950), "crossbar B  y +17.7…+19.8", color=C3, a=a, side="right")
         src = read_lines("case/fusion_scripts/02_backplate.py")
         first = 270 + max(0, t - t_cross - 2.0) * 1.1
-        code_pane(d, (60, 150, 1090, 980), src, first, fs, lang="py", title="02_backplate.py  -  board-seating fix, 2026-09-07")
+        code_pane(d, (80, 150, 1080, 980), src, first, fm, lang="py", title="02_backplate.py  -  board-seating fix, 2026-09-07")
         caption(d, "Highlighted boxes are the crossbar volumes from the script, drawn over the exported geometry", "right")
     elif t < t_sw:
-        R = view(az, 42); sc = 12; c = (1490, 560)
+        R = view(az, 42); sc = 12; c = (1480, 560)
         render_meshes(d, plate_parts(), R, sc, c)
         src = read_lines("case/fusion_scripts/90_verify.py")
         if t < t_caught:
-            code_pane(d, (60, 150, 1090, 600), src, 31, fs, lang="py", title="90_verify.py  -  read-only point-containment probes")
-            code_pane(d, (60, 620, 1090, 980), src, 150, fs, lang="py", title="90_verify.py  -  check_lego_bores_clear()")
+            code_pane(d, (80, 150, 1080, 600), src, 31, fm, lang="py", title="90_verify.py  -  read-only point-containment probes")
+            code_pane(d, (80, 620, 1080, 980), src, 150, fm, lang="py", title="90_verify.py  -  check_lego_bores_clear()")
             a = seg(t, t_verify + 1.0, t_verify + 1.6)
             for cx, cy in ((0.95, -12), (0.95, -4), (0.95, 4), (0.95, 12), (8.95, -4), (8.95, 4)):
                 for dx in (-1.5, 0, 1.5):
@@ -714,7 +727,7 @@ def shot_04(t, dur):
                     d.ellipse((p[0] - 4, p[1] - 4, p[0] + 4, p[1] + 4), fill=mix(BG, C2, a))
             callout(d, project((0.95, 12, 0.5), R, sc, c), (1150, 190), "three probes per bore, 0.5 mm above the floor", color=C2, a=a, side="right")
         else:
-            code_pane(d, (60, 150, 1090, 560), src, 150, fs, lang="py", title="90_verify.py  -  check_lego_bores_clear()")
+            code_pane(d, (80, 150, 1080, 560), src, 150, fm, lang="py", title="90_verify.py  -  check_lego_bores_clear()")
             rep = [(0.0, "$ run_fusion.py script 90_verify.py --read-only", DIM),
                    (0.5, "  check_baseline ................ ok", FG),
                    (0.8, "  check_xiao_clips .............. ok", FG),
@@ -727,7 +740,7 @@ def shot_04(t, dur):
                    (3.5, "# cap ribs moved x 3.0/12.8 -> 5.0/14.8; re-run:", C3),
                    (4.6, "  check_lego_bores_clear ........ ok", GREEN),
                    (4.9, "  7 checks, 0 failures", GREEN)]
-            terminal(d, (60, 580, 1090, 980), [(t_caught + 0.3 + ts, s, col) for ts, s, col in rep], t, font(19, mono=True), title="verification run  (reconstructed)")
+            terminal(d, (80, 580, 1080, 980), [(t_caught + 0.3 + ts, s, col) for ts, s, col in rep], t, font(19, mono=True), title="verification run  (reconstructed)")
             a = seg(t, t_caught + 1.6, t_caught + 2.2)
             wire_box(d, R, sc, c, (2.4, 3.6, 12.45, 21.05, 0, 8), mix(BG, RED, a), width=3)
             wire_box(d, R, sc, c, (-1.5, 3.4, 9.55, 14.45, -8, 0), mix(BG, C2, a), width=2)
@@ -738,7 +751,7 @@ def shot_04(t, dur):
             if t >= t_unit:
                 u = seg(t, t_unit, t_unit + 0.6)
                 f = font(40, bold=True); s = "a unit test for a mechanical part"
-                d.text((1490 - f.getlength(s) / 2, 975), s, font=f, fill=mix(BG, C3, u))
+                d.text((1480 - f.getlength(s) / 2, 975), s, font=f, fill=mix(BG, C3, u))
         caption(d, "Probe harness is the real script; the run output is reconstructed from its failure format", "right")
     else:
         f1 = font(44, bold=True); f2 = font(30)
