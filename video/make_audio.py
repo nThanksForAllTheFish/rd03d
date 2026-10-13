@@ -45,8 +45,22 @@ SPOKEN = [
     ("recreation", "re creation"),          # re-creation, not the leisure word
     ("synthesized from them: renders", "synthesized from them. Renders"),   # a colon makes the voice rise; close the sentence
 ]
-def spoken(text):
-    for a, b in SPOKEN:
+# Per-voice overrides (the author's Personal Voice reads some respellings differently from Ava).
+PERSONAL_VOICE = os.environ.get("RD_PERSONAL_VOICE", "Personal Voice")   # name of your own Personal Voice, as `say -v ?` lists it
+SPOKEN_BY_VOICE = {
+    PERSONAL_VOICE: [
+        ("Seeed XIAO ESP32-C6", "Seed Studio Shiao E S P thirty two C6"),
+        ("XIAO ESP32-C6", "Shiao E S P thirty two C6"),
+        ("XIAO", "Shiao"),
+        ("written as plain C and", "written as plain C, and"),
+        ("0.6 millimetre", "zero point six millimetre"),
+        ("0.6 mm", "zero point six millimetre"),
+    ],
+}
+def spoken(text, voice_name=None):
+    rules = dict(SPOKEN)
+    rules.update(dict(SPOKEN_BY_VOICE.get(voice_name or voice, [])))
+    for a, b in sorted(rules.items(), key=lambda kv: -len(kv[0])):   # longest written form first
         text = text.replace(a, b)
     return text
 
@@ -59,7 +73,15 @@ if voice not in installed:
     # Not a `say` voice. A macOS Personal Voice (the user's own recorded voice) is only
     # reachable through AVFoundation; see av_speak.py. Check there before giving up.
     av_list = subprocess.run(AV_CMD + ["--list"], capture_output=True, text=True).stdout
-    if any(ln.startswith(voice + " ") or (" " + voice) in ln for ln in av_list.splitlines()):
+    hits = [ln for ln in av_list.splitlines() if ln.startswith(voice + " ") or (" " + voice) in ln]
+    if hits and "[personal]" in hits[0]:
+        # Apple only lets a Personal Voice be spoken aloud: capture the speaker output instead.
+        engine = "capture"
+        AV_CMD = [UV, "run", "--quiet", "--with", "pyobjc-framework-AVFoundation", "--with", "pyobjc-framework-ScreenCaptureKit",
+                  "--with", "pyobjc-framework-CoreMedia", "python3",
+                  os.path.join(os.path.dirname(os.path.abspath(__file__)), "pv_capture.py")]
+        print("Personal Voice: capturing from the speaker output in real time; keep the Mac silent.")
+    elif hits:
         engine = "av"
     else:
         sys.exit("voice %r is not installed. `say` would silently use the default instead.\n"
@@ -73,10 +95,10 @@ durs = {}
 for key, title, text in SHOTS:
     aiff = os.path.join(AUDIO, key + ".aiff")
     if engine == "say":
-        subprocess.run(["say", "-v", voice, "-r", rate, "-o", aiff, spoken(text)], check=True)
+        subprocess.run(["say", "-v", voice, "-r", rate, "-o", aiff, spoken(text, voice)], check=True)
     else:
         caf = aiff[:-5] + ".caf"
-        subprocess.run(AV_CMD + [voice, rate, caf, spoken(text)], check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(AV_CMD + [voice, rate, caf, spoken(text, voice)], check=True, stdout=subprocess.DEVNULL)
         subprocess.run(["/opt/homebrew/bin/ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", caf, aiff], check=True)
         os.remove(caf)
     out = subprocess.run(["/opt/homebrew/bin/ffprobe", "-v", "error", "-show_entries", "format=duration",
