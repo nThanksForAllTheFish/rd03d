@@ -34,3 +34,6 @@ video/check_*.png
 video/durations.json
 # Third-party board models (GrabCAD uploads) - licence not cleared for redistribution
 video/models/
+
+# Raw narration takes (large WAV); kept takes travel in the transfer package
+video/takes/

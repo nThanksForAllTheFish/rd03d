@@ -1064,7 +1064,7 @@ def shot_07(t, dur):
         creds = ["Everything here was synthesized from the repository:",
                  "CAD views rendered from the exported STL files  ·  radar chart recreated from the device's web page",
                  "code and specs shown are the real files  ·  logs and run output reconstructed from the notes",
-                 "narration: macOS text-to-speech"]
+                 "narration: the author" if VARIANT == "hackaday" else "narration: macOS text-to-speech"]
         for i, s in enumerate(creds):
             d.text(((W - f3.getlength(s)) / 2, 640 + i * 38), s, font=f3, fill=mix(BG, DIM, b))
         b2 = seg(t, cue(key, "The agent also wrote"), cue(key, "The agent also wrote") + 1.0)
