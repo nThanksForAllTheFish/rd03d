@@ -402,7 +402,23 @@ def fit_mono_font(fnt, lines, width, floor=13):
 
 def _code_pane_inner(d, box, lines, first, fnt, lang="py", hl=(), title=None):
     x0, y0, x1, y1 = box
-    if lang != "md": fnt = fit_mono_font(fnt, lines, x1 - x0)   # prose panes scroll and may clip; code must fit
+    if lang != "md":
+        fnt = fit_mono_font(fnt, lines, x1 - x0)                 # code: shrink the font until the longest line fits
+    else:                                                        # prose: word-wrap to the pane width
+        gutter = fnt.getlength("%4d  " % 0) + 14 + 12
+        maxc = max(8, int((x1 - x0 - gutter) / fnt.getlength("M")))
+        wrapped = []
+        for ln in lines:
+            ln = ln.rstrip("\n").replace("\t", "    ")
+            if len(ln) <= maxc: wrapped.append(ln); continue
+            indent = len(ln) - len(ln.lstrip(" "))
+            words = ln.split(" "); cur = ""
+            for w in words:
+                trial = (cur + " " + w) if cur else w
+                if len(trial) <= maxc or not cur: cur = trial
+                else: wrapped.append(cur); cur = " " * (indent + 2) + w
+            wrapped.append(cur)
+        lines = wrapped
     rrect(d, box, 10, fill=PANE)
     if title:
         d.rectangle((x0, y0 + 10, x1, y0 + 40), fill=PANE2)
