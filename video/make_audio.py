@@ -49,9 +49,9 @@ SPOKEN = [
 PERSONAL_VOICE = os.environ.get("RD_PERSONAL_VOICE", "Personal Voice")   # name of your own Personal Voice, as `say -v ?` lists it
 SPOKEN_BY_VOICE = {
     PERSONAL_VOICE: [
-        ("Seeed XIAO ESP32-C6", "Seed Studio shyao E S P thirty two C6"),   # rhymes with "now"
-        ("XIAO ESP32-C6", "shyao E S P thirty two C6"),
-        ("XIAO", "shyao"),
+        ("Seeed XIAO ESP32-C6", "Seed Studio SheAw, ESP thirty two C6"),
+        ("XIAO ESP32-C6", "SheAw, ESP thirty two C6"),
+        ("XIAO", "SheAw"),
         ("written as plain C and", "written as plain C, and"),
         ("0.6 millimetre", "zero point six millimetre"),
         ("0.6 mm", "zero point six millimetre"),
