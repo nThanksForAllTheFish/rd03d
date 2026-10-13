@@ -6,7 +6,8 @@ _OVERRIDES = {
      "The light goes off sixty seconds after the last step. The firmware, the Fusion scripts, the "
      "Node-RED flow, and the dated design notes are all in the repository. Everything you have seen "
      "was synthesized from them: renders of the actual STL files, a recreation of the live radar "
-     "chart, and the real code on screen."),
+     "chart, and the real code on screen. The agent also wrote this script and built the video. "
+     "I reviewed and corrected it."),
     "04_cad": ("Fusion, driven live",
      "The enclosure was not designed by generating a mesh. Autodesk ships a Model Context Protocol "
      "server for Fusion 360, a small local endpoint that lets an agent run Python against the live "
