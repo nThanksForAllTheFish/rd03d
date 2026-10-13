@@ -390,8 +390,19 @@ def code_pane(d, box, lines, first, fnt, lang="py", hl=(), title=None, in_block_
     _code_pane_inner(pd, (0, 0, bx1 - bx0, by1 - by0), lines, first, fnt, lang, hl, title)
     d._image.paste(pane, (int(bx0), int(by0)))
 
+def fit_mono_font(fnt, lines, width, floor=13):
+    """Largest mono font <= fnt.size whose widest line in `lines` fits in `width` px."""
+    longest = max((len(ln.rstrip("\n").replace("\t", "    ")) for ln in lines), default=0)
+    size = fnt.size
+    while size > floor:
+        f = font(size, mono=True, bold=False)
+        if f.getlength("%4d  " % 0) + longest * f.getlength("M") + 14 + 12 <= width: return f
+        size -= 1
+    return font(floor, mono=True)
+
 def _code_pane_inner(d, box, lines, first, fnt, lang="py", hl=(), title=None):
     x0, y0, x1, y1 = box
+    if lang != "md": fnt = fit_mono_font(fnt, lines, x1 - x0)   # prose panes scroll and may clip; code must fit
     rrect(d, box, 10, fill=PANE)
     if title:
         d.rectangle((x0, y0 + 10, x1, y0 + 40), fill=PANE2)
