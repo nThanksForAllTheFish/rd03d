@@ -11,6 +11,11 @@ import sys
 import urllib.request
 
 URL = "http://127.0.0.1:27182/mcp"
+# Scripts that need a local path (05_export.py OUT, 91_pir_fit.py SENSOR)
+# write it as /path/to/rd03d; it is replaced with this checkout's root
+# when the script is sent, so no machine-specific path lives in git.
+import os
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def rpc(session, payload):
@@ -53,7 +58,7 @@ def main():
     sid = connect()
 
     if mode == "script":
-        src = open(sys.argv[2]).read()
+        src = open(sys.argv[2]).read().replace("/path/to/rd03d", REPO_ROOT)
         obj = {"script": src}
         if "--read-only" in sys.argv:
             obj["readOnly"] = True

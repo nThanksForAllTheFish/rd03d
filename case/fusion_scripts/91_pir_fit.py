@@ -14,7 +14,7 @@ import adsk.core
 import adsk.fusion
 
 # Local vendor download, gitignored (case/models/ is not redistributed).
-SENSOR = "/path/to/rd03d/case/models/EKMC1603111.STEP"  # local vendor download, gitignored; set like OUT in 05_export.py
+SENSOR = "/path/to/rd03d/case/models/EKMC1603111.STEP"  # local vendor download, gitignored; run_fusion.py fills in the checkout root
 SENSOR_PREFIXES = ("EKMC", "PaPIRs")
 
 # Sensor native frame: Z is the lens axis, z = 0 the metal base. Its lens

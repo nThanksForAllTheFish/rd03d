@@ -1,7 +1,7 @@
 import adsk.core
 import adsk.fusion
 
-OUT = "/path/to/rd03d/case"
+OUT = "/path/to/rd03d/case"  # run_fusion.py fills in the checkout root
 
 
 def run(_context: str):
