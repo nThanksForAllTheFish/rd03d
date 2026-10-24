@@ -38,3 +38,5 @@ video/models/
 
 # Vendor sensor models (third-party downloads, not redistributed)
 case/models/
+# Raw narration takes (large WAV); kept takes travel in the transfer package
+video/takes/
