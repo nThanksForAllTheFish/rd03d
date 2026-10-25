@@ -188,32 +188,40 @@ delay the light. The gate:
 
 ## Case
 
-The PIR sits in a small pod fused to the front shell at the XIAO end, outside the
-interior, so neither the plate layout nor the radome changes. Constraints the
-scripts must satisfy and the probe harness must check:
+Revised 2026-10-25 after the first test print. The PIR pod was first built on the
+front shell (commits up to 582091f); the user then asked for it to live on the
+back plate so that all wiring stays on one platform and the shell lifts off clean.
+That also removes the support problem: the plate prints back-face-down, so a pod
+standing up from the plate has its recess opening at the top, a normal pocket.
 
-- The pod's lens axis points 18° below the shell's outward normal, centring the
-  wedge from 6° up to 43° down when the case hangs on its ball joint with the
-  radar level. If the radar ends up tilted on the joint, the pod angle is a
-  parameter in `01_setup.py` and gets re-run, not hand-edited.
-- The dome has a clear cone of at least 50° vertical by 30° horizontal out of
-  the pod opening, with 1 mm radial clearance to the lens.
-- The sensor body (measure the part before scripting, as with the USB jack: can
-  diameter, flange, lens height, pin length) seats against a shoulder inside the
-  pod and is retained by a printed clip, not glue.
-- A 3 mm wire pass-through from the pod into the XIAO bay, placed where it
-  misses the XIAO hold-down boss and the +X radome band, verified by probes.
-- Printable without supports in the same orientation as the shell, except
-  inside the PIR recess (its floor is an overhang onto the bed; supports there
-  only, accepted 2026-10-11); the pod's downward tilt must not create an
-  overhang steeper than 45° on its outer face.
-- The pod must not shadow the radar's field: nothing new within the TX/RX bands'
-  projection at the shell front.
+Geometry (shell frame, z −8 back plane .. 16 front face; the case hangs XIAO end
+(+X) down):
 
-`03_shell.py` gains the pod; `90_verify.py` gains `check_pir_pod()` (opening
-clear, pass-through clear of the boss, cone unobstructed by probing along the
-cone edge rays). `05_export.py` exports the revised shell. The back plate script
-is untouched.
+- **Wing.** The plate grows a 6 mm thick tab (z −8..−2) on its +X end, coplanar
+  with the plate's back, long enough to carry the pod: from the plate edge out to
+  about x 58. Flat back face like the rest of the plate.
+- **Pod tower** on the wing, beside the shell's +X wall with a small gap: the same
+  pod as before (Ø23 recess with the flange ledge and hook groove, Ø11.8 bore
+  tilted 18° toward +X, slotted plug tube, Ø1.9 keeper-pin cross-hole), top face
+  flush with the shell's front face (z 16). The bore runs through the wing and
+  exits the back face, so the plug goes in from the back as before.
+- **Two more Technic holes** in the wing on the existing 8 mm grid, under the
+  tower's far end, clear of the bore exit and the keeper pin.
+- **Shell notch.** The shell's +X wall is cut away at its bottom edge over the
+  pod's width: 6 mm so the wall sits on the wing, plus 4 mm of slot above the
+  wing for the wires (z −8..+2). The shell's own pod is removed.
+- **Wires** leave the plug's slot through a Ø3 hole in the tower's −X wall at
+  the wing level, run through the shell notch onto the plate, and reach the XIAO
+  bay without leaving the plate assembly.
+- Printable without supports: the recess is a top-side pocket on the plate, the
+  bore is an 18° hole, the notch is a bottom-edge cut-out on the shell.
+- Verification: `90_verify.py` probes the wing, tower, recess, bore, pin hole,
+  wire hole, the two new bores, and the shell notch; `91_pir_fit.py` places the
+  sensor STEP on the plate's pod and checks interference (the plug's designed
+  press-fit annulus is the only expected pair).
+
+Parameters stay in the scripts' `ensure_params()` (02 for the pod now; 03 keeps
+only the notch), not in `01_setup.py`, which resets hand-tuned values.
 
 ## Chart page
 

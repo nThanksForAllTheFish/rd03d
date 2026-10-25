@@ -1315,6 +1315,29 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ---
 
+### Task 9b: Move the PIR pod from the shell to the back plate (2026-10-25)
+
+**Why:** the user wants all wiring on the plate (the shell lifts off clean), and a pod standing up from the plate prints its recess as a top-side pocket, so no supports. Supersedes the shell pod built in Task 9; keep that work in history, reuse its code.
+
+**Files:**
+- Modify: `case/fusion_scripts/02_backplate.py` (wing + pod tower + plug + pin hole + wire hole + two Technic holes; `ensure_params` gains the pir* parameters, moved from 03)
+- Modify: `case/fusion_scripts/03_shell.py` (remove step 7/7b pod and plug; add the +X wall notch; keep the `pirTilt`/pod-width parameters it needs to size the notch by reading them, not creating them)
+- Modify: `case/fusion_scripts/91_pir_fit.py` (place the sensor on the plate's pod; plug parked in the plate's bore)
+- Modify: `case/fusion_scripts/90_verify.py` (`check_pir_pod(plate, shell, des)` for the new location; `check_shell_notch` for the cut-out; `check_lego_bores_clear` extended to the two wing holes; drop the shell-pod probes)
+- Modify: `case/README.md`, `case/rd03d_case_back.stl`, `case/rd03d_case_shell.stl`, `case/rd03d_pir_plug.stl`
+
+**Geometry (shell frame).** Plate outline is `intW − 2·rimGap` by `intH − 2·rimGap`, z −backT..0; its +X edge is at x = intW/2 − rimGap (20.85). Shell outer +X face at x = intW/2 + wall (23). Pod tower: width along X = 2·(pirRecessR + pirPodWall) + 24·tan(pirTilt) (≈ 34.8), length along Y = 2·(pirRecessR + pirPodWall) (27); it starts at x = 23 + 0.3 (gap to the shell wall) and spans z −2..16 standing on the wing. Wing: z −8..−2, x from the plate edge (20.85, fused to the plate) to the tower's far end, y ±13.5 (the tower's length). Bore axis as before: through the tower's centre at z 16, direction (sin18°, 0, cos18°) into −z, open at the back face z −8 (through the wing). Recess, ledge, groove, bore, plug, slot, keeper pin, wire hole exactly as in the current `03_shell.py` step 7/7b (copy the code, re-anchor `podCx` and `zTop`). Wire hole: Ø3 along −X from the bore at the pin-tip depth, exiting the tower's −X face at x 23.3 at z ≈ 0..+2, into the notch. Technic holes: two, at (x 48.95, y ±4) on the existing grid (x = 0.95 + k·8), Ø`legoHole` through the wing from the back with the `legoCbDia`/`legoCbDepth` counterbore on the back face, 8 mm deep in total (they end inside the tower's solid material); they must clear the bore exit (centred x ≈ 33 at z −8, r 5.9) and the keeper pin. Shell notch: in `03_shell.py`, cut the +X wall (x 21..23) over y ±(13.5 + 0.3) from z −8 up to z +2, so the wall sits on the wing (z −2) with a 4 mm wire slot above; then the edge-count assertions in 6a–6c must still pass (do the notch AFTER them, and only if the perimeter-edge selectors stay at 8, otherwise relax the assertion with a comment).
+
+**Order inside `02_backplate.py`:** the wing and tower must be added AFTER step 6 (which trims everything to the plate outline) and after the Technic holes (step 7), as a new step 14; the two wing holes are cut in step 14 with the same code pattern as step 7.
+
+- [ ] **Step 1:** `02_backplate.py`: `ensure_params` gains the pir* spec (copy from 03, including `pirPinDia`, `pirPinD` expression, `pirPlugOD` 12.1, `pirSeatD`); step 14 builds wing, tower, cuts (recess/ledge/groove/bore/wire/pin, one Combine, participants = plate body, one-body check), two Technic holes, and the `PirPlug` component (delete-then-rebuild). Run `02_backplate.py`; expect the pod prints and `BackPlate bodies: 1`.
+- [ ] **Step 2:** `03_shell.py`: delete step 7/7b and the PirPlug/PaPIRs deletion lines; add the notch; run; expect the 6a–6c prints unchanged and `FrontShell bodies: 1`. Run `04_boards.py`? No: the boards are unaffected; skip.
+- [ ] **Step 3:** `91_pir_fit.py`: front-face axis point now from the tower on the plate (`podCx`, `zTop` = 16); interference bodies: sensor + plate + shell + plug; the plug/plate press-fit annulus is the one expected pair; everything else 0. Expect `PIR FIT OK`.
+- [ ] **Step 4:** `90_verify.py`: move `check_pir_pod` to probe the plate (recess, ledge, groove, bore mid-depth and at the back face, both ±Y tower walls, pin hole both walls, wire hole exit at x 23.3), add the two wing bores to `check_lego_bores_clear` (open from the back, counterbore present, bore clear 0.5 mm above the back face), add `check_shell_notch(shell)` (void at (22, 0, −4) and (22, 0, +1); solid at (22, 0, +4) and at (22, ±16, −4)), restore `check_no_shell_notch` to its original probes only if they do not overlap the new notch, otherwise retire it with a comment. Expect `VERIFY OK`.
+- [ ] **Step 5:** export all three STLs; the back STL grows, the shell STL shrinks back toward its pre-pod size.
+- [ ] **Step 6:** README: the pod paragraphs move to the plate section; Printing says no supports again; assembly order updated (sensor into the plate's pod, plug and keeper from the back, wires through the notch; shell last).
+- [ ] **Step 7:** commit `case: move the PIR pod to the back plate wing; shell notch; no supports` with the usual trailer.
+
 ### Task 10: Walk test, numbers, docs
 
 **Files:**
