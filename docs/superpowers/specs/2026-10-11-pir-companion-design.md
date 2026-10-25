@@ -188,49 +188,55 @@ delay the light. The gate:
 
 ## Case
 
-Revised 2026-10-25 after the first test print. The PIR pod was first built on the
-front shell (commits up to 582091f); the user then asked for it to live on the
-back plate so that all wiring stays on one platform and the shell lifts off clean.
-That also removes the support problem: the plate prints back-face-down, so a pod
-standing up from the plate has its recess opening at the top, a normal pocket.
+Revised 2026-10-25 (third layout, after the test print and two reviews with the
+user). Two decisions drive it:
 
-Geometry (shell frame, z −8 back plane .. 16 front face; the case hangs XIAO end
-(+X) down):
+1. **The PIR looks where the radar looks.** The user wants the PIR's field to
+   overlap the radar's as much as possible, so the PIR axis is parallel to the
+   radar's boresight (`pirTilt` = 0). The case already hangs on a ball joint
+   tilted slightly down to aim the radar at the stairs; the PIR rides along.
+   With the lens's ±46° vertical field centred on the same axis, the stair
+   wedge (6° up to 43° down) is inside it for any case tilt up to about 40°,
+   and the 102° × 92° PIR field covers the radar's ±60° fan almost entirely.
+   The earlier 18° pod tilt and its canted top go away.
+2. **The plate holds the sensor; the shell covers it.** All wiring stays on the
+   plate; the shell lifts off over the sensor like it does over the boards.
 
-- **Wing.** The plate grows a 6 mm thick tab (z −8..−2) on its +X end, coplanar
-  with the plate's back, long enough to carry the pod: from the plate edge out to
-  about x 58. Flat back face like the rest of the plate.
-- **Pod tower** on the wing, beside the shell's +X wall with a small gap: the same
-  pod as before (Ø23 recess with the flange ledge and hook groove, Ø11.8 bore
-  tilted 18° toward +X, slotted plug tube, Ø1.9 keeper-pin cross-hole). Its top
-  face is canted 18°, normal to the sensor's axis, pivoting about the axis point
-  at the tower's centre (z 16) so every depth along the axis is unchanged (user
-  review 2026-10-25: with a flat top the lens ring broke through on the uphill
-  side); the uphill edge beside the shell rises to about z 21.7, the downhill
-  edge drops to about 10.4, and the ring sits flush all round. The bore runs
-  through the wing and exits the back face, so the plug goes in from the back as
-  before. Edges softened like the shell's (2.5 corner fillets, 1 mm chamfer round
-  the top, 0.8 fillet on the wing's back rim).
-- **Two more Technic holes** in the wing on the existing 8 mm grid, under the
-  tower's far end, clear of the bore exit and the keeper pin.
-- **Shell notch.** The shell's +X wall is cut away at its bottom edge over the
-  pod's width: 6 mm so the wall sits on the wing, plus 4.5 mm of slot above the
-  wing for the wires (z −8..+2.5, `pirNotchTop`). The shell's own pod is removed;
-  the +X snap pair moves outboard of the notch (y ±17, `snapYpx`).
-- **Wires** leave the plug's slot through a Ø3 hole that slopes 17° down from the
-  bore to the tower's −X face at the wing level (exit centred z 0.4,
-  `pirWireExitZ`), run through the shell notch onto the plate, and reach the XIAO
-  bay without leaving the plate assembly.
-- Printable without supports anywhere: the recess is a top-side pocket on the
-  plate (its walls and floor lean 18°), the bore is an 18° hole, the notch is a
-  bottom-edge cut-out on the shell.
-- Verification: `90_verify.py` probes the wing, tower, recess, bore, pin hole,
-  wire hole, the two new bores, and the shell notch; `91_pir_fit.py` places the
-  sensor STEP on the plate's pod and checks interference (the plug's designed
-  press-fit annulus is the only expected pair).
+Geometry (case frame, z −8 back plane .. 16 front face):
 
-Parameters stay in the scripts' `ensure_params()` (02 for the pod now; 03 keeps
-only the notch), not in `01_setup.py`, which resets hand-tuned values.
+- **Wing.** The plate grows a 6 mm tab (z −8..−2) on its +X end, flush with
+  the plate's back, out to the pod box's inner wall less the rim gap.
+- **Socket.** A straight cylindrical boss on the wing, bore Ø11.8 along +Z,
+  outer Ø15.4, rising to z 14.0: the sensor's neck and can drop into it from
+  the front and the flange's underside seats on the boss's top rim (the lens
+  hooks hang outside the boss). The bore continues through the wing and exits
+  the back face; the slotted plug (OD 12.1, ID 9, 10 mm) goes in from the back
+  and bears on the can's underside at z 6.7; the Ø1.9 keeper-pin hole crosses
+  the wing along Y just behind the plug's back end. A Ø3 wire hole leaves the
+  socket's −X side at pin level into the pod cavity.
+- **Two Technic holes** in the wing on the 8 mm grid at (x 24.95, y ±4),
+  through the wing (a pin stands 2 mm proud into the pod cavity, which is
+  empty there).
+- **Pod box on the shell.** The shell's +X wall over the pod's width is
+  replaced by a hollow box: walls 2 mm, inner y ±13.5, inner x from the old
+  wall line to the socket centre + 13.5, full height z −8..16, enclosing the
+  wing with the usual rim gap, open to the shell cavity so the wires pass
+  straight to the XIAO bay. Its top is the shell's flat front face with a
+  Ø23 hole: the lens ring (Ø20.6) and its hooks (Ø22.2) pass, the ring's top
+  face sits flush with the shell's face, the dome stands 11 mm proud. Exterior
+  edges softened like the rest of the shell.
+- **+X snap pair** of the shell moves to y ±19 (`snapYpx`), outboard of the
+  box's ±Y walls; the plate's +X pockets follow.
+- Printable without supports anywhere: the socket and wing are plain
+  extrusions on the plate; the box is walls plus a flat top with a through
+  hole, printed face-down.
+- Verification: `90_verify.py` probes socket, bore, plug seat, pin hole, wire
+  hole, wing, Technic holes, the box walls and the lens hole; `91_pir_fit.py`
+  places the sensor STEP in the socket and checks interference with plate,
+  shell and plug (the plug's press-fit annulus is the only expected pair).
+
+Parameters live in the scripts' `ensure_params()` (02 owns the pir* set),
+not in `01_setup.py`.
 
 ## Chart page
 
