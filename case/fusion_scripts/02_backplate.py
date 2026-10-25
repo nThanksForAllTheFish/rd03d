@@ -185,6 +185,11 @@ def ensure_params(des):
         ("capDia", "8.2 mm", "bulk capacitor diameter"),
         ("capLen", "12 mm", "bulk capacitor body length"),
         ("capClear", "0.4 mm", "total capacitor cradle clearance"),
+        # 2026-10-25: the +X snap pair (shell bumps, plate pockets) moved
+        # from y +/-12 to y +/-17 so it sits OUTBOARD of the shell's wing
+        # notch (y +/-13.8), which had swallowed all but 1.2 mm of it. Read
+        # by 03_shell.py step 5 and 02 step 3; the -X pair stays at +/-12.
+        ("snapYpx", "17 mm", "y of the +X-side snap bump/pocket pair (the -X pair stays at 12): outboard of the wing notch, 6 mm long so it spans y 14..20"),
         # PIR pod (moved here from 03_shell.py on 2026-10-25, when the pod
         # moved from the shell to the plate's wing; step 14). Radii measured
         # on Panasonic's STEP by point probing (2026-10-11): base/can r 5.5
@@ -297,20 +302,25 @@ def run(_context: str):
     # fully flat; adhesive tape sticks directly to it. The rear Technic
     # counterbores (0.9 deep, step 7) are unchanged.
 
-    # 3. snap pockets at plate +/-X edges, y=+/-12 (BLIND: z -1.7..-0.3,
-    # leaving material ledges at both z ends so the shell's bumps
-    # (z -1.6..-0.4) are retained axially with 0.1mm slop per side)
+    # 3. snap pockets at plate +/-X edges (BLIND: z -1.7..-0.3, leaving
+    # material ledges at both z ends so the shell's bumps (z -1.6..-0.4)
+    # are retained axially with 0.1mm slop per side). -X pair at y +/-12;
+    # the +X pair at y +/-snapYpx (17) since 2026-10-25, clear of the
+    # shell's wing notch (y +/-13.8): pockets y 13.9..20.1, 6 mm clear of
+    # the plate's +/-Y edges and above the wing (z < -2).
+    snapYpx = p(des, "snapYpx")
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sx in (-1, 1):
         edge = sx * (intW / 2 - rimGap)
+        snapY = snapYpx if sx > 0 else 12 * MM
         for sy in (-1, 1):
             # rect centered on the edge, 1.2 wide -> cuts 0.6 deep into plate
-            rect(sk, edge, sy * 12 * MM, 0.12, 6.2 * MM)
+            rect(sk, edge, sy * snapY, 0.12, 6.2 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, -1.7 * MM, -0.3 * MM,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("snap pockets ok")
+    print("snap pockets ok (-X at y +/-12, +X at y +/-%.1f)" % (snapYpx * 10))
 
     # 4. radar bay: two +/-X side walls + crossbars. (Thin-wall fix
     # 2026-09-07: the old full perimeter fence ring left 0.6 mm +/-Y wall
@@ -1074,17 +1084,19 @@ def run(_context: str):
     # slot (z -2..+2, between the wing top and the notched wall's bottom
     # edge), so the hole SLOPES down from the bore to the tower's -X face
     # instead of running level as it did through the shell wall. Exit
-    # centre WIRE_EXIT_Z, 0.2 mm above the slot's middle; the hole's rim is
-    # then 0.6 mm above the wing top and 0.2 mm below the wall edge. The
-    # sloped cylinder is extended 0.8 mm past the face so the exit is a
-    # clean hole, and it only cuts air there (the wing top is lower).
-    WIRE_EXIT_Z = 0.2 * MM
+    # centre WIRE_EXIT_Z = 0.4 (raised from 0.2 on 2026-10-25 so the
+    # rim's thin lip over the wing is 0.8 mm, four layers, instead of 0.6);
+    # the rim's top is then 1.97, 0.03 mm under the wall's cut edge at
+    # 2.0, which the assertion below keeps strictly inside. The sloped
+    # cylinder is extended 0.8 mm past the face so the exit is a clean
+    # hole, and it only cuts air there (the wing top is lower).
+    WIRE_EXIT_Z = 0.4 * MM
     wire_exit = adsk.core.Point3D.create(xTow0, 0.0, WIRE_EXIT_Z)
     slope = math.atan2(wp.z - wire_exit.z, wp.x - wire_exit.x)   # from -X
     rimZ = wireR / math.cos(slope)          # the exit ellipse's z half-extent
     wire_end = adsk.core.Point3D.create(xTow0 - 0.8 * MM, 0.0,
                                         WIRE_EXIT_Z - 0.8 * MM * math.tan(slope))
-    if not (zWing + 0.05 < wire_exit.z - rimZ and wire_exit.z + rimZ < 0.2 - 0.01):
+    if not (zWing + 0.05 < wire_exit.z - rimZ and wire_exit.z + rimZ < 0.2):
         raise RuntimeError("wire hole exit z %.2f..%.2f mm is not inside the "
                            "shell's wire slot (z %.1f..2.0)"
                            % ((wire_exit.z - rimZ) * 10, (wire_exit.z + rimZ) * 10,

@@ -61,6 +61,34 @@ def check_baseline(plate, shell):
     void(shell, 0, 0, 7.0, "shell interior cavity")
 
 
+def check_snaps(plate, shell, des):
+    """Snap pairs: -X at y +/-12 as always; the +X pair moved to y +/-snapYpx
+    (17) on 2026-10-25, outboard of the shell's wing notch (y +/-13.8), so
+    the lid's +X end is still retained. Bumps are 6 mm long and 0.5 proud
+    of the inner wall (x 20.5..23 on +X), z -1.6..-0.4; pockets 6.2 long,
+    0.6 into the plate edge (x 20.25..20.85), z -1.7..-0.3."""
+    ypx = des.userParameters.itemByName("snapYpx").value * 10
+    for sy in (-1, 1):
+        # +X side: bump and pocket at +/-ypx, none left at +/-12
+        void(shell, 20.75, sy * 12, -1.0, "old +X bump at y %+.0f gone (notch)" % (sy * 12))
+        solid(shell, 20.75, sy * ypx, -1.0, "+X bump at y %+.1f" % (sy * ypx))
+        solid(shell, 20.75, sy * (ypx + 2.5), -1.0, "+X bump reaches y %+.1f" % (sy * (ypx + 2.5)))
+        void(shell, 20.75, sy * (ypx + 3.5), -1.0, "+X bump ends before y %+.1f" % (sy * (ypx + 3.5)))
+        void(shell, 20.75, sy * ypx, -3.0, "+X bump only spans z -1.6..-0.4")
+        solid(shell, 22.0, sy * ypx, -1.0, "+X wall solid behind the bump (outside the notch)")
+        void(plate, 20.6, sy * ypx, -1.0, "+X pocket at y %+.1f" % (sy * ypx))
+        void(plate, 20.6, sy * (ypx + 2.9), -1.0, "+X pocket reaches y %+.1f" % (sy * (ypx + 2.9)))
+        solid(plate, 20.6, sy * (ypx + 3.5), -1.0, "plate edge solid past the +X pocket")
+        solid(plate, 20.6, sy * 12, -1.0, "no +X pocket left at y %+.0f" % (sy * 12))
+        solid(plate, 20.6, sy * ypx, -2.5, "plate solid below the +X pocket (blind)")
+        solid(plate, 20.6, sy * ypx, -0.1, "plate solid above the +X pocket (blind)")
+        # -X side unchanged at +/-12
+        solid(shell, -20.75, sy * 12, -1.0, "-X bump at y %+.0f" % (sy * 12))
+        void(shell, -20.75, sy * ypx, -1.0, "no -X bump at y %+.1f" % (sy * ypx))
+        void(plate, -20.6, sy * 12, -1.0, "-X pocket at y %+.0f" % (sy * 12))
+        solid(plate, -20.6, sy * ypx, -1.0, "no -X pocket at y %+.1f" % (sy * ypx))
+
+
 def check_xiao_clips(plate):
     """Lips on a CONTINUOUS 1.5 mm fence wall: no slots, no trenches.
 
@@ -379,7 +407,7 @@ def check_pir_pod(plate, shell, des):
     # inside the shell's wire slot z -2..+2. Probe the exit just inside the
     # face, the same point outside it (free air, then the shell's notch at
     # the wall), and the hole's body half way along.
-    WIRE_EXIT_Z = 0.02
+    WIRE_EXIT_Z = 0.04
     xw, _, zw = along(pv("pirWireD"))
     void(plate, (xTow0 + 0.05) * 10, 0.0, WIRE_EXIT_Z * 10 + 0.2, "wire hole exit on the tower's -X face")
     void(plate, (xTow0 + 0.05) * 10, 0.0, WIRE_EXIT_Z * 10 - 0.8, "wire hole exit, lower part")
@@ -395,8 +423,10 @@ def check_pir_pod(plate, shell, des):
     solid(plate, xm, 0.0, zm - 2.5, "tower solid under the wire hole")
     solid(plate, xm, 0.0, zm + 2.5, "tower solid over the wire hole")
     solid(plate, (xTow0 + 0.05) * 10, 0.0, 3.0, "tower -X face solid above the wire exit")
-    if not (zWing * 10 + 0.5 < WIRE_EXIT_Z * 10 - 1.6 and WIRE_EXIT_Z * 10 + 1.6 < 2.0):
-        FAILURES.append("wire hole exit (centre z %.1f mm) is not inside the wire slot z -2..2" % (WIRE_EXIT_Z * 10))
+    rimZ = pv("pirWireDia") / 2 * 10 / math.cos(slope)     # mm, exit ellipse half-height
+    if not (zWing * 10 + 0.5 < WIRE_EXIT_Z * 10 - rimZ and WIRE_EXIT_Z * 10 + rimZ < 2.0):
+        FAILURES.append("wire hole exit (z %.2f..%.2f mm) is not inside the wire slot z -2..2"
+                        % (WIRE_EXIT_Z * 10 - rimZ, WIRE_EXIT_Z * 10 + rimZ))
     # lens cone edges: rays from the front-face axis point at +/-25 deg from
     # the bore axis in the XZ plane, probed 15 mm out, must be in free air
     # (neither the plate's tower nor the shell)
@@ -421,6 +451,7 @@ def run(_context: str):
           % (plate.volume, shell.volume))
 
     check_baseline(plate, shell)
+    check_snaps(plate, shell, des)
     check_xiao_clips(plate)
     check_no_interior_counterbores(plate)
     check_lego_bores_clear(plate)

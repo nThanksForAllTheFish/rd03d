@@ -218,20 +218,27 @@ def run(_context: str):
     else:  # nice-to-have; square rib is acceptable
         print("RIB CHAMFER SKIPPED entirely")
 
-    # 5: snap bumps on inner +/-X walls at y=+/-12, z centered -1mm
-    # (rects extend into the wall so the Join reliably merges with the
-    # shell body; proud amount into the cavity is snapBump)
+    # 5: snap bumps on inner +/-X walls, z centered -1mm (rects extend
+    # into the wall so the Join reliably merges with the shell body; proud
+    # amount into the cavity is snapBump). -X pair at y +/-12; the +X pair
+    # at y +/-snapYpx (17, created by 02_backplate.py) since 2026-10-25 so
+    # it sits outboard of the wing notch (step 7, y +/-13.8): bumps span
+    # y 14..20, 0.2 mm past the notch edge and 3 mm short of the cavity's
+    # +/-Y walls (23), nowhere near the outer corner fillets. The plate's
+    # pockets (02 step 3) move with it.
     snap = p(des, "snapBump")
+    snapYpx = p(des, "snapYpx")
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sx in (-1, 1):
         cx = sx * (intW / 2 + (wall - snap) / 2)  # spans intW/2-snap .. intW/2+wall
+        snapY = snapYpx if sx > 0 else 12 * MM
         for sy in (-1, 1):
-            rect(sk, cx, sy * 12 * MM, snap + wall, 6 * MM)
+            rect(sk, cx, sy * snapY, snap + wall, 6 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, -1.6 * MM, -0.4 * MM,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[shell_body])
-    print("snap bumps ok")
+    print("snap bumps ok (-X at y +/-12, +X at y +/-%.1f)" % (snapYpx * 10))
 
     # 5b. XIAO hold-down boss (change request 2026-09-07). Nothing held the
     # XIAO down on its four 3 mm posts; the board could lift off them. This
@@ -383,10 +390,9 @@ def run(_context: str):
     # above z +2. The notch's +/-Y faces straddle the wing with 0.3 mm a
     # side, which also locates the shell in Y at this end.
     #
-    # Side effect, accepted: the two +X snap bumps (y 9..15, z -1.6..-0.4)
-    # lie almost entirely inside the notch; only their outer 1.2 mm (y
-    # 13.8..15) survives, so the shell's +X end is retained mostly by the
-    # -X bumps and by the wing sitting in the notch.
+    # The +X snap bumps used to sit at y +/-12 (y 9..15), almost entirely
+    # inside this notch; since 2026-10-25 they are at y +/-snapYpx (17),
+    # outboard of it (step 5), so the +X end of the lid is still snapped.
     #
     # Done AFTER 6a-6c, which count edges on the virgin outline (the notch
     # would split the +X rim segment and give 9 at z_back). It takes the

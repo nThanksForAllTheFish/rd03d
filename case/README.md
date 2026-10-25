@@ -31,8 +31,9 @@ The living design is in your Fusion; save it to your own project.
   back face (centred about x 32.9). A Ø3 pass-through for the three sensor
   wires leaves the bore's −X wall centred on the pin tips (about 13.9 mm
   down the bore, inside the plug's span, so it opens straight onto the
-  plug's slot) and slopes down (18°) to come out of the tower's −X face at
-  about z 0, in line with the shell's wire slot (next item). Two more
+  plug's slot) and slopes down (17°) to come out of the tower's −X face at
+  z 0.4 (rim −1.2..2.0), in line with the shell's wire slot (next item).
+  The plate's +X edge snap pockets sit at y ±17, outboard of that slot. Two more
   Technic holes, at (48.95, ±4) on the same 8 mm grid, go 8 mm into the
   wing from the back, with the same counterbore, under the tower's far
   end; with the original six that is eight mount points.
@@ -47,10 +48,10 @@ The living design is in your Fusion; save it to your own project.
   wing is the slot the PIR wires come through onto the plate. (The pod
   lived on this wall from 2026-10-11 to 2026-10-25; it moved to the plate
   so that every wire stays on the plate and the shell lifts off clean, and
-  so that nothing needs supports any more.) The notch takes most of the
-  two +X snap bumps with it — only their outer 1.2 mm survives — so the +X
-  end of the lid is held by the wing sitting in the notch and by the two
-  −X bumps.
+  so that nothing needs supports any more.) The +X pair of snap bumps
+  moved outboard of the notch, from y ±12 to y ±17 (`snapYpx`), with the
+  plate's pockets, so the lid still snaps at both ends; the −X pair stays
+  at ±12.
 - `rd03d_pir_plug.stl` — the PIR retaining plug: a Ø12.1 × 10 mm tube
   with a Ø9 bore, pressed into the pod's Ø11.8 bore from the **back**
   until its front rim bears on the sensor's base, which holds the flange
@@ -269,7 +270,9 @@ at y ±4. The six centres are (0.95, ±12), (0.95, ±4) and (8.95, ±4).)
 ## Tweaking fit
 
 Open the design in Fusion → Modify → Change Parameters. `boardClear`,
-`rimGap`, and `snapBump` are the fit-critical ones; `legoHole` is the
+`rimGap`, and `snapBump` are the fit-critical ones (`snapYpx`, 17 mm, is
+where the +X snap pair sits — keep it above 13.8 + 3 so the 6 mm bump
+clears the wing notch, and below 23 − 3 for the cavity wall); `legoHole` is the
 Technic pin hole diameter (tune ±0.1 mm if pins are too tight/loose after
 a test print). `pirPlugOD` is the PIR plug's press fit. Calibration from
 the 2026-10-25 test print on this printer: holes print true to size (the
