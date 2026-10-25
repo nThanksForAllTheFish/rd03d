@@ -206,12 +206,19 @@ def ensure_params(des):
         ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up"),
         ("pirPodWall", "2.0 mm", "pod wall around the recess"),
         ("pirWireDia", "3.0 mm", "wire pass-through out of the tower's -X face into the shell notch"),
-        # The wire hole leaves the bore at this axis depth. It meets the -X
-        # bore wall pirBoreR*tan(pirTilt) = 5.9*tan18 = 1.9 mm deeper than
-        # its axis point, i.e. at the pin tips (sensor z -5.5 = d 13.9),
-        # inside the plug span d 9.3..15.3 where the plug's slot is:
-        # 13.9 - 1.9 = 12.0.
-        ("pirWireD", "12.0 mm", "pass-through axis point depth: pin tips d 13.9 minus boreR*tan(tilt) 1.9"),
+        # The wire hole's centre line starts on the bore axis at this depth
+        # (z 4.6) and slopes 17 deg down to the exit (pirWireExitZ) on the
+        # tower's -X face. On the way it crosses the -X bore wall at about
+        # d 16.1, and its oblique opening in that wall spans about
+        # d 14.3..18.0: behind the pin tips (d 13.9), inside the plug span
+        # (d 9.3..19.3) and its slot, level with the cap on the pins.
+        ("pirWireD", "12.0 mm", "wire hole: axis depth where its sloped centre line starts (crosses the -X bore wall at d ~16.1, opening d ~14.3..18.0: behind the pin tips, inside the plug slot)"),
+        ("pirWireExitZ", "0.4 mm", "wire hole exit centre on the tower's -X face: 0.4 puts the rim 0.8 mm above the wing top (z -2) and under the shell notch top (pirNotchTop)"),
+        # Shell notch top (03_shell.py step 7 cuts the +X wall from the back
+        # rim up to here; the 4.5 mm above the wing top is the wire slot).
+        # Owned here so 02's wire-exit guard, 03's notch and 90's probes
+        # read one value.
+        ("pirNotchTop", "2.5 mm", "top of the shell's +X wall notch (z): wing z -8..-2 passes under, -2..pirNotchTop is the wire slot; the wire hole's rim must stay under it"),
         # Test print 2026-10-25: bore measured 11.8 (holes on this printer
         # come out true to size), plug OD measured 11.5 for 11.7 nominal
         # (outside walls print 0.2 under), and the plug fell out under
@@ -306,9 +313,17 @@ def run(_context: str):
     # material ledges at both z ends so the shell's bumps (z -1.6..-0.4)
     # are retained axially with 0.1mm slop per side). -X pair at y +/-12;
     # the +X pair at y +/-snapYpx (17) since 2026-10-25, clear of the
-    # shell's wing notch (y +/-13.8): pockets y 13.9..20.1, 6 mm clear of
-    # the plate's +/-Y edges and above the wing (z < -2).
+    # shell's wing notch (y +/-13.8): pockets y 13.9..20.1, 2.75 mm clear
+    # of the plate's +/-Y edges (half-height 22.85) and above the wing
+    # (z < -2). The -Y pocket (x 20.25..20.85) leaves a 1.99 mm web to the
+    # jack slot's +X wall at x 18.265 (step 9; the slot spans y
+    # -20.71..-17.29, inside the pocket's y range).
     snapYpx = p(des, "snapYpx")
+    if snapYpx + 3.1 * MM >= intH / 2 - rimGap:
+        raise RuntimeError("snapYpx %.1f puts the +X pocket end (y %.2f) past the "
+                           "plate's +/-Y edge (%.2f)"
+                           % (snapYpx * 10, (snapYpx + 3.1 * MM) * 10,
+                              (intH / 2 - rimGap) * 10))
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sx in (-1, 1):
         edge = sx * (intW / 2 - rimGap)
@@ -1185,29 +1200,33 @@ def run(_context: str):
     pinR, pinD = p(des, "pirPinDia") / 2, p(des, "pirPinD")
     plugBack = p(des, "pirSeatD") + p(des, "pirPlugL")
     pp = along(pinD)
-    # Wire hole. It still LEAVES the bore at the axis point pirWireD (so it
-    # meets the -X bore wall at the pin tips, inside the plug's slot), but
-    # that point is at z 4.6 and the exit has to land in the shell's wire
-    # slot (z -2..+2, between the wing top and the notched wall's bottom
-    # edge), so the hole SLOPES down from the bore to the tower's -X face
-    # instead of running level as it did through the shell wall. Exit
-    # centre WIRE_EXIT_Z = 0.4 (raised from 0.2 on 2026-10-25 so the
-    # rim's thin lip over the wing is 0.8 mm, four layers, instead of 0.6);
-    # the rim's top is then 1.97, 0.03 mm under the wall's cut edge at
-    # 2.0, which the assertion below keeps strictly inside. The sloped
-    # cylinder is extended 0.8 mm past the face so the exit is a clean
-    # hole, and it only cuts air there (the wing top is lower).
-    WIRE_EXIT_Z = 0.4 * MM
+    # Wire hole. Its centre line starts on the bore axis at d pirWireD
+    # (z 4.6) and slopes about 17 deg down to the exit on the tower's -X
+    # face, centred at z pirWireExitZ (0.4) in the shell's wire slot (z -2
+    # ..pirNotchTop, between the wing top and the notched wall's bottom
+    # edge). It cannot run level as it did through the shell wall: level
+    # at z 4.6 it would miss the slot, and lower on the axis it would meet
+    # the keeper pin. Along the way the centre line crosses the -X bore
+    # wall at about d 16.1 and the oblique opening in that wall spans
+    # about d 14.3..18.0: behind the pin tips (d 13.9), inside the plug
+    # span (d 9.3..19.3) and its slot, level with the cap on the pins, so
+    # the wires leave the slot straight into it. At the exit the rim is
+    # 0.8 mm (four layers) above the wing top and must stay under the
+    # notch top; the assertion keeps both. The sloped cylinder is extended
+    # 0.8 mm past the face so the exit is a clean hole, and it only cuts
+    # air there (the wing top is lower).
+    WIRE_EXIT_Z = p(des, "pirWireExitZ")
+    notchTop = p(des, "pirNotchTop")
     wire_exit = adsk.core.Point3D.create(xTow0, 0.0, WIRE_EXIT_Z)
     slope = math.atan2(wp.z - wire_exit.z, wp.x - wire_exit.x)   # from -X
     rimZ = wireR / math.cos(slope)          # the exit ellipse's z half-extent
     wire_end = adsk.core.Point3D.create(xTow0 - 0.8 * MM, 0.0,
                                         WIRE_EXIT_Z - 0.8 * MM * math.tan(slope))
-    if not (zWing + 0.05 < wire_exit.z - rimZ and wire_exit.z + rimZ < 0.2):
+    if not (zWing + 0.05 < wire_exit.z - rimZ and wire_exit.z + rimZ < notchTop):
         raise RuntimeError("wire hole exit z %.2f..%.2f mm is not inside the "
-                           "shell's wire slot (z %.1f..2.0)"
+                           "shell's wire slot (z %.1f..%.1f, pirNotchTop)"
                            % ((wire_exit.z - rimZ) * 10, (wire_exit.z + rimZ) * 10,
-                              zWing * 10))
+                              zWing * 10, notchTop * 10))
     # keeper pin guards (see ensure_params): its front surface must be
     # behind the plug's back end, it must stay clear of the wire hole
     # (both sit at y 0, so only their z separation where the hole passes
@@ -1268,10 +1287,10 @@ def run(_context: str):
              boreR * 10, math.degrees(tilt), exit_pt.x * 10))
     print("pir wire hole dia %.1f from the bore axis at d %.1f (x %.2f z %.2f) "
           "sloping %.1f deg down to the tower's -X face at z %.2f "
-          "(rim z %.2f..%.2f; wing top %.1f, wall edge 2.0) ok"
+          "(rim z %.2f..%.2f; wing top %.1f, notch top %.1f) ok"
           % (wireR * 20, p(des, "pirWireD") * 10, wp.x * 10, wp.z * 10,
              math.degrees(slope), wire_exit.z * 10, (wire_exit.z - rimZ) * 10,
-             (wire_exit.z + rimZ) * 10, zWing * 10))
+             (wire_exit.z + rimZ) * 10, zWing * 10, notchTop * 10))
     # hand-drill location for a print made without the pin: on the pod's
     # +-Y side faces (the wing's, with the 10 mm plug), measured up from the
     # back face and from the tower's -X face

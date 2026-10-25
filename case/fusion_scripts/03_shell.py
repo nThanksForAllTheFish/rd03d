@@ -6,6 +6,14 @@ def p(des, name):
     return des.userParameters.itemByName(name).value  # cm
 
 
+def p02(des, name):
+    """A parameter 02_backplate.py owns (its ensure_params creates it)."""
+    if des.userParameters.itemByName(name) is None:
+        raise RuntimeError("parameter %s is missing: run 02_backplate.py first "
+                           "(it creates snapYpx and the pir* parameters)" % name)
+    return p(des, name)
+
+
 def rect(sk, cx, cy, w, h):
     sk.sketchCurves.sketchLines.addTwoPointRectangle(
         adsk.core.Point3D.create(cx - w / 2, cy - h / 2, 0),
@@ -227,7 +235,18 @@ def run(_context: str):
     # +/-Y walls (23), nowhere near the outer corner fillets. The plate's
     # pockets (02 step 3) move with it.
     snap = p(des, "snapBump")
-    snapYpx = p(des, "snapYpx")
+    snapYpx = p02(des, "snapYpx")
+    podHalf = p02(des, "pirRecessR") + p02(des, "pirPodWall")      # 13.5 mm
+    NOTCH_CLEAR = 0.3 * MM                       # notch to wing, per side
+    if snapYpx - 3 * MM <= podHalf + NOTCH_CLEAR:
+        raise RuntimeError("snapYpx %.1f puts the +X bump's inboard end (y %.1f) "
+                           "inside the wing notch (y +/-%.1f)"
+                           % (snapYpx * 10, (snapYpx - 3 * MM) * 10,
+                              (podHalf + NOTCH_CLEAR) * 10))
+    if snapYpx + 3 * MM >= intH / 2:
+        raise RuntimeError("snapYpx %.1f puts the +X bump's outboard end (y %.1f) "
+                           "into the cavity's +/-Y wall (y %.1f)"
+                           % (snapYpx * 10, (snapYpx + 3 * MM) * 10, intH / 2 * 10))
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sx in (-1, 1):
         cx = sx * (intW / 2 + (wall - snap) / 2)  # spans intW/2-snap .. intW/2+wall
@@ -382,13 +401,15 @@ def run(_context: str):
     # 7. NOTCH FOR THE PLATE'S PIR WING (2026-10-25). The PIR pod now stands
     # on a 6 mm wing that grows out of the back plate's +X edge (z -8..-2,
     # y +/-13.5; 02_backplate.py step 14) and passes UNDER this wall. Cut
-    # the +X wall away over the wing's width from the back rim up to z +2:
-    # z -8..-2 makes room for the wing itself, and the 4 mm above it
-    # (z -2..+2) is the slot the sensor's three wires come through, out of
-    # the dia 3 hole in the tower's -X face (exit centred z 0.2) and onto
-    # the plate, to the XIAO bay. The wall keeps its full 2 mm thickness
-    # above z +2. The notch's +/-Y faces straddle the wing with 0.3 mm a
-    # side, which also locates the shell in Y at this end.
+    # the +X wall away over the wing's width from the back rim up to
+    # z pirNotchTop (2.5, a parameter 02 owns): z -8..-2 makes room for the
+    # wing itself, and the 4.5 mm above it (z -2..2.5) is the slot the
+    # sensor's three wires come through, out of the dia 3 hole in the
+    # tower's -X face (exit centred z pirWireExitZ = 0.4, rim to 1.97) and
+    # onto the plate, to the XIAO bay. The wall keeps its full 2 mm
+    # thickness above the notch top. The notch's +/-Y faces straddle the
+    # wing with 0.3 mm a side, which also locates the shell in Y at this
+    # end.
     #
     # The +X snap bumps used to sit at y +/-12 (y 9..15), almost entirely
     # inside this notch; since 2026-10-25 they are at y +/-snapYpx (17),
@@ -398,9 +419,9 @@ def run(_context: str):
     # would split the +X rim segment and give 9 at z_back). It takes the
     # back-rim fillet off the +X wall over the notch's width, which is
     # fine: that stretch of rim is cut away.
-    podHalf = p(des, "pirRecessR") + p(des, "pirPodWall")          # 13.5 mm
-    NOTCH_CLEAR = 0.3 * MM
-    NOTCH_TOP = 2.0 * MM
+    # (podHalf and NOTCH_CLEAR are set in step 5, which guards the snap
+    # bumps against this notch)
+    NOTCH_TOP = p02(des, "pirNotchTop")
     sk = comp.sketches.add(comp.xYConstructionPlane)
     nx0, nx1 = intW / 2 - 0.1 * MM, intW / 2 + wall + 0.1 * MM
     ny = podHalf + NOTCH_CLEAR
@@ -412,7 +433,8 @@ def run(_context: str):
         raise RuntimeError("wing notch split the shell: %d bodies"
                            % comp.bRepBodies.count)
     print("wing notch ok (+X wall x %.2f..%.2f cut over y +/-%.2f from the back "
-          "rim up to z %.1f: %.0f mm for the wing, %.0f mm wire slot above it)"
+          "rim up to z %.1f (pirNotchTop): %.0f mm for the wing, %.1f mm wire "
+          "slot above it)"
           % (nx0 * 10, nx1 * 10, ny * 10, NOTCH_TOP * 10, (backT - 0.2) * 10,
              (NOTCH_TOP + 0.2) * 10))
 

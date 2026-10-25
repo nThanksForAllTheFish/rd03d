@@ -202,19 +202,28 @@ Geometry (shell frame, z −8 back plane .. 16 front face; the case hangs XIAO e
   about x 58. Flat back face like the rest of the plate.
 - **Pod tower** on the wing, beside the shell's +X wall with a small gap: the same
   pod as before (Ø23 recess with the flange ledge and hook groove, Ø11.8 bore
-  tilted 18° toward +X, slotted plug tube, Ø1.9 keeper-pin cross-hole), top face
-  flush with the shell's front face (z 16). The bore runs through the wing and
-  exits the back face, so the plug goes in from the back as before.
+  tilted 18° toward +X, slotted plug tube, Ø1.9 keeper-pin cross-hole). Its top
+  face is canted 18°, normal to the sensor's axis, pivoting about the axis point
+  at the tower's centre (z 16) so every depth along the axis is unchanged (user
+  review 2026-10-25: with a flat top the lens ring broke through on the uphill
+  side); the uphill edge beside the shell rises to about z 21.7, the downhill
+  edge drops to about 10.4, and the ring sits flush all round. The bore runs
+  through the wing and exits the back face, so the plug goes in from the back as
+  before. Edges softened like the shell's (2.5 corner fillets, 1 mm chamfer round
+  the top, 0.8 fillet on the wing's back rim).
 - **Two more Technic holes** in the wing on the existing 8 mm grid, under the
   tower's far end, clear of the bore exit and the keeper pin.
 - **Shell notch.** The shell's +X wall is cut away at its bottom edge over the
-  pod's width: 6 mm so the wall sits on the wing, plus 4 mm of slot above the
-  wing for the wires (z −8..+2). The shell's own pod is removed.
-- **Wires** leave the plug's slot through a Ø3 hole in the tower's −X wall at
-  the wing level, run through the shell notch onto the plate, and reach the XIAO
+  pod's width: 6 mm so the wall sits on the wing, plus 4.5 mm of slot above the
+  wing for the wires (z −8..+2.5, `pirNotchTop`). The shell's own pod is removed;
+  the +X snap pair moves outboard of the notch (y ±17, `snapYpx`).
+- **Wires** leave the plug's slot through a Ø3 hole that slopes 17° down from the
+  bore to the tower's −X face at the wing level (exit centred z 0.4,
+  `pirWireExitZ`), run through the shell notch onto the plate, and reach the XIAO
   bay without leaving the plate assembly.
-- Printable without supports: the recess is a top-side pocket on the plate, the
-  bore is an 18° hole, the notch is a bottom-edge cut-out on the shell.
+- Printable without supports anywhere: the recess is a top-side pocket on the
+  plate (its walls and floor lean 18°), the bore is an 18° hole, the notch is a
+  bottom-edge cut-out on the shell.
 - Verification: `90_verify.py` probes the wing, tower, recess, bore, pin hole,
   wire hole, the two new bores, and the shell notch; `91_pir_fit.py` places the
   sensor STEP on the plate's pod and checks interference (the plug's designed
@@ -250,8 +259,8 @@ sensors reacting on one screen.
   up, out the top on the right, back, down, out the left), with the CSV branch
   running. Success: the PIR fires before the first step on both approaches, and
   the first-fire delay against the radar is reported per approach.
-- Case: probe harness passes; the pod prints without supports except inside the
-  PIR recess; the dome sees the
+- Case: probe harness passes; both parts print without supports anywhere; the
+  dome sees the
   whole wedge when the case is on the wall (check with the chart's PIR lamp while
   walking the extremes).
 
@@ -261,8 +270,9 @@ sensors reacting on one screen.
    entries, SNTP enable, the `rd03d/pir` and `rd03d/pir/state` topics, the chart
    `pir` field.
 2. `tests/test_pir_gate.c` and its Makefile entry.
-3. `case/fusion_scripts/03_shell.py` pod, `01_setup.py` pod parameters,
-   `90_verify.py` `check_pir_pod()`, exported shell STL.
+3. `case/fusion_scripts/02_backplate.py` wing/pod (parameters in its
+   `ensure_params`), `03_shell.py` notch, `90_verify.py` checks,
+   `91_pir_fit.py` fit check.
 4. `node-red/flows-stair-light.json` with the source switch and the CSV branch.
 5. A short note in `docs/` with the walk-test and latency numbers once measured.
 

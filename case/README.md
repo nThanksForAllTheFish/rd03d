@@ -14,7 +14,8 @@ The living design is in your Fusion; save it to your own project.
   jack**, with a capacitor cradle and wire notches inside. Apart from the
   jack's mouth — which sits flush in it — the rear face is flat (great
   first layer; tape sticks directly to it), and so is the interior floor,
-  which carries no counterbores.
+  which carries no counterbores. The plate's own back perimeter is square;
+  only the wing's outer back edges (below) carry a 0.8 mm fillet.
   Since 2026-10-25 the plate also carries the **PIR pod**, on a **wing**:
   a 6 mm tab (z −8..−2, the same back face as the plate) growing out of
   the plate's +X edge (the end that hangs down) to x 58, 27 mm wide, with
@@ -34,10 +35,12 @@ The living design is in your Fusion; save it to your own project.
   toward +X, so the PIR looks outward and 18° down when the case hangs
   XIAO-end-down; the bore runs on through the wing and comes out of the
   back face (centred about x 32.9). A Ø3 pass-through for the three sensor
-  wires leaves the bore's −X wall centred on the pin tips (about 13.9 mm
-  down the bore, inside the plug's span, so it opens straight onto the
-  plug's slot) and slopes down (17°) to come out of the tower's −X face at
-  z 0.4 (rim −1.2..2.0), in line with the shell's wire slot (next item).
+  wires slopes 17° down from the bore to the tower's −X face: its oblique
+  opening in the bore's −X wall spans about 14.3..18.0 mm down the bore,
+  behind the pin tips and inside the plug's span and slot, level with the
+  cap on the pins, so the wires leave the slot straight into it; it comes
+  out of the tower's −X face centred at z 0.4 (rim −1.2..2.0, in the
+  shell's 4.5 mm wire slot, next item), 0.8 mm above the wing top.
   The plate's +X edge snap pockets sit at y ±17, outboard of that slot. Two more
   Technic holes, at (48.95, ±4) on the same 8 mm grid, go 8 mm into the
   wing from the back, with the same counterbore, under the tower's far
@@ -49,8 +52,9 @@ The living design is in your Fusion; save it to your own project.
   side USB notch is **gone** — see the USB-C base jack section below. The
   only opening in its walls is the **wing notch**: the +X wall is cut away
   at its bottom edge over 27.6 mm (y ±13.8) from the rim up to z +2, so
-  the plate's wing passes under the wall (z −8..−2) and the 4 mm above the
-  wing is the slot the PIR wires come through onto the plate. (The pod
+  the plate's wing passes under the wall (z −8..−2) and the 4.5 mm above
+  the wing (to z 2.5, `pirNotchTop`) is the slot the PIR wires come
+  through onto the plate. (The pod
   lived on this wall from 2026-10-11 to 2026-10-25; it moved to the plate
   so that every wire stays on the plate and the shell lifts off clean, and
   so that nothing needs supports any more.) The +X pair of snap bumps
@@ -87,7 +91,7 @@ shell's notch is a bottom-edge cut-out. The two
 small horizontal holes in the plate print on their side and may close up
 a little: the Ø1.9 keeper pin hole through the wing may need a 1.8–1.9 mm
 drill run through it before the filament stub will pass, and the Ø3 wire
-hole out of the tower's −X face (sloping 18°) a 3 mm drill if the wires
+hole out of the tower's −X face (sloping 17°) a 3 mm drill if the wires
 are snug. The two wing Technic holes are blind (8 mm deep) and bridge
 their Ø4.9 ceiling inside the tower; that bridges fine at 0.2 mm layers.
 Back plate: print flat (back face down). Shell: print open-side-up.
@@ -168,8 +172,8 @@ down means holding an iron over them.
      end (the fence bars are 5 mm tall; the wires climb over the −Y one
      or run across the bay above the board to D1, 3V3 and GND).
 3. Snap the shell on: its +X wall drops over the wing through the notch,
-   the wires pass through the 4 mm slot above the wing, and the −X bumps
-   click into the plate grooves. There is no USB notch to hook a
+   the wires pass through the 4.5 mm slot above the wing, and both snap
+   pairs click into the plate grooves. There is no USB notch to hook a
    fingernail into, so to get the lid back off, work a thin plastic
    spudger or guitar pick into the parting seam at a corner and walk it
    along until the bumps let go.

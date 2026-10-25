@@ -74,6 +74,7 @@ def check_snaps(plate, shell, des):
         solid(shell, 20.75, sy * ypx, -1.0, "+X bump at y %+.1f" % (sy * ypx))
         solid(shell, 20.75, sy * (ypx + 2.5), -1.0, "+X bump reaches y %+.1f" % (sy * (ypx + 2.5)))
         void(shell, 20.75, sy * (ypx + 3.5), -1.0, "+X bump ends before y %+.1f" % (sy * (ypx + 3.5)))
+        solid(shell, 20.75, sy * (ypx - 2.9), -1.0, "+X bump's inboard end at y %+.1f (outside the notch)" % (sy * (ypx - 2.9)))
         void(shell, 20.75, sy * ypx, -3.0, "+X bump only spans z -1.6..-0.4")
         solid(shell, 22.0, sy * ypx, -1.0, "+X wall solid behind the bump (outside the notch)")
         void(plate, 20.6, sy * ypx, -1.0, "+X pocket at y %+.1f" % (sy * ypx))
@@ -307,14 +308,21 @@ def check_radar_cable_exit(plate):
 # probe at z +4 that replaces the old z 7 one.
 
 
-def check_shell_notch(shell):
-    """The +X wall is cut away over the wing's width from the back rim to
-    z +2 (03_shell.py step 7): the wing passes under it (z -8..-2) and the
-    4 mm above is the wire slot. The wall is intact above and beyond it."""
+def check_shell_notch(shell, des):
+    """The +X wall is cut away over the wing's width (y +/-13.8) from the
+    back rim to z pirNotchTop (03_shell.py step 7): the wing passes under
+    it (z -8..-2) and the 4.5 mm above is the wire slot. The wall is intact
+    above and beyond it."""
+    notchTop = des.userParameters.itemByName("pirNotchTop").value * 10
     void(shell, 22.0, 0.0, -4.0, "notch open where the wing passes under the wall")
     void(shell, 22.0, 0.0, 1.0, "wire slot open above the wing")
     void(shell, 22.0, 13.0, -4.0, "notch reaches the wing's +Y side (13.5)")
     void(shell, 22.0, -13.0, -4.0, "notch reaches the wing's -Y side")
+    for sy in (1, -1):
+        void(shell, 22.0, sy * 13.7, -4.0, "notch open 0.1 mm inside its %sY face (13.8)" % ("+" if sy > 0 else "-"))
+        solid(shell, 22.0, sy * 14.0, -4.0, "wall solid 0.2 mm beyond the notch's %sY face" % ("+" if sy > 0 else "-"))
+    void(shell, 22.0, 0.0, notchTop - 0.2, "wire slot open 0.2 mm under the notch top (pirNotchTop %.1f)" % notchTop)
+    solid(shell, 22.0, 0.0, notchTop + 0.2, "wall solid 0.2 mm above the notch top")
     solid(shell, 22.0, 0.0, 4.0, "+X wall solid above the notch")
     solid(shell, 22.0, 0.0, 10.0, "+X wall solid at mid-height")
     solid(shell, 22.0, 16.0, -4.0, "+X wall solid beyond the notch (+Y)")
@@ -390,6 +398,17 @@ def check_pir_pod(plate, shell, des):
     solid(plate, (xTow1 - ch - 0.03) * 10, 0.0, z_dn + (ch + 0.03) * math.tan(tilt) * 10 - (ch + 0.03) * 10, "tower solid inboard of the top chamfer")
     void(plate, (xTow1 - 0.02) * 10, 0.0, zBack * 10 + 0.2, "wing rim fillet: old +X back edge gone")
     solid(plate, (xTow1 - 0.02) * 10, 0.0, zBack * 10 + 1.5, "+X face solid above the rim fillet")
+    # +-Y top chamfer (1 mm off the 2 mm wall at the top edge only): void
+    # 0.3 mm inside both old faces, solid on the 1 mm flat left between the
+    # chamfer (starts y 12.5) and the recess rim (11.5); and the rim edge
+    # itself stayed sharp: solid 0.2 mm inside it at d 0.2, all round.
+    for sy in (1, -1):
+        tag = "+Y" if sy > 0 else "-Y"
+        x, yy, z = on_top(0.03, 0.0, sy * (podL / 2 - 0.03)); void(plate, x, yy, z, "top chamfer: old %s top edge gone" % tag)
+        x, yy, z = on_top(0.03, 0.0, sy * (recessR + 0.05)); solid(plate, x, yy, z, "flat top between the %s chamfer and the recess rim" % tag)
+    for tag, u, y in (("downhill", sgn * (recessR + 0.02), 0.0), ("uphill", -sgn * (recessR + 0.02), 0.0),
+                      ("+Y", 0.0, recessR + 0.02), ("-Y", 0.0, -(recessR + 0.02))):
+        x, yy, z = on_top(0.02, u, y); solid(plate, x, yy, z, "recess rim edge sharp (solid 0.2 mm inside it), %s" % tag)
     for tag, u, y in (("downhill", sgn * (recessR + 0.1), 0.0), ("uphill", -sgn * (recessR + 0.1), 0.0),
                       ("+Y", 0.0, recessR + 0.1), ("-Y", 0.0, -(recessR + 0.1))):
         x, yy, z = on_top(0.03, u, y); solid(plate, x, yy, z, "rim solid 0.3 mm under the canted top, %s" % tag)
@@ -444,15 +463,22 @@ def check_pir_pod(plate, shell, des):
         FAILURES.append("keeper pin hole (z %.2f mm) leaves under 1 mm of wing to the back face" % zp)
     if not (xp + pinDia * 5 + 0.6 < 48.95 - 3.2):
         FAILURES.append("keeper pin hole at x %.2f mm is under 0.6 mm from the wing Technic holes" % xp)
-    # wire hole (02 step 14c): leaves the bore at axis depth pirWireD and
-    # slopes down to exit the tower's -X face at z WIRE_EXIT_Z = 0.2,
-    # inside the shell's wire slot z -2..+2. Probe the exit just inside the
-    # face, the same point outside it (free air, then the shell's notch at
-    # the wall), and the hole's body half way along.
-    WIRE_EXIT_Z = 0.04
+    # wire hole (02 step 14c): its centre line starts on the bore axis at
+    # depth pirWireD and slopes down to exit the tower's -X face centred at
+    # z pirWireExitZ (0.4), inside the shell's wire slot z -2..pirNotchTop.
+    # Probe the exit just inside the face (lip under it, rim extents, face
+    # solid above it up to the notch top), the shell's notch in line with
+    # it, and the hole's body on its way to the bore.
+    WIRE_EXIT_Z = pv("pirWireExitZ")
+    notchTop = pv("pirNotchTop") * 10
     xw, _, zw = along(pv("pirWireD"))
-    void(plate, (xTow0 + 0.05) * 10, 0.0, WIRE_EXIT_Z * 10 + 0.2, "wire hole exit on the tower's -X face")
-    void(plate, (xTow0 + 0.05) * 10, 0.0, WIRE_EXIT_Z * 10 - 0.8, "wire hole exit, lower part")
+    xf = (xTow0 + 0.05) * 10                      # 0.5 mm inside the -X face
+    void(plate, xf, 0.0, WIRE_EXIT_Z * 10 + 0.2, "wire hole exit on the tower's -X face")
+    void(plate, xf, 0.0, WIRE_EXIT_Z * 10 - 0.8, "wire hole exit, lower part")
+    solid(plate, xf, 0.0, -1.6, "lip between the wire hole's rim and the wing top (z -2)")
+    void(plate, xf, 0.0, -1.0, "wire hole rim reaches down past z -1.0")
+    void(plate, xf, 0.0, 1.8, "wire hole rim reaches up past z 1.8")
+    solid(plate, xf, 0.0, notchTop + 0.2, "tower -X face solid at the notch top: the rim stops under the slot top")
     void(shell, 22.0, 0.0, WIRE_EXIT_Z * 10, "shell notch open in line with the wire hole exit")
     void(shell, 22.0, 0.0, -1.5, "shell notch open down to the wing top")
     # the hole's body 2.7 mm in from the exit (x 26: well outside the bore,
@@ -466,9 +492,9 @@ def check_pir_pod(plate, shell, des):
     solid(plate, xm, 0.0, zm + 2.5, "tower solid over the wire hole")
     solid(plate, (xTow0 + 0.05) * 10, 0.0, 3.0, "tower -X face solid above the wire exit")
     rimZ = pv("pirWireDia") / 2 * 10 / math.cos(slope)     # mm, exit ellipse half-height
-    if not (zWing * 10 + 0.5 < WIRE_EXIT_Z * 10 - rimZ and WIRE_EXIT_Z * 10 + rimZ < 2.0):
-        FAILURES.append("wire hole exit (z %.2f..%.2f mm) is not inside the wire slot z -2..2"
-                        % (WIRE_EXIT_Z * 10 - rimZ, WIRE_EXIT_Z * 10 + rimZ))
+    if not (zWing * 10 + 0.5 < WIRE_EXIT_Z * 10 - rimZ and WIRE_EXIT_Z * 10 + rimZ < notchTop):
+        FAILURES.append("wire hole exit (z %.2f..%.2f mm) is not inside the wire slot z -2..%.1f"
+                        % (WIRE_EXIT_Z * 10 - rimZ, WIRE_EXIT_Z * 10 + rimZ, notchTop))
     # lens cone edges: rays from the front-face axis point at +/-25 deg from
     # the bore axis in the XZ plane, probed 15 mm out, must be in free air
     # (neither the plate's tower nor the shell)
@@ -501,7 +527,7 @@ def run(_context: str):
     check_cap_cradle(plate)
     check_fence_walls_continuous(plate)
     check_radar_cable_exit(plate)
-    check_shell_notch(shell)
+    check_shell_notch(shell, des)
     check_pir_pod(plate, shell, des)
 
     if FAILURES:
