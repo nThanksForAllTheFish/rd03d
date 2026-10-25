@@ -69,6 +69,15 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
   alternates ON/OFF strictly. Don't reconfigure it to "per topic" mode; that
   can swallow legitimate ONs.
 
+## Manual remote (2026-10-25)
+
+The bridge reports every RF code it hears on `tele/sonoffBridge/RESULT`,
+including the hand remote's, as `RfReceived` with `RfKey` 1 (ON) or 2 (OFF).
+The "manual OFF resets the hold" node listens there: a manual OFF resets the
+trigger's hold and the rbe, so the next approach sends a fresh ON instead of
+being swallowed by a hold that still thinks the light is on. A manual ON needs
+nothing. Edit the topic in that mqtt-in node if the bridge's name changes.
+
 ## PIR companion (2026-10-11)
 
 The flow also subscribes to `rd03d/pir`. Edit `SOURCE` in the "source switch"

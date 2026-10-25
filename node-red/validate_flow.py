@@ -123,4 +123,12 @@ if csv.get("overwriteFile") != "false" or csv.get("appendNewline") is not True:
 if csv.get("filename") != "/data/stair_compare.csv":
     fail("CSV file node must write /data/stair_compare.csv")
 
+# Manual-remote resync (2026-10-25): a bridge RfReceived with RfKey 2 resets the hold
+rfin = one("mqtt in", lambda n: n.get("topic") == "tele/sonoffBridge/RESULT", "for the bridge's RESULT")
+rfres = one("function", lambda n: n.get("name", "").startswith("manual OFF resets"), "manual-off reset")
+if "reset: true" not in rfres["func"] or "RfKey !== 2" not in rfres["func"]:
+    fail("manual-off reset node must send reset:true on RfKey 2")
+if not wired(rfin, rfres) or not wired(rfres, trig) or not wired(rfres, rbe):
+    fail("manual-off reset must wire bridge RESULT -> reset -> trigger and rbe")
+
 print("flow validation passed")

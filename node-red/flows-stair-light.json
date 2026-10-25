@@ -286,5 +286,38 @@
         "x": 560,
         "y": 260,
         "wires": [[]]
+    },
+    {
+        "id": "stairrfin1",
+        "type": "mqtt in",
+        "z": "stairtab1",
+        "name": "bridge hears the remote",
+        "topic": "tele/sonoffBridge/RESULT",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "stairbroker1",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 420,
+        "wires": [["stairrf1"]]
+    },
+    {
+        "id": "stairrf1",
+        "type": "function",
+        "z": "stairtab1",
+        "name": "manual OFF resets the hold (EDIT DEVICE)",
+        "func": "// The bridge reports every RF code it hears, including the hand remote's.\n// A manual OFF (RfKey 2) desyncs the flow: its hold is still running, so the\n// next approach would send nothing. Reset the trigger and the rbe so a fresh\n// approach starts a new ON. A manual ON needs nothing.\nlet d;\ntry { d = JSON.parse(msg.payload); } catch (e) { return null; }\nconst rf = d && d.RfReceived;\nif (!rf || rf.RfKey !== 2) return null;\nreturn { reset: true, topic: \"manual-off\" };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 420,
+        "wires": [["stairtrig1", "stairrbe1"]]
     }
 ]
