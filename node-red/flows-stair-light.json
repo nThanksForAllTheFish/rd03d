@@ -126,7 +126,7 @@
         "type": "function",
         "z": "stairtab1",
         "name": "to Sonoff RF bridge (EDIT DEVICE)",
-        "func": "// The stair light is a radio-controlled lamp driven through a Tasmota Sonoff\n// RF Bridge. RfKey1 is the learned ON code, RfKey2 the learned OFF code.\n// Edit BRIDGE if the bridge's Tasmota topic changes.\nconst BRIDGE = \"sonoffBridge\";\nmsg.topic = \"cmnd/\" + BRIDGE + (msg.payload === \"ON\" ? \"/RfKey1\" : \"/RfKey2\");\nmsg.payload = \"4\";   // Tasmota RfKey<x>: 4 = send the LEARNED code (1 would send the default code)\nreturn msg;",
+        "func": "// The stair light is a radio-controlled lamp driven through a Tasmota Sonoff\n// RF Bridge. RfKey1 is the learned ON code, RfKey2 the learned OFF code.\n// Edit BRIDGE if the bridge's Tasmota topic changes.\nconst BRIDGE = \"sonoffBridge\";\nmsg.topic = \"cmnd/\" + BRIDGE + (msg.payload === \"ON\" ? \"/RfKey1\" : \"/RfKey2\");\nmsg.payload = \"\";    // empty = send the learned code (this bridge answered 1 with \"Default sent\" and 4 with \"Saved\")\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,

@@ -18,7 +18,7 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
 2. **Device** — the light is a radio-controlled lamp driven through a Tasmota
    Sonoff RF Bridge: double-click *"to Sonoff RF bridge (EDIT DEVICE)"* and set
    `BRIDGE` to the bridge's Tasmota topic. ON sends `cmnd/<BRIDGE>/RfKey1`,
-   OFF sends `RfKey2` (payload `4` = send the learned code; `1` sends Tasmota's default code). For a Tasmota
+   OFF sends `RfKey2` (empty payload = send the learned code; on this bridge `1` sent the default code and `4` saved). For a Tasmota
    relay instead, make the node set `msg.topic` to `cmnd/<device>/POWER` and
    leave the payload as ON/OFF.
 3. **Zone** — double-click *"zone filter (EDIT ZONE)"* and set the four
