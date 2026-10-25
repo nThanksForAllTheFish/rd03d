@@ -62,25 +62,39 @@ def check_baseline(plate, shell):
 
 
 def check_snaps(plate, shell, des):
-    """Snap pairs: -X at y +/-12 as always; the +X pair moved to y +/-snapYpx
-    (17) on 2026-10-25, outboard of the shell's wing notch (y +/-13.8), so
-    the lid's +X end is still retained. Bumps are 6 mm long and 0.5 proud
-    of the inner wall (x 20.5..23 on +X), z -1.6..-0.4; pockets 6.2 long,
-    0.6 into the plate edge (x 20.25..20.85), z -1.7..-0.3."""
+    """Snap pairs: -X at y +/-12 as always; the +X pair at y +/-snapYpx
+    (19 since 2026-10-25 evening), outboard of the shell's pod box walls
+    (y +/-15.5) so the lid's +X end is still retained. Bumps are 6 mm long
+    and 0.5 proud of the inner wall (x 20.5..23 on +X), z -1.6..-0.4;
+    pockets 6.2 long, 0.6 into the plate edge (x 20.25..20.85), z -1.7..-0.3.
+    The bump's inboard end must clear the box wall by 0.3 and its outboard
+    end the cavity's +/-Y wall by 0.5 (03_shell.py step 5 asserts the same;
+    here so a hand-edited parameter cannot slip past a stale shell)."""
     ypx = des.userParameters.itemByName("snapYpx").value * 10
+    boxOutY = (des.userParameters.itemByName("pirBoxHalfY").value
+               + des.userParameters.itemByName("wall").value) * 10
+    intH = des.userParameters.itemByName("intH").value * 10
+    if not (ypx - 3 >= boxOutY + 0.3 - 1e-9):
+        FAILURES.append("snapYpx %.1f: the +X bump's inboard end (y %.1f) is under 0.3 mm "
+                        "from the pod box wall (y %.1f)" % (ypx, ypx - 3, boxOutY))
+    if not (ypx + 3 <= intH / 2 - 0.5 + 1e-9):
+        FAILURES.append("snapYpx %.1f: the +X bump's outboard end (y %.1f) is under 0.5 mm "
+                        "from the cavity wall (y %.1f)" % (ypx, ypx + 3, intH / 2))
     for sy in (-1, 1):
-        # +X side: bump and pocket at +/-ypx, none left at +/-12
-        void(shell, 20.75, sy * 12, -1.0, "old +X bump at y %+.0f gone (notch)" % (sy * 12))
+        # +X side: bump and pocket at +/-ypx, none at +/-12 (where the box
+        # cavity is open now: at x 20.75 that point is in the main cavity)
+        void(shell, 20.75, sy * 12, -1.0, "no +X bump at y %+.0f (box cavity)" % (sy * 12))
         solid(shell, 20.75, sy * ypx, -1.0, "+X bump at y %+.1f" % (sy * ypx))
         solid(shell, 20.75, sy * (ypx + 2.5), -1.0, "+X bump reaches y %+.1f" % (sy * (ypx + 2.5)))
         void(shell, 20.75, sy * (ypx + 3.5), -1.0, "+X bump ends before y %+.1f" % (sy * (ypx + 3.5)))
-        solid(shell, 20.75, sy * (ypx - 2.9), -1.0, "+X bump's inboard end at y %+.1f (outside the notch)" % (sy * (ypx - 2.9)))
+        solid(shell, 20.75, sy * (ypx - 2.9), -1.0, "+X bump's inboard end at y %+.1f" % (sy * (ypx - 2.9)))
+        void(shell, 20.75, sy * (ypx - 3.5), -1.0, "+X bump starts after y %+.1f (box wall clear)" % (sy * (ypx - 3.5)))
         void(shell, 20.75, sy * ypx, -3.0, "+X bump only spans z -1.6..-0.4")
-        solid(shell, 22.0, sy * ypx, -1.0, "+X wall solid behind the bump (outside the notch)")
+        solid(shell, 22.0, sy * ypx, -1.0, "+X wall solid behind the bump (outboard of the box)")
         void(plate, 20.6, sy * ypx, -1.0, "+X pocket at y %+.1f" % (sy * ypx))
         void(plate, 20.6, sy * (ypx + 2.9), -1.0, "+X pocket reaches y %+.1f" % (sy * (ypx + 2.9)))
         solid(plate, 20.6, sy * (ypx + 3.5), -1.0, "plate edge solid past the +X pocket")
-        solid(plate, 20.6, sy * 12, -1.0, "no +X pocket left at y %+.0f" % (sy * 12))
+        solid(plate, 20.6, sy * 12, -1.0, "no +X pocket at y %+.0f" % (sy * 12))
         solid(plate, 20.6, sy * ypx, -2.5, "plate solid below the +X pocket (blind)")
         solid(plate, 20.6, sy * ypx, -0.1, "plate solid above the +X pocket (blind)")
         # -X side unchanged at +/-12
@@ -182,17 +196,22 @@ def check_lego_bores_clear(plate):
             void(plate, cx + dx, cy, 0.5,
                  "Technic bore (%.2f, %+.0f) unroofed at dx=%+.1f"
                  % (cx, cy, dx))
-    # The two WING holes (2026-10-25, 02_backplate step 14d) at (48.95,
-    # +/-4) are BLIND: 8 mm deep from the back face, ending inside the
-    # tower's solid material at z 0, so the "unroofed" probe is inverted for
-    # them: open and counterbored at the back, solid 0.5 mm past the end.
+    # The two WING holes (2026-10-25 evening, 02_backplate step 14d) at
+    # (24.95, +/-4) go THROUGH the 6 mm wing (z -8..-2) and open into the
+    # shell's pod box cavity, which is empty there (a pin stands 2 mm
+    # proud). Open and counterbored at the back, open at the wing top, wing
+    # solid beside them, nothing of the plate above them (the socket boss
+    # is 1.13 mm away in plan, 02 asserts it).
     for cy in (-4, 4):
-        void(plate, 48.95, cy, -7.5, "wing bore (48.95, %+.0f) open 0.5 mm above the back face" % cy)
-        void(plate, 48.95 + 2.8, cy, -7.55, "wing bore (48.95, %+.0f) rear counterbore" % cy)
-        void(plate, 48.95, cy, -4.0, "wing bore (48.95, %+.0f) mid-depth" % cy)
-        void(plate, 48.95, cy, -0.5, "wing bore (48.95, %+.0f) open to its full 8 mm" % cy)
-        solid(plate, 48.95, cy, 0.5, "wing bore (48.95, %+.0f) ends blind in the tower" % cy)
-        solid(plate, 48.95 + 2.8, cy, -6.5, "tower/wing solid beside the wing bore (48.95, %+.0f)" % cy)
+        void(plate, 24.95, cy, -7.5, "wing bore (24.95, %+.0f) open 0.5 mm above the back face" % cy)
+        void(plate, 24.95 + 2.8, cy, -7.55, "wing bore (24.95, %+.0f) rear counterbore" % cy)
+        solid(plate, 24.95 + 2.8, cy, -6.5, "wing solid beside the wing bore (24.95, %+.0f) above its counterbore" % cy)
+        void(plate, 24.95, cy, -5.0, "wing bore (24.95, %+.0f) mid-depth" % cy)
+        void(plate, 24.95, cy, -2.3, "wing bore (24.95, %+.0f) open 0.3 mm under the wing top" % cy)
+        for dx in (-1.5, 0.0, 1.5):
+            void(plate, 24.95 + dx, cy, -1.5,
+                 "wing bore (24.95, %+.0f) unroofed above the wing at dx=%+.1f" % (cy, dx))
+        solid(plate, 24.95, cy + 2.8, -5.0, "wing solid beside the wing bore (24.95, %+.0f) in y" % cy)
 
 
 def check_usb_jack(plate):
@@ -299,214 +318,221 @@ def check_radar_cable_exit(plate):
     void(plate, 12.0, -13.0, 2.0, "cable lane clear at the collar's +Y face")
 
 
-# RETIRED 2026-10-25: check_no_shell_notch. It asserted the +X wall solid at
-# (22, 0, -6), (22, 0, -2), (22, 0, 2) and (22, +/-4, 0) - exactly the
-# region the wing notch now removes (y +/-13.8, z -8..+2). Its probes and
-# the notch's cannot both hold, so the def is gone rather than left to fail
-# or to be rewritten into check_shell_notch's negation. check_shell_notch
-# below owns that wall now, including the "still solid above the notch"
-# probe at z +4 that replaces the old z 7 one.
+# RETIRED 2026-10-25 (morning): check_no_shell_notch, which asserted the +X
+# wall solid where the wing notch then cut it.
+# RETIRED 2026-10-25 (evening): check_shell_notch and check_pir_pod. The
+# notch is gone with the wing tower it served: the shell's +X wall over the
+# pod's width is now replaced by the pod box (check_pod_box), and the tower
+# with its recess, ledge, groove, canted top and sloped wire hole by the
+# straight socket boss (check_pir_socket). Nothing those two asserted can
+# hold any more, so they are deleted rather than left to fail.
 
 
-def check_shell_notch(shell, des):
-    """The +X wall is cut away over the wing's width (y +/-13.8) from the
-    back rim to z pirNotchTop (03_shell.py step 7): the wing passes under
-    it (z -8..-2) and the 4.5 mm above is the wire slot. The wall is intact
-    above and beyond it."""
-    notchTop = des.userParameters.itemByName("pirNotchTop").value * 10
-    void(shell, 22.0, 0.0, -4.0, "notch open where the wing passes under the wall")
-    void(shell, 22.0, 0.0, 1.0, "wire slot open above the wing")
-    void(shell, 22.0, 13.0, -4.0, "notch reaches the wing's +Y side (13.5)")
-    void(shell, 22.0, -13.0, -4.0, "notch reaches the wing's -Y side")
-    for sy in (1, -1):
-        void(shell, 22.0, sy * 13.7, -4.0, "notch open 0.1 mm inside its %sY face (13.8)" % ("+" if sy > 0 else "-"))
-        solid(shell, 22.0, sy * 14.0, -4.0, "wall solid 0.2 mm beyond the notch's %sY face" % ("+" if sy > 0 else "-"))
-    void(shell, 22.0, 0.0, notchTop - 0.2, "wire slot open 0.2 mm under the notch top (pirNotchTop %.1f)" % notchTop)
-    solid(shell, 22.0, 0.0, notchTop + 0.2, "wall solid 0.2 mm above the notch top")
-    solid(shell, 22.0, 0.0, 4.0, "+X wall solid above the notch")
-    solid(shell, 22.0, 0.0, 10.0, "+X wall solid at mid-height")
-    solid(shell, 22.0, 16.0, -4.0, "+X wall solid beyond the notch (+Y)")
-    solid(shell, 22.0, -16.0, -4.0, "+X wall solid beyond the notch (-Y)")
-    void(shell, 19.0, 0.0, 7.0, "cavity still open inside the +X wall")
-
-
-def check_pir_pod(plate, shell, des):
-    """Pod tower on the PLATE's wing (02_backplate.py step 14, 2026-10-25):
-    recess and bore void, ledge and tower walls solid, bore open at the back
-    face through the wing, keeper pin hole through both tower walls, wire
-    hole out of the tower's -X face into the shell's notch, lens cone edges
-    clear, the wing itself solid under the tower and fused to the plate."""
+def check_pod_box(shell, plate, des):
+    """The shell's pod box (03_shell.py step 5c): the +X wall is gone over
+    |y| <= pirBoxHalfY from the back rim to z 14 and a 2 mm-walled box
+    stands there, x 21..pirCx + pirBoxHalfY + wall, y +/-(pirBoxHalfY +
+    wall), z -8..16, open to the shell's cavity, with the r pirRecessR
+    lens hole through its top at (pirCx, 0). Its outer edges carry the
+    shell's softening (r 2.5 corners, 1 mm front chamfer, 0.8 rim fillet),
+    the lens hole rim and the two T-junction corners stay sharp."""
     import math
-    def pv(n): return des.userParameters.itemByName(n).value
-    wall, intW, intD, backT = pv("wall"), pv("intW"), pv("intD"), pv("backT")
-    rimGap = pv("rimGap")
-    recessR, recessD, boreR, podWall = pv("pirRecessR"), pv("pirRecessD"), pv("pirBoreR"), pv("pirPodWall")
-    tilt = pv("pirTilt") if pv("pirTilt") < 1.6 else math.radians(pv("pirTilt"))
-    sgn = 1.0 if pv("pirTiltSign") >= 0 else -1.0
-    POD_GAP, WING_T = 0.03, 0.6                     # cm, as in 02 step 14
-    xTow0 = intW / 2 + wall + POD_GAP               # 23.3
-    zTop, zBack = intD + wall, -backT
-    zWing = zBack + WING_T                          # -2
-    depth = zTop - zBack
-    podW = 2 * (recessR + podWall) + depth * math.tan(tilt)
-    podL = 2 * (recessR + podWall)
-    podCx = xTow0 + podW / 2
-    xTow1 = xTow0 + podW
-    ax = (sgn * math.sin(tilt), math.cos(tilt))
-    uv = (math.cos(tilt), -sgn * math.sin(tilt))   # across the tilt, in the top plane
-    # solid()/void() take MILLIMETRES (they scale by MM internally); the
-    # parameters above are cm, so along() converts on the way out.
-    def along(d, side=0.0):            # cm along the axis in, cm sideways in Y -> mm tuple
-        return ((podCx - ax[0] * d) * 10, side * 10, (zTop - ax[1] * d) * 10)
-    def on_top(d, u, y=0.0):           # d in along the axis, u across the tilt, y sideways
-        return ((podCx - ax[0] * d + uv[0] * u) * 10, y * 10, (zTop - ax[1] * d + uv[1] * u) * 10)
-    # wing: solid between the plate edge and the tower, under the tower,
-    # and nothing above it outside the tower (the notch region)
-    solid(plate, (intW / 2 - rimGap + xTow0) / 2 * 10, 0.0, -5.0, "wing fused to the plate edge")
-    solid(plate, (intW / 2 - rimGap + xTow0) / 2 * 10, 12.5, -5.0, "wing full width (+Y)")
-    solid(plate, (xTow1 - 0.1) * 10, 0.0, -5.0, "wing reaches the tower's far end")
-    void(plate, (intW / 2 - rimGap + xTow0) / 2 * 10, 0.0, -1.0, "nothing above the wing between plate and tower")
-    void(plate, (intW / 2 - rimGap + xTow0) / 2 * 10, 0.0, -8.5, "wing back face flush with the plate's")
-    # canted top (02 step 14b', 2026-10-25): the top face is the plane
-    # through the axis point at z 16 with the bore axis as its normal, so
-    # the downhill (+X) corner is at z 16 - 17.4*tan18 = 10.35 and the
-    # uphill (-X) corner at 21.65. Probe just under / over the plane at the
-    # four rim points 1 mm outside the recess, and at both tower ends.
-    z_dn = (zTop - (xTow1 - podCx) * math.tan(tilt)) * 10
-    z_up = (zTop + (podCx - xTow0) * math.tan(tilt)) * 10
-    # (y 8: inboard of the r 2.5 corner fillets, see below)
-    solid(plate, (xTow1 - 0.1) * 10, 8.0, z_dn - 1.5, "tower downhill end solid 1.5 mm under the canted top")
-    void(plate, (xTow1 - 0.1) * 10, 8.0, z_dn + 0.5, "nothing above the canted top at the downhill end")
-    solid(plate, (xTow0 + 0.1) * 10, 8.0, z_up - 1.5, "tower uphill end solid 1.5 mm under the canted top")
-    void(plate, (xTow0 + 0.1) * 10, 8.0, z_up + 0.5, "nothing above the canted top at the uphill end")
-    # softened edges (02 step 14d'): r cornerFillet on the four outer
-    # vertical corners (void where the sharp corner was, 0.3 mm inside the
-    # old faces; solid 0.3 mm inside the fillet surface on the diagonal),
-    # frontChamfer round the canted top (void 0.3 mm inside the old +X top
-    # edge), softFillet on the wing's back rim (void 0.2 mm inside the old
-    # +X back edge).
-    r = pv("cornerFillet")
-    k = (r - 0.03) / math.sqrt(2)
-    for cx, zmid in ((xTow1, 4.0), (xTow0, 8.0)):
-        sx = 1 if cx > podCx else -1
+    def pv(n): return des.userParameters.itemByName(n).value * 10
+    wall, intW, intD = pv("wall"), pv("intW"), pv("intD")
+    cx, hy, lensR = pv("pirCx"), pv("pirBoxHalfY"), pv("pirRecessR")
+    xIn, xBoxIn, xBoxOut = intW / 2, cx + hy, cx + hy + wall     # 21, 49, 51
+    by = hy + wall                                               # 15.5
+    zTop = intD + wall                                           # 16
+    # old +X wall gone over the box's width, present outboard of it
+    for z in (-6.0, 5.0, 13.5):
+        void(shell, 22.0, 0.0, z, "old +X wall gone at y 0, z %.1f" % z)
+    for sy in (1, -1):
+        void(shell, 22.0, sy * 13.0, 5.0, "old +X wall gone at y %+.0f" % (sy * 13))
+        solid(shell, 22.0, sy * 14.5, 5.0, "box +/-Y wall (y %+.1f) in the old wall's footprint" % (sy * 14.5))
+        solid(shell, 22.0, sy * 18.0, 5.0, "+X wall present at y %+.0f" % (sy * 18))
+        solid(shell, 22.0, sy * 18.0, -4.0, "+X wall present at y %+.0f down to the rim (no notch)" % (sy * 18))
+        solid(shell, 22.0, sy * 18.0, 1.0, "+X wall present at y %+.0f (no wire slot)" % (sy * 18))
+    solid(shell, 22.0, 0.0, 15.0, "front face continues over the old wall line")
+    # box walls solid at three heights; cavity void; cavity open to the shell
+    for z in (-6.0, 5.0, 12.0):
+        solid(shell, xBoxOut - 1.0, 0.0, z, "box +X wall at z %.0f" % z)
         for sy in (1, -1):
-            tag = "x %.1f y %+.1f" % (cx * 10, sy * podL / 2 * 10)
-            void(plate, (cx - sx * 0.03) * 10, sy * (podL / 2 - 0.03) * 10, zmid, "old sharp corner gone at " + tag)
-            solid(plate, (cx - sx * r + sx * k) * 10, sy * (podL / 2 - r + k) * 10, zmid, "fillet surface solid inside at " + tag)
+            solid(shell, cx, sy * (hy + 1.0), z, "box %sY wall at z %.0f" % ("+" if sy > 0 else "-", z))
+            void(shell, cx, sy * (hy - 0.1), z, "box cavity open 0.1 mm inside its %sY wall" % ("+" if sy > 0 else "-"))
+        void(shell, cx + 4.5, 0.0, z, "box cavity at z %.0f" % z)
+        void(shell, xBoxIn - 0.1, 0.0, z, "box cavity open 0.1 mm inside its +X wall at z %.0f" % z)
+    void(shell, cx, 10.0, -1.0, "box cavity open just above the wing top")
+    void(shell, cx, 0.0, 13.5, "box cavity open up to the top's underside")
+    void(shell, xIn, 0.0, 5.0, "box open to the shell's cavity at the old wall line")
+    void(shell, xIn, 0.0, -6.0, "box open to the shell's cavity down at the rim (the wing passes)")
+    # the plate's wing sits in the cavity with rimGap
+    # (z -6.5, not -5: the keeper pin hole runs along Y at (pirCx, -4.75))
+    solid(plate, cx, 13.3, -6.5, "wing reaches y 13.3 inside the box cavity")
+    void(shell, cx, 13.3, -6.5, "box cavity clear of the wing's +Y side")
+    solid(plate, xBoxIn - 0.3, 0.0, -5.0, "wing reaches x %.1f inside the box cavity" % (xBoxIn - 0.3))
+    void(shell, xBoxIn - 0.3, 0.0, -5.0, "box cavity clear of the wing's far end")
+    # top: 2 mm over the box with the lens hole
+    for sy in (1, -1):
+        solid(shell, cx, sy * 12.0, 15.0, "top solid at y %+.0f (outside the lens hole)" % (sy * 12))
+        void(shell, cx, sy * 11.2, 15.0, "lens hole open at y %+.1f" % (sy * 11.2))
+        void(shell, cx + sy * 11.2, 0.0, 15.0, "lens hole open at x %+.1f from the axis" % (sy * 11.2))
+    void(shell, cx, 0.0, 15.0, "lens hole open on the axis")
+    void(shell, cx, 0.0, 14.1, "lens hole open at the top's underside")
+    void(shell, cx, 0.0, 15.9, "lens hole open at the face")
+    solid(shell, cx + lensR + 0.5, 0.0, 15.0, "top solid 0.5 mm outside the lens hole (+X)")
+    solid(shell, cx - lensR - 0.5, 0.0, 15.0, "top solid 0.5 mm outside the lens hole (-X)")
+    solid(shell, xBoxIn - 0.5, 0.0, 15.0, "top solid over the box's +X wall")
+    # lens hole rim sharp (the front chamfer skips it): solid 0.2 mm
+    # outside the rim 0.2 mm under the face, all round
+    for tag, dx, dy in (("+X", lensR + 0.2, 0.0), ("-X", -(lensR + 0.2), 0.0),
+                        ("+Y", 0.0, lensR + 0.2), ("-Y", 0.0, -(lensR + 0.2))):
+        solid(shell, cx + dx, dy, zTop - 0.2, "lens hole rim sharp (not chamfered), %s" % tag)
+    # softening on the box: r cornerFillet on its two outer vertical
+    # corners (void where the sharp corner was, solid 0.3 mm inside the
+    # fillet surface on the diagonal), frontChamfer round its top edges,
+    # softFillet on its back rim; the T-junction corners at (23, +/-15.5)
+    # sharp (solid right into the concave corner on both faces, nothing
+    # filled in outside it)
+    r = pv("cornerFillet")
+    k = (r - 0.3) / math.sqrt(2)
+    for sy in (1, -1):
+        tag = "(%.0f, %+.1f)" % (xBoxOut, sy * by)
+        void(shell, xBoxOut - 0.3, sy * (by - 0.3), 5.0, "box sharp corner gone at " + tag)
+        solid(shell, xBoxOut - r + k, sy * (by - r + k), 5.0, "box corner fillet surface solid inside at " + tag)
+        solid(shell, 22.9, sy * 15.6, 5.0, "T-junction: +X wall solid up to the concave corner, %sY" % ("+" if sy > 0 else "-"))
+        solid(shell, 23.1, sy * 15.4, 5.0, "T-junction: box wall solid up to the concave corner, %sY" % ("+" if sy > 0 else "-"))
+        void(shell, 23.3, sy * 15.8, 5.0, "T-junction left sharp (no concave fill), %sY" % ("+" if sy > 0 else "-"))
     ch = pv("frontChamfer")
-    void(plate, (xTow1 - 0.03) * 10, 0.0, z_dn + 0.03 * math.tan(tilt) * 10 - 0.3, "top chamfer: old +X top edge gone (0.3 mm inside both faces)")
-    solid(plate, (xTow1 - ch - 0.03) * 10, 0.0, z_dn + (ch + 0.03) * math.tan(tilt) * 10 - (ch + 0.03) * 10, "tower solid inboard of the top chamfer")
-    void(plate, (xTow1 - 0.02) * 10, 0.0, zBack * 10 + 0.2, "wing rim fillet: old +X back edge gone")
-    solid(plate, (xTow1 - 0.02) * 10, 0.0, zBack * 10 + 1.5, "+X face solid above the rim fillet")
-    # +-Y top chamfer (1 mm off the 2 mm wall at the top edge only): void
-    # 0.3 mm inside both old faces, solid on the 1 mm flat left between the
-    # chamfer (starts y 12.5) and the recess rim (11.5); and the rim edge
-    # itself stayed sharp: solid 0.2 mm inside it at d 0.2, all round.
-    for sy in (1, -1):
-        tag = "+Y" if sy > 0 else "-Y"
-        x, yy, z = on_top(0.03, 0.0, sy * (podL / 2 - 0.03)); void(plate, x, yy, z, "top chamfer: old %s top edge gone" % tag)
-        x, yy, z = on_top(0.03, 0.0, sy * (recessR + 0.05)); solid(plate, x, yy, z, "flat top between the %s chamfer and the recess rim" % tag)
-    for tag, u, y in (("downhill", sgn * (recessR + 0.02), 0.0), ("uphill", -sgn * (recessR + 0.02), 0.0),
-                      ("+Y", 0.0, recessR + 0.02), ("-Y", 0.0, -(recessR + 0.02))):
-        x, yy, z = on_top(0.02, u, y); solid(plate, x, yy, z, "recess rim edge sharp (solid 0.2 mm inside it), %s" % tag)
-    for tag, u, y in (("downhill", sgn * (recessR + 0.1), 0.0), ("uphill", -sgn * (recessR + 0.1), 0.0),
-                      ("+Y", 0.0, recessR + 0.1), ("-Y", 0.0, -(recessR + 0.1))):
-        x, yy, z = on_top(0.03, u, y); solid(plate, x, yy, z, "rim solid 0.3 mm under the canted top, %s" % tag)
-        x, yy, z = on_top(-0.03, u, y); void(plate, x, yy, z, "nothing 0.3 mm above the canted top, %s" % tag)
-    # lens ring flush: the recess is open right up to the top plane all round
-    for tag, u, y in (("downhill", sgn * (recessR - 0.03), 0.0), ("uphill", -sgn * (recessR - 0.03), 0.0),
-                      ("+Y", 0.0, recessR - 0.03), ("-Y", 0.0, -(recessR - 0.03))):
-        x, yy, z = on_top(-0.05, u, y); void(plate, x, yy, z, "recess open at the top plane (d -0.5), %s side" % tag)
-        x, yy, z = on_top(0.05, u, y); void(plate, x, yy, z, "recess open just under the top plane (d 0.5), %s side" % tag)
-    # recess, ledge, groove
-    x, y, z = along(0.1); void(plate, x, y, z, "recess centre")   # passes trivially: the bore is under it
-    x, y, z = along(0.1, side=recessR - 0.03); void(plate, x, y, z, "recess edge")
-    x, y, z = along(recessD - 0.05, side=recessR - 0.03); void(plate, x, y, z, "recess full depth at its edge (too-shallow recess)")
-    flangeR, hookD = pv("pirFlangeR"), pv("pirHookD")
-    x, y, z = along(recessD + 0.05, side=(boreR + flangeR) / 2); solid(plate, x, y, z, "flange ledge")
-    x, y, z = along(recessD + 0.05, side=(flangeR + recessR) / 2); void(plate, x, y, z, "latch hook groove open below the ledge")
-    x, y, z = along(hookD - 0.05, side=(flangeR + recessR) / 2); void(plate, x, y, z, "latch hook groove full depth")
-    x, y, z = along(hookD + 0.05, side=(flangeR + recessR) / 2); solid(plate, x, y, z, "groove floor")
-    # bore, through the tower and the wing
-    x, y, z = along(recessD + 0.2); void(plate, x, y, z, "bore just behind the floor")
-    x, y, z = along(1.0, side=boreR - 0.03); void(plate, x, y, z, "bore edge mid-depth")
-    zb = (zWing - 0.05 - zTop) / -ax[1]             # axis depth at z -2.5 (inside the wing)
-    x, y, z = along(zb); void(plate, x, y, z, "bore open through the wing")
-    zb = (-0.79 - zTop) / -ax[1]                    # axis depth at z -7.9
-    x, y, z = along(zb); void(plate, x, y, z, "bore open at the back face (z -7.9)")
-    x, y, z = along(zb, side=boreR - 0.03); void(plate, x, y, z, "bore full radius at the back face")
-    x, y, z = along(zb, side=boreR + 0.1); solid(plate, x, y, z, "wing solid 1 mm outside the bore at the back face")
-    x, y, z = along(1.0, side=recessR + podWall / 2); solid(plate, x, y, z, "tower wall +Y")
-    x, y, z = along(1.0, side=-(recessR + podWall / 2)); solid(plate, x, y, z, "tower wall -Y")
-    # keeper pin (2026-10-25): a cross-hole along Y at axis depth pirPinD
-    # through both +-Y pod walls (with the 10 mm plug the pin sits at
-    # d 20.75, in the WING at z about -3.7). Its front surface must be
-    # behind the plug's back end (pirSeatD + pirPlugL) or the filament stub
-    # cannot go in with the plug seated; the wall 1.5 mm in front of and
-    # behind the axis is solid, so it is a hole and not a slot; and at
-    # least 1 mm of wing remains between the hole and the back face.
-    pinDia, pinD = pv("pirPinDia"), pv("pirPinD")
+    void(shell, xBoxOut - 0.3, 0.0, zTop - 0.3, "front chamfer: box's +X top edge gone")
+    solid(shell, xBoxOut - ch - 0.3, 0.0, zTop - 0.1, "top solid inboard of the box's +X chamfer")
+    void(shell, cx, by - 0.3, zTop - 0.3, "front chamfer: box's +Y top edge gone")
+    void(shell, cx, -(by - 0.3), zTop - 0.3, "front chamfer: box's -Y top edge gone")
+    void(shell, xBoxOut - 0.2, 0.0, -7.8, "rim fillet: box's +X back edge gone")
+    solid(shell, xBoxOut - 0.2, 0.0, -6.5, "box +X face solid above the rim fillet")
+    void(shell, cx, by - 0.2, -7.8, "rim fillet: box's +Y back edge gone")
+    # the dome's field: rays from the face point at +/-46 deg (the lens's
+    # vertical field) in the XZ plane and in the YZ plane, 15 mm out, in
+    # free air (flat face, nothing can stand in the way, but recorded)
+    for a in (46.0, -46.0):
+        px, pz = cx + math.sin(math.radians(a)) * 15, zTop + math.cos(math.radians(a)) * 15
+        void(shell, px, 0.0, pz, "lens field edge %+.0f deg (XZ) clear 15 mm out (shell)" % a)
+        void(plate, px, 0.0, pz, "lens field edge %+.0f deg (XZ) clear 15 mm out (plate)" % a)
+        void(shell, cx, px - cx, pz, "lens field edge %+.0f deg (YZ) clear 15 mm out (shell)" % a)
+
+
+def check_pir_socket(plate, shell, des):
+    """Straight socket on the PLATE's wing (02_backplate.py step 14,
+    2026-10-25 evening): boss ring solid round a void bore along +Z, boss
+    top at pirSeatZ, hook clearance outside the boss, level wire hole out
+    of the boss's -X side, keeper pin hole through the whole wing at
+    pirPinZ, the wing fused to the plate and softened like the shell."""
+    import math
+    def pv(n): return des.userParameters.itemByName(n).value * 10
+    wall, intW, intD, backT, rimGap = pv("wall"), pv("intW"), pv("intD"), pv("backT"), pv("rimGap")
+    cx, boreR, socketR = pv("pirCx"), pv("pirBoreR"), pv("pirSocketR")
+    seatZ, hy = pv("pirSeatZ"), pv("pirBoxHalfY")
+    wireZ, wireR = pv("pirWireZ"), pv("pirWireDia") / 2
+    pinZ, pinR = pv("pirPinZ"), pv("pirPinDia") / 2
     seatD, plugL = pv("pirSeatD"), pv("pirPlugL")
-    if pinD - pinDia / 2 <= seatD + plugL:
-        FAILURES.append("keeper pin front surface d %.2f mm is not behind the plug's "
-                        "back end d %.2f mm" % ((pinD - pinDia / 2) * 10, (seatD + plugL) * 10))
+    xEdge = intW / 2 - rimGap                        # 20.85
+    xWing1 = cx + hy - rimGap                        # 48.85
+    wy = hy - rimGap                                 # 13.35
+    zTop, zBack, zWing = intD + wall, -backT, -backT + 6.0
+    ringR = (boreR + socketR) / 2                    # 6.8: mid-wall of the boss
+    # parameter-level guards (02 asserts the same at build time; repeated
+    # here so a hand-edited parameter cannot slip past a stale plate)
+    if not (socketR <= 9.6 - 0.3 + 1e-9):
+        FAILURES.append("pirSocketR %.2f is not 0.3 mm inside the latch hook lips (r 9.6)" % socketR)
+    if not (socketR - boreR >= 1.5 - 1e-9):
+        FAILURES.append("socket boss wall %.2f mm is under 1.5" % (socketR - boreR))
+    plugBackZ = zTop - seatD - plugL
+    if not (plugBackZ - (pinZ + pinR) >= 0.5 - 1e-9):
+        FAILURES.append("plug back end z %.2f is under 0.5 mm in front of the keeper pin's top z %.2f"
+                        % (plugBackZ, pinZ + pinR))
+    if not (pinZ - pinR - zBack >= 1.5 - 1e-9):
+        FAILURES.append("keeper pin hole (z %.2f) leaves under 1.5 mm of wing to the back face" % pinZ)
+    # wing: solid between the plate edge and the boss, under the boss, out
+    # to its far end; nothing above it beside the boss; back face flush
+    solid(plate, 21.5, 0.0, -5.0, "wing fused to the plate edge")
+    solid(plate, 21.5, 12.5, -5.0, "wing full width (+Y)")
+    solid(plate, 21.5, -12.5, -5.0, "wing full width (-Y)")
+    solid(plate, cx, wy - 0.3, -6.5, "wing reaches y %.2f (z -6.5: under the pin hole)" % (wy - 0.3))
+    solid(plate, xWing1 - 0.3, 0.0, -5.0, "wing reaches its far end x %.2f" % (xWing1 - 0.3))
+    void(plate, xWing1 + 0.3, 0.0, -5.0, "nothing past the wing's far end")
+    void(plate, 21.5, 0.0, -1.0, "nothing above the wing between the plate and the boss")
+    void(plate, cx, 10.0, -1.0, "nothing above the wing beside the boss")
+    void(plate, cx + socketR + 0.3, 0.0, 0.0, "nothing above the wing 0.3 mm outside the boss")
+    void(plate, 21.5, 0.0, -8.5, "wing back face flush with the plate's")
+    void(plate, cx, 0.0, -1.0, "bore open where the boss meets the wing")
+    # socket boss: ring solid, bore void, top at pirSeatZ
+    for z in (-1.0, 5.0, 10.0, 13.0):
+        for tag, dx, dy in (("+X", ringR, 0), ("-X", -ringR, 0), ("+Y", 0, ringR), ("-Y", 0, -ringR)):
+            if tag == "-X" and abs(z - wireZ) < wireR + 0.3:
+                continue                         # the wire hole runs there
+            solid(plate, cx + dx, dy, z, "socket ring solid at r %.1f, %s, z %.0f" % (ringR, tag, z))
+        void(plate, cx, 0.0, z, "bore open on the axis at z %.0f" % z)
+        void(plate, cx + boreR - 0.3, 0.0, z, "bore open 0.3 mm inside its wall at z %.0f" % z)
+    for z in (-7.9, -5.0, -2.5):
+        void(plate, cx, 0.0, z, "bore open through the wing at z %.1f" % z)
+        void(plate, cx, boreR - 0.3, z, "bore full radius in the wing at z %.1f" % z)
+        solid(plate, cx + boreR + 1.0, 0.0, z, "wing solid 1 mm outside the bore at z %.1f (+X: the pin hole crosses at y 0 only within r pinR of the axis)" % z)
+    solid(plate, cx + ringR, 0.0, seatZ - 0.1, "boss solid 0.1 mm under its top (z %.1f)" % seatZ)
+    void(plate, cx + ringR, 0.0, seatZ + 0.1, "nothing 0.1 mm above the boss top")
+    void(plate, cx + ringR, 0.0, zTop - 0.5, "nothing of the plate near the shell's face over the boss")
+    void(plate, cx + socketR + 0.3, 0.0, 5.0, "nothing 0.3 mm outside the boss")
+    void(plate, cx, socketR + 0.3, 5.0, "nothing 0.3 mm outside the boss (+Y)")
+    # latch hook lips (r 9.6..10.7, down to z 13.1) clear: void at r 10.1
+    # z 13.5 all round, in the plate AND the shell (box cavity)
+    for tag, dx, dy in (("+X", 10.1, 0), ("-X", -10.1, 0), ("+Y", 0, 10.1), ("-Y", 0, -10.1)):
+        void(plate, cx + dx, dy, 13.5, "hook clearance outside the boss, %s (plate)" % tag)
+        void(shell, cx + dx, dy, 13.5, "hook clearance outside the boss, %s (shell)" % tag)
+        void(plate, cx + dx, dy, 12.9, "hook clearance down to z 12.9, %s (plate)" % tag)
+    # wire hole: level along -X at z pirWireZ, through the boss's -X wall
+    # only; solid above and below it in the wall; no hole on the +X side
+    xw = cx - socketR + 0.5
+    void(plate, xw, 0.0, wireZ, "wire hole through the boss's -X wall")
+    void(plate, cx - boreR - 0.3, 0.0, wireZ, "wire hole meets the bore")
+    void(plate, xw, 0.0, wireZ + wireR - 0.2, "wire hole full height (top)")
+    void(plate, xw, 0.0, wireZ - wireR + 0.2, "wire hole full height (bottom)")
+    solid(plate, xw, 0.0, wireZ + wireR + 1.0, "boss wall solid 1 mm above the wire hole")
+    solid(plate, xw, 0.0, wireZ - wireR - 1.0, "boss wall solid 1 mm below the wire hole")
+    solid(plate, xw, wireR + 0.4, wireZ, "boss wall solid 0.4 mm beside the wire hole (+Y)")
+    solid(plate, cx + socketR - 0.5, 0.0, wireZ, "no wire hole on the boss's +X side")
+    void(plate, cx - socketR - 0.5, 0.0, wireZ, "wire hole exits into the pod cavity (air)")
+    void(shell, cx - socketR - 0.5, 0.0, wireZ, "pod cavity open where the wire hole exits")
+    # keeper pin: a cross-hole along Y at (pirCx, pirPinZ) through BOTH wing
+    # side faces, crossing the bore; solid 1.5 mm in front of / behind it
+    # on both sides (a hole, not a slot), solid above it to the wing top
+    # and below it to the back face
     for sy in (1, -1):
         tag = "+Y" if sy > 0 else "-Y"
-        x, y, z = along(pinD, side=sy * (podL / 2 - 0.05)); void(plate, x, y, z, "keeper pin hole through the %s pod wall" % tag)
-    x, y, z = along(pinD - 0.15, side=podL / 2 - 0.05); solid(plate, x, y, z, "+Y pod wall solid 1.5 mm in front of the pin hole (hole, not a slot)")
-    x, y, z = along(pinD + 0.15, side=podL / 2 - 0.05); solid(plate, x, y, z, "+Y pod wall solid 1.5 mm behind the pin hole")
-    xp, _, zp = along(pinD)
-    void(plate, xp, 0.0, zp, "keeper pin hole crosses the bore (open at y 0)")
-    solid(plate, xp, podL / 2 * 10 - 0.5, zp - pinDia * 5 - 0.5, "wing solid 0.5 mm behind the pin hole (in the +Y wall), between it and the back face")
-    solid(plate, xp, podL / 2 * 10 - 0.5, zp - pinDia * 5 - 2.0, "wing solid 2 mm behind the pin hole (in the +Y wall)")
-    if not (zp - pinDia * 5 >= zBack * 10 + 1.0):
-        FAILURES.append("keeper pin hole (z %.2f mm) leaves under 1 mm of wing to the back face" % zp)
-    if not (xp + pinDia * 5 + 0.6 < 48.95 - 3.2):
-        FAILURES.append("keeper pin hole at x %.2f mm is under 0.6 mm from the wing Technic holes" % xp)
-    # wire hole (02 step 14c): its centre line starts on the bore axis at
-    # depth pirWireD and slopes down to exit the tower's -X face centred at
-    # z pirWireExitZ (0.4), inside the shell's wire slot z -2..pirNotchTop.
-    # Probe the exit just inside the face (lip under it, rim extents, face
-    # solid above it up to the notch top), the shell's notch in line with
-    # it, and the hole's body on its way to the bore.
-    WIRE_EXIT_Z = pv("pirWireExitZ")
-    notchTop = pv("pirNotchTop") * 10
-    xw, _, zw = along(pv("pirWireD"))
-    xf = (xTow0 + 0.05) * 10                      # 0.5 mm inside the -X face
-    void(plate, xf, 0.0, WIRE_EXIT_Z * 10 + 0.2, "wire hole exit on the tower's -X face")
-    void(plate, xf, 0.0, WIRE_EXIT_Z * 10 - 0.8, "wire hole exit, lower part")
-    solid(plate, xf, 0.0, -1.6, "lip between the wire hole's rim and the wing top (z -2)")
-    void(plate, xf, 0.0, -1.0, "wire hole rim reaches down past z -1.0")
-    void(plate, xf, 0.0, 1.8, "wire hole rim reaches up past z 1.8")
-    solid(plate, xf, 0.0, notchTop + 0.2, "tower -X face solid at the notch top: the rim stops under the slot top")
-    void(shell, 22.0, 0.0, WIRE_EXIT_Z * 10, "shell notch open in line with the wire hole exit")
-    void(shell, 22.0, 0.0, -1.5, "shell notch open down to the wing top")
-    # the hole's body 2.7 mm in from the exit (x 26: well outside the bore,
-    # whose -X wall the hole meets at about x 30): on the sloped centre line,
-    # with tower solid 2.5 mm above and below it
-    slope = math.atan2(zw - WIRE_EXIT_Z * 10, xw - xTow0 * 10)
-    xm = 26.0
-    zm = WIRE_EXIT_Z * 10 + (xm - xTow0 * 10) * math.tan(slope)
-    void(plate, xm, 0.0, zm, "wire hole body 2.7 mm in from the exit (sloped centre line)")
-    solid(plate, xm, 0.0, zm - 2.5, "tower solid under the wire hole")
-    solid(plate, xm, 0.0, zm + 2.5, "tower solid over the wire hole")
-    solid(plate, (xTow0 + 0.05) * 10, 0.0, 3.0, "tower -X face solid above the wire exit")
-    rimZ = pv("pirWireDia") / 2 * 10 / math.cos(slope)     # mm, exit ellipse half-height
-    if not (zWing * 10 + 0.5 < WIRE_EXIT_Z * 10 - rimZ and WIRE_EXIT_Z * 10 + rimZ < notchTop):
-        FAILURES.append("wire hole exit (z %.2f..%.2f mm) is not inside the wire slot z -2..%.1f"
-                        % (WIRE_EXIT_Z * 10 - rimZ, WIRE_EXIT_Z * 10 + rimZ, notchTop))
-    # lens cone edges: rays from the front-face axis point at +/-25 deg from
-    # the bore axis in the XZ plane, probed 15 mm out, must be in free air
-    # (neither the plate's tower nor the shell)
-    for a in (25.0, -25.0):
-        ang = tilt + math.radians(a)
-        px = (podCx + sgn * math.sin(ang) * 1.5) * 10
-        pz = (zTop + math.cos(ang) * 1.5) * 10
-        void(plate, px, 0.0, pz, "lens cone edge %+.0f deg clear 15 mm out (plate)" % a)
-        void(shell, px, 0.0, pz, "lens cone edge %+.0f deg clear 15 mm out (shell)" % a)
-    # the tower never touches the shell: the 0.3 mm gap at x 23.0..23.3
-    void(plate, 23.15, 0.0, 8.0, "gap between the tower and the shell wall (plate side)")
-    void(shell, 23.15, 0.0, 8.0, "gap between the tower and the shell wall (shell side)")
+        void(plate, cx, sy * (wy - 0.5), pinZ, "keeper pin hole through the %s wing face" % tag)
+        void(plate, cx, sy * 9.0, pinZ, "keeper pin hole inside the wing (y %+.0f)" % (sy * 9))
+        solid(plate, cx - pinR - 1.5, sy * (wy - 0.5), pinZ, "wing solid 1.5 mm -X of the pin hole, %s face" % tag)
+        solid(plate, cx + pinR + 1.5, sy * (wy - 0.5), pinZ, "wing solid 1.5 mm +X of the pin hole, %s face" % tag)
+        solid(plate, cx, sy * (wy - 0.5), pinZ + pinR + 0.5, "wing solid 0.5 mm above the pin hole, %s face" % tag)
+        solid(plate, cx, sy * (wy - 0.5), pinZ - pinR - 0.5, "wing solid 0.5 mm below the pin hole, %s face" % tag)
+        solid(plate, cx, sy * (wy - 0.5), zWing - 0.3, "wing top solid above the pin hole, %s face" % tag)
+    void(plate, cx, 0.0, pinZ, "keeper pin hole crosses the bore (open at y 0)")
+    # softened wing edges (02 step 14d'): r cornerFillet on its two outer
+    # vertical corners, softFillet on its back rim; the boss stays sharp
+    r = pv("cornerFillet")
+    k = (r - 0.3) / math.sqrt(2)
+    for sy in (1, -1):
+        tag = "(%.2f, %+.2f)" % (xWing1, sy * wy)
+        void(plate, xWing1 - 0.3, sy * (wy - 0.3), -5.0, "wing sharp corner gone at " + tag)
+        solid(plate, xWing1 - r + k, sy * (wy - r + k), -5.0, "wing corner fillet surface solid inside at " + tag)
+        void(plate, cx, sy * (wy - 0.2), -7.8, "wing rim fillet: %sY back edge gone" % ("+" if sy > 0 else "-"))
+        solid(plate, cx, sy * (wy - 0.2), -6.5, "wing %sY face solid above the rim fillet" % ("+" if sy > 0 else "-"))
+    void(plate, xWing1 - 0.2, 0.0, -7.8, "wing rim fillet: +X back edge gone")
+    solid(plate, xWing1 - 0.2, 0.0, -6.5, "wing +X face solid above the rim fillet")
+    solid(plate, cx + socketR - 0.15, 0.0, seatZ - 0.15, "boss top rim sharp (flange seat)")
+    # plate and shell never touch here: the boss inside the lens hole's
+    # footprint but under the top (z 14 vs 14..16), the wing inside the
+    # cavity (rimGap), the shell's top over the boss
+    void(shell, cx + socketR + 0.5, 0.0, 15.0, "lens hole (r %.1f) open over the boss rim region: the flange and hooks pass" % pv("pirRecessR"))
+    void(shell, cx + socketR + 0.5, 0.0, 13.8, "shell cavity just under its top, outside the boss")
+    void(plate, cx + socketR + 0.5, 0.0, 13.8, "plate: nothing there either")
 
 
 def run(_context: str):
@@ -527,8 +553,8 @@ def run(_context: str):
     check_cap_cradle(plate)
     check_fence_walls_continuous(plate)
     check_radar_cable_exit(plate)
-    check_shell_notch(shell, des)
-    check_pir_pod(plate, shell, des)
+    check_pod_box(shell, plate, des)
+    check_pir_socket(plate, shell, des)
 
     if FAILURES:
         for f in FAILURES:

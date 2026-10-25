@@ -229,23 +229,22 @@ def run(_context: str):
     # 5: snap bumps on inner +/-X walls, z centered -1mm (rects extend
     # into the wall so the Join reliably merges with the shell body; proud
     # amount into the cavity is snapBump). -X pair at y +/-12; the +X pair
-    # at y +/-snapYpx (17, created by 02_backplate.py) since 2026-10-25 so
-    # it sits outboard of the wing notch (step 7, y +/-13.8): bumps span
-    # y 14..20, 0.2 mm past the notch edge and 3 mm short of the cavity's
-    # +/-Y walls (23), nowhere near the outer corner fillets. The plate's
-    # pockets (02 step 3) move with it.
+    # at y +/-snapYpx (19, created by 02_backplate.py) since 2026-10-25 so
+    # it sits outboard of the pod box (step 5c), whose +/-Y walls reach
+    # y +/-15.5: bumps span y 16..22, 0.5 mm past the box wall and 1 mm
+    # short of the cavity's +/-Y walls (23), nowhere near the outer corner
+    # fillets. The plate's pockets (02 step 3) move with it.
     snap = p(des, "snapBump")
     snapYpx = p02(des, "snapYpx")
-    podHalf = p02(des, "pirRecessR") + p02(des, "pirPodWall")      # 13.5 mm
-    NOTCH_CLEAR = 0.3 * MM                       # notch to wing, per side
-    if snapYpx - 3 * MM <= podHalf + NOTCH_CLEAR:
+    boxHalfY = p02(des, "pirBoxHalfY")                       # 13.5 mm
+    boxOutY = boxHalfY + wall                                # 15.5 mm
+    if snapYpx - 3 * MM < boxOutY + 0.3 * MM:
         raise RuntimeError("snapYpx %.1f puts the +X bump's inboard end (y %.1f) "
-                           "inside the wing notch (y +/-%.1f)"
-                           % (snapYpx * 10, (snapYpx - 3 * MM) * 10,
-                              (podHalf + NOTCH_CLEAR) * 10))
-    if snapYpx + 3 * MM >= intH / 2:
+                           "under 0.3 mm from the pod box's +/-Y wall (y +/-%.1f)"
+                           % (snapYpx * 10, (snapYpx - 3 * MM) * 10, boxOutY * 10))
+    if snapYpx + 3 * MM > intH / 2 - 0.5 * MM:
         raise RuntimeError("snapYpx %.1f puts the +X bump's outboard end (y %.1f) "
-                           "into the cavity's +/-Y wall (y %.1f)"
+                           "under 0.5 mm from the cavity's +/-Y wall (y %.1f)"
                            % (snapYpx * 10, (snapYpx + 3 * MM) * 10, intH / 2 * 10))
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for sx in (-1, 1):
@@ -287,20 +286,104 @@ def run(_context: str):
           "z %.2f..%.2f)" % (BOSS_W * 10, BOSS_W * 10, BOSS_CX * 10,
                              BOSS_CY * 10, BOSS_Z0 * 10, intD * 10))
 
+    # 5c. POD BOX (2026-10-25, third PIR layout; was step 7, the wing
+    # notch, until the same evening). The PIR sensor sits in a straight
+    # socket on the back plate's wing (02_backplate.py step 14); the shell
+    # covers it with a hollow box that REPLACES its +X wall over the pod's
+    # width. Done BEFORE step 6 so the edge-softening selectors see the
+    # final outline and fillet/chamfer the box with the rest.
+    #
+    #   old wall   x 21..23 (the shell's +X wall) is removed over
+    #              |y| <= pirBoxHalfY from the back rim up to z 14, so the
+    #              cavity opens straight into the box: the plate's wing
+    #              passes through at z -8..-2 and the sensor's wires run
+    #              over it into the XIAO bay with nothing in the way. The
+    #              2 mm top (z 14..16) stays: it is the shell's flat front
+    #              face, which continues over the box.
+    #   box        outer x 21..(pirCx + pirBoxHalfY + wall) = 21..51,
+    #              y +/-(pirBoxHalfY + wall) = +/-15.5, z -8..16, joined
+    #              (it overlaps the wall stubs at |y| 13.5..15.5, which
+    #              become the box's +/-Y walls' first 2 mm); its cavity
+    #              x 21..(pirCx + pirBoxHalfY) = 21..49, y +/-13.5,
+    #              z -8..14 is cut out again. Walls 2 mm, same as the
+    #              shell's; the wing sits in it with rimGap all round like
+    #              the plate in the shell.
+    #   lens hole  r pirRecessR (11.5) through the top at (pirCx, 0): the
+    #              lens ring (r 10.3) and its two latch tabs (r 11.1) pass,
+    #              the ring's top face is flush with the shell's face and
+    #              the dome stands 11 mm proud. Its rim stays sharp (the
+    #              front chamfer in 6b skips it).
+    # Print: face-down the box is walls plus a flat top with a hole, no
+    # overhang anywhere.
+    pirCx = p02(des, "pirCx")
+    lensR = p02(des, "pirRecessR")
+    xIn = intW / 2                               # 21: the old wall's inner line
+    xBoxIn = pirCx + boxHalfY                    # 49
+    xBoxOut = xBoxIn + wall                      # 51
+    z_top, z_back = intD + wall, -backT          # 16, -8
+    if lensR + 0.1 >= boxHalfY:
+        raise RuntimeError("lens hole r %.1f leaves under 1 mm of top to the box cavity "
+                           "wall (y %.1f)" % (lensR * 10, boxHalfY * 10))
+    if pirCx - lensR < xIn + 0.1:
+        raise RuntimeError("lens hole reaches x %.2f, under 1 mm from the old wall line"
+                           % ((pirCx - lensR) * 10))
+    if xBoxIn - (pirCx + lensR) < 0.1:
+        raise RuntimeError("lens hole leaves under 1 mm of top before the box's +X wall")
+    # (a) remove the old +X wall over the box's width, back rim to z 14
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    rect(sk, (xIn + intW / 2 + wall) / 2, 0, wall + 0.2 * MM, 2 * boxHalfY)
+    extrude(comp, sk.profiles.item(0), z_back - 0.1 * MM, intD,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
+    # (b) the box's outer block, full height, joined to the wall stubs
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    rect(sk, (xIn + xBoxOut) / 2, 0, xBoxOut - xIn, 2 * boxOutY)
+    extrude(comp, sk.profiles.item(0), z_back, z_top,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("pod box did not merge with the shell: %d bodies"
+                           % comp.bRepBodies.count)
+    # (c) its cavity, open to the shell's cavity at x 21 (the cut starts
+    # 0.1 mm inside the main cavity so no sliver of wall survives there)
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    rect(sk, (xIn - 0.1 * MM + xBoxIn) / 2, 0, xBoxIn - xIn + 0.1 * MM, 2 * boxHalfY)
+    extrude(comp, sk.profiles.item(0), z_back - 0.1 * MM, intD,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
+    # (d) lens hole through the top
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    sk.sketchCurves.sketchCircles.addByCenterRadius(
+        adsk.core.Point3D.create(pirCx, 0.0, 0), lensR)
+    extrude(comp, sk.profiles.item(0), intD - 0.1 * MM, z_top + 0.1 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("pod box cavity / lens hole split the shell: %d bodies"
+                           % comp.bRepBodies.count)
+    print("pod box ok: +X wall removed over y +/-%.1f (z %.0f..%.0f); box x %.0f..%.0f, "
+          "y +/-%.1f, z %.0f..%.0f, cavity to x %.0f; lens hole r %.1f at (%.1f, 0) "
+          "through the top"
+          % (boxHalfY * 10, z_back * 10, intD * 10, xIn * 10, xBoxOut * 10,
+             boxOutY * 10, z_back * 10, z_top * 10, xBoxIn * 10, lensR * 10,
+             pirCx * 10))
+
     # 6. soften exterior edges for hand comfort (change request 2026-09-07).
     # Operates on shell_body ONLY (fillet/chamfer features act on its edges,
     # so they are participant-safe by construction; BackPlate untouched).
     # Order matters: vertical corner fillets FIRST (they change the corner
     # topology the later perimeter selections rely on).
-    # 2026-10-24..25: for one day the PIR pod block stood off the +X face
-    # and this ran around it (8 vertical edges, 16-edge loops). The pod now
-    # lives on the back plate's wing (02_backplate.py step 14), so the
-    # outline is the plain shell rectangle again: 4 corners, 8-edge loops.
+    # Outline since 2026-10-25 (pod box, step 5c): the shell rectangle with
+    # the box grown off its +X side over |y| <= 15.5, so the outer boundary
+    # at any z level is 8 straights (-X; +/-Y; the two +X stubs at
+    # |y| 15.5..22.5; the box's +/-Y sides; the box's +X end) and, after
+    # 6a, 6 corner arcs (the shell's 4 and the box's 2) = 14 edges. The
+    # two concave T-junction corners at (23, +/-15.5) are vertices, not
+    # edges, and stay sharp.
     corner = p(des, "cornerFillet")
     cham = p(des, "frontChamfer")
     soft = p(des, "softFillet")
     ox, oy = intW / 2 + wall, intH / 2 + wall   # outer half-extents (cm)
-    z_top, z_back = intD + wall, -backT
     EPS = 0.005  # 0.05 mm tolerance (cm)
 
     def mid(g):
@@ -324,8 +407,10 @@ def run(_context: str):
             inp.addConstantRadiusEdgeSet(collection(edges), rv, False)
         return fil.add(inp)
 
-    # 6a. four outer vertical corner edges: lines parallel to Z with both
-    # |x| and |y| at the outer values.
+    # 6a. six outer vertical corner edges: lines parallel to Z with |x|
+    # and |y| at the shell's outer values (4), or at the box's far corners
+    # (xBoxOut, +/-boxOutY) (2). The box corners run the full z -8..16
+    # like the shell's.
     verts = []
     for e in shell_body.edges:
         g = e.geometry
@@ -335,22 +420,23 @@ def run(_context: str):
         if abs(abs(d.z) - 1) > 1e-6:
             continue
         mx, my, _ = mid(g)
-        if abs(abs(mx) - ox) < EPS and abs(abs(my) - oy) < EPS:
+        if ((abs(abs(mx) - ox) < EPS and abs(abs(my) - oy) < EPS)
+                or (abs(mx - xBoxOut) < EPS and abs(abs(my) - boxOutY) < EPS)):
             verts.append(e)
     print("corner fillet edges found:", len(verts))
-    if len(verts) != 4:
-        raise RuntimeError("expected 4 vertical corner edges, found %d"
+    if len(verts) != 6:
+        raise RuntimeError("expected 6 vertical corner edges (4 shell + 2 box), found %d"
                            % len(verts))
     add_fillet(verts, corner)
-    print("corner fillets ok (r=%.2f mm on 4 edges)" % (corner * 10))
+    print("corner fillets ok (r=%.2f mm on 6 edges)" % (corner * 10))
 
     # Outer-perimeter edge selector at a z level: straight edges lying on the
-    # outer faces (|x|=ox or |y|=oy) plus the corner-fillet arcs. The window
-    # pocket is on the interior face and never touches the outer boundary.
-    # At both z_top and z_back the boundary is one clean closed loop
-    # (4 straights + 4 arcs = 8 edges). Before 2026-09-09 the USB notch
-    # split the +X segment at z_back, giving 9; the wing notch (step 7) is
-    # cut AFTER this block for the same reason.
+    # outer faces (|x|=ox, |y|=oy, the box's |y|=boxOutY beyond x ox, or
+    # the box's x=xBoxOut) plus the six corner-fillet arcs. The lens hole's
+    # circle (r pirRecessR) and the cavity outlines are other radii /
+    # other coordinates and are never picked. At both z_top and z_back the
+    # boundary is one closed loop of 8 straights + 6 arcs = 14 edges
+    # (8 before the pod box, 2026-10-25).
     def perimeter_edges(zlev):
         found = []
         for e in shell_body.edges:
@@ -360,14 +446,18 @@ def run(_context: str):
                         or abs(g.endPoint.z - zlev) > EPS):
                     continue
                 mx, my, _ = mid(g)
-                if abs(abs(mx) - ox) < EPS or abs(abs(my) - oy) < EPS:
+                if (abs(abs(mx) - ox) < EPS or abs(abs(my) - oy) < EPS
+                        or (abs(abs(my) - boxOutY) < EPS and mx > ox - EPS)
+                        or abs(mx - xBoxOut) < EPS):
                     found.append(e)
             elif isinstance(g, (adsk.core.Arc3D, adsk.core.Circle3D)):
                 c = g.center
-                if (abs(c.z - zlev) < EPS
-                        and abs(g.radius - corner) < EPS
-                        and abs(abs(c.x) - (ox - corner)) < EPS
-                        and abs(abs(c.y) - (oy - corner)) < EPS):
+                if abs(c.z - zlev) >= EPS or abs(g.radius - corner) >= EPS:
+                    continue
+                if ((abs(abs(c.x) - (ox - corner)) < EPS
+                        and abs(abs(c.y) - (oy - corner)) < EPS)
+                        or (abs(c.x - (xBoxOut - corner)) < EPS
+                            and abs(abs(c.y) - (boxOutY - corner)) < EPS)):
                     found.append(e)
         return found
 
@@ -377,65 +467,33 @@ def run(_context: str):
         chi.setToEqualDistance(adsk.core.ValueInput.createByReal(dist))
         return ch.add(chi)
 
-    # 6b. front-face perimeter chamfer (prints clean bed-side). With the
-    # window pocket on the interior face, the z=16 outer boundary is one
-    # clean closed loop - 4 straights + 4 corner-fillet arcs = 8 edges -
-    # chamfered as a single feature.
+    # 6b. front-face perimeter chamfer (prints clean bed-side). The z=16
+    # outer boundary, shell plus box, is one closed loop of 14 edges,
+    # chamfered as a single feature; the lens hole rim is left sharp.
     front = perimeter_edges(z_top)
     print("front perimeter edges found:", len(front))
-    if len(front) != 8:
-        raise RuntimeError("expected 8 front perimeter edges, found %d"
+    if len(front) != 14:
+        raise RuntimeError("expected 14 front perimeter edges (8 lines + 6 arcs), found %d"
                            % len(front))
     add_chamfer(front, cham)
-    print("front chamfer ok (%.2f mm on 8 edges)" % (cham * 10))
+    print("front chamfer ok (%.2f mm on %d edges)" % (cham * 10, len(front)))
 
-    # 6c. back rim outer edge fillet.
+    # 6c. back rim outer edge fillet, the same 14-edge loop at z -8 (the
+    # box's cavity is open at the back rim like the shell's, so its walls'
+    # outer edges continue the rim).
     rim = perimeter_edges(z_back)
     print("back rim edges found:", len(rim))
-    if len(rim) != 8:
-        raise RuntimeError("back rim should be 8 edges before the wing notch, "
-                           "found %d" % len(rim))
+    if len(rim) != 14:
+        raise RuntimeError("expected 14 back rim edges (8 lines + 6 arcs), found %d"
+                           % len(rim))
     add_fillet(rim, soft)
     print("rim fillet ok (r=%.2f mm on %d edges)" % (soft * 10, len(rim)))
-
-    # 7. NOTCH FOR THE PLATE'S PIR WING (2026-10-25). The PIR pod now stands
-    # on a 6 mm wing that grows out of the back plate's +X edge (z -8..-2,
-    # y +/-13.5; 02_backplate.py step 14) and passes UNDER this wall. Cut
-    # the +X wall away over the wing's width from the back rim up to
-    # z pirNotchTop (2.5, a parameter 02 owns): z -8..-2 makes room for the
-    # wing itself, and the 4.5 mm above it (z -2..2.5) is the slot the
-    # sensor's three wires come through, out of the dia 3 hole in the
-    # tower's -X face (exit centred z pirWireExitZ = 0.4, rim to 1.97) and
-    # onto the plate, to the XIAO bay. The wall keeps its full 2 mm
-    # thickness above the notch top. The notch's +/-Y faces straddle the
-    # wing with 0.3 mm a side, which also locates the shell in Y at this
-    # end.
-    #
-    # The +X snap bumps used to sit at y +/-12 (y 9..15), almost entirely
-    # inside this notch; since 2026-10-25 they are at y +/-snapYpx (17),
-    # outboard of it (step 5), so the +X end of the lid is still snapped.
-    #
-    # Done AFTER 6a-6c, which count edges on the virgin outline (the notch
-    # would split the +X rim segment and give 9 at z_back). It takes the
-    # back-rim fillet off the +X wall over the notch's width, which is
-    # fine: that stretch of rim is cut away.
-    # (podHalf and NOTCH_CLEAR are set in step 5, which guards the snap
-    # bumps against this notch)
-    NOTCH_TOP = p02(des, "pirNotchTop")
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    nx0, nx1 = intW / 2 - 0.1 * MM, intW / 2 + wall + 0.1 * MM
-    ny = podHalf + NOTCH_CLEAR
-    rect(sk, (nx0 + nx1) / 2, 0, nx1 - nx0, 2 * ny)
-    extrude(comp, sk.profiles.item(0), -backT - 0.1 * MM, NOTCH_TOP,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[shell_body])
     if comp.bRepBodies.count != 1:
-        raise RuntimeError("wing notch split the shell: %d bodies"
+        raise RuntimeError("edge softening split the shell: %d bodies"
                            % comp.bRepBodies.count)
-    print("wing notch ok (+X wall x %.2f..%.2f cut over y +/-%.2f from the back "
-          "rim up to z %.1f (pirNotchTop): %.0f mm for the wing, %.1f mm wire "
-          "slot above it)"
-          % (nx0 * 10, nx1 * 10, ny * 10, NOTCH_TOP * 10, (backT - 0.2) * 10,
-             (NOTCH_TOP + 0.2) * 10))
+
+    # 7. (deleted 2026-10-25 evening) the wing notch in the +X wall. The
+    # pod box (step 5c) removes that stretch of wall entirely and encloses
+    # the wing instead.
 
     print("FrontShell bodies:", comp.bRepBodies.count)
