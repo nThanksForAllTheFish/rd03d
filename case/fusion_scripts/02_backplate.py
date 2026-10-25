@@ -1165,6 +1165,36 @@ def run(_context: str):
              (plugBackZ - pinZ - pinR) * 10, (pinZ - zBack) * 10,
              (pinZ - pinR - zBack) * 10, (pirCx - xEdge) * 10))
 
+    # 14c'. FOOT FILLET (2026-10-25, review): a 1.0 mm concave fillet where
+    # the boss meets the wing top, so a side knock on the 16 mm post does
+    # not crack it at the joint. Concave, on a vertical cylinder over a
+    # horizontal face, so it prints as ordinary layers. Its toe (r 8.7)
+    # stays 0.13 mm clear of the Technic holes' rims in plan (they are
+    # 1.13 from the boss, 14d) and well under the wire hole (z >= 2.5).
+    FOOT_R = 1.0 * MM
+    foot = [e for e in plate_body.edges
+            if isinstance(e.geometry, adsk.core.Circle3D)
+            and abs(e.geometry.radius - socketR) < 0.005
+            and abs(e.geometry.center.z - zWing) < 0.005
+            and abs(e.geometry.center.x - pirCx) < 0.005
+            and abs(e.geometry.center.y) < 0.005]
+    if len(foot) != 1:
+        raise RuntimeError("expected 1 boss foot edge (circle r %.2f at z %.1f), found %d"
+                           % (socketR * 10, zWing * 10, len(foot)))
+    fil = comp.features.filletFeatures
+    finp = fil.createInput()
+    try:
+        finp.edgeSetInputs.addConstantRadiusEdgeSet(
+            collection(foot), adsk.core.ValueInput.createByReal(FOOT_R), False)
+    except AttributeError:  # older API shape
+        finp.addConstantRadiusEdgeSet(
+            collection(foot), adsk.core.ValueInput.createByReal(FOOT_R), False)
+    fil.add(finp)
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("boss foot fillet split the plate: %d bodies" % comp.bRepBodies.count)
+    print("pir boss foot fillet ok (r %.1f mm, concave, on 1 edge; toe at r %.1f)"
+          % (FOOT_R * 10, (socketR + FOOT_R) * 10))
+
     # 14d. two more Technic holes in the wing, on the step-7 grid (x = 0.95
     # + 3*8 = 24.95, y +/-4), the same pattern as step 7: legoHole bore
     # THROUGH the 6 mm wing (open into the pod cavity above it, where a pin

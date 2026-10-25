@@ -464,6 +464,15 @@ def check_pir_socket(plate, shell, des):
     void(plate, cx + socketR + 0.3, 0.0, 0.0, "nothing above the wing 0.3 mm outside the boss")
     void(plate, 21.5, 0.0, -8.5, "wing back face flush with the plate's")
     void(plate, cx, 0.0, -1.0, "bore open where the boss meets the wing")
+    # boss foot fillet (02 step 14c'): concave r 1.0 at the boss/wing
+    # corner, arc centre at (r 8.7, z -1). Inside the fillet material at
+    # (r 7.9, z -1.8) (1.13 from the centre; air without the fillet), air
+    # at (r 8.2, z -1.5) (0.71 from the centre: the fillet is no bigger
+    # than r 1.0) and beyond its toe at (r 9.0, z -1.0).
+    solid(plate, cx + socketR + 0.2, 0.0, -1.8, "boss foot fillet material (r 7.9, z -1.8)")
+    solid(plate, cx, -(socketR + 0.2), -1.8, "boss foot fillet material (-Y side)")
+    void(plate, cx + socketR + 0.5, 0.0, -1.5, "boss foot fillet is r 1.0, not bigger (r 8.2, z -1.5)")
+    void(plate, cx + socketR + 1.3, 0.0, -1.0, "nothing beyond the foot fillet's toe (r 9.0, z -1.0)")
     # socket boss: ring solid, bore void, top at pirSeatZ
     for z in (-1.0, 5.0, 10.0, 13.0):
         for tag, dx, dy in (("+X", ringR, 0), ("-X", -ringR, 0), ("+Y", 0, ringR), ("-Y", 0, -ringR)):

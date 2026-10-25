@@ -27,6 +27,7 @@ The living design is in your Fusion; save it to your own project.
   sensor drops in from the **front**, dome out: its neck and Ø11 base go
   down the bore and the underside of its flange (Ø18.8) lands on the
   boss's top rim; the lens's two latch hooks hang outside the boss. The
+  A 1 mm concave fillet at the boss's foot ties it into the wing. The
   PIR's axis is **parallel to the radar's** (`pirTilt` 0): the user wants
   the two fields to overlap as much as they can, and the case already
   hangs on a ball joint aimed at the stairs. The bore runs on through the
