@@ -235,7 +235,12 @@ void mqtt_pub_pir_event(uint32_t n, int64_t t_ms)
     if (len <= 0 || len >= (int)sizeof(payload)) {
         return;
     }
-    if (esp_mqtt_client_enqueue(client, "rd03d/pir", payload, len, 0, 0, true) < 0) {
+    /* publish(), not enqueue(): esp-mqtt drains its outbox one message per
+     * loop iteration, and an idle loop iteration is a 1 s poll, so enqueued
+     * PIR traffic (three messages per event) backed up by ~29 s on the bench
+     * (2026-10-25). publish() writes to the socket now; this runs on the PIR
+     * task, which may block for the few ms a write takes. */
+    if (esp_mqtt_client_publish(client, "rd03d/pir", payload, len, 0, 0) < 0) {
         ESP_LOGW(TAG, "pir event %lu dropped", (unsigned long)n);
     }
 }
@@ -247,9 +252,11 @@ void mqtt_pub_pir_state(bool active)
     if (!s_connected || client == NULL) {
         return;
     }
-    /* Retained so a fresh Node-RED subscriber learns the current state. */
-    if (esp_mqtt_client_enqueue(client, "rd03d/pir/state", active ? "1" : "0",
-                                1, 1, 1, true) < 0) {
+    /* Retained so a fresh Node-RED subscriber learns the current state.
+     * QoS 0 and publish(): see mqtt_pub_pir_event for why not enqueue(); the
+     * reconnect republish above covers the retained value after an outage. */
+    if (esp_mqtt_client_publish(client, "rd03d/pir/state", active ? "1" : "0",
+                                1, 0, 1) < 0) {
         ESP_LOGW(TAG, "pir state %d dropped", active ? 1 : 0);
     }
 }

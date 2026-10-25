@@ -131,11 +131,12 @@ config RD03D_PIR_GPIO
 config RD03D_PIR_HOLD_MS
     int "PIR hold window (ms)"
     depends on RD03D_ENABLE_PIR
-    default 500
+    default 1500
     range 0 10000
     help
         Edges inside this window after an event are the same pass and do not
         publish; each one extends the window. rd03d/pir/state is 1 while the
-        window is open.
+        window is open. 1500 ms (was 500): on the bench one hand-wave produced
+        five or six events at 500 ms; the light only needs one per pass.
 
 endmenu
