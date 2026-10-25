@@ -1,12 +1,14 @@
-"""Place the real EKMC1603111 in the shell's PIR pod and check interference.
+"""Place the real EKMC1603111 in the back plate's PIR pod and check interference.
 
 Run with:  python3 run_fusion.py script 91_pir_fit.py
 
 Imports Panasonic's STEP of the sensor, seats it in the pod exactly as
-03_shell.py defines the pod (recomputed from the same parameters), snapshots
-the placement and runs Fusion's interference analysis between the sensor,
-the shell and the plug. Expected: 0 interference pairs. If it is not zero,
-fix the POD in 03_shell.py, never the sensor.
+02_backplate.py step 14 defines the pod tower (recomputed from the same
+parameters), snapshots the placement and runs Fusion's interference analysis
+between the sensor, the plate, the shell and the plug. Expected: the plug's
+designed press-fit annulus against the plate is the ONLY pair; anything
+involving the sensor is a failure. If it is not clean, fix the POD in
+02_backplate.py, never the sensor.
 """
 import math
 
@@ -69,17 +71,20 @@ def run(_context: str):
             occ.deleteMe()
             print("removed prior import:", name)
 
-    # --- pod frame, exactly as 03_shell.py step 7 computes it ---
+    # --- pod frame, exactly as 02_backplate.py step 14 computes it: the
+    # tower stands on the plate's wing 0.3 mm outside the shell's +X wall,
+    # its top face flush with the shell's front face ---
     intW, intD = p(des, "intW"), p(des, "intD")
     wall, backT = p(des, "wall"), p(des, "backT")
     recessR, podWall = p(des, "pirRecessR"), p(des, "pirPodWall")
     tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))
     sgn = 1.0 if p(des, "pirTiltSign") >= 0 else -1.0
-    xOuter = intW / 2 + wall
+    POD_GAP = 0.03                      # cm, tower to shell wall (02 step 14)
+    xTow0 = intW / 2 + wall + POD_GAP   # tower's -X face, 23.3
     zTop = intD + wall
     depth = zTop + backT
     podW = 2 * (recessR + podWall) + depth * math.tan(tilt)
-    podCx = xOuter + podW / 2
+    podCx = xTow0 + podW / 2
     front_pt = adsk.core.Point3D.create(podCx, 0.0, zTop)
 
     imp = app.importManager
@@ -132,7 +137,7 @@ def run(_context: str):
                                         (1.929 - SEAT_Z) * 10 * math.cos(tilt),
                                         zTop * 10))
 
-    # --- plug seat: pirSeatD (shared with 03_shell.py, which parks the plug's
+    # --- plug seat: pirSeatD (shared with 02_backplate.py, which parks the plug's
     # front rim there) must be the base's underside. Probe the sensor body
     # 0.5 mm either side of it, at a radius inside the rim's bearing annulus.
     seatD = p(des, "pirSeatD")
@@ -165,11 +170,15 @@ def run(_context: str):
                                % (pinD * 10, side * 10))
     print("keeper pin at d %.2f clear of the sensor ok" % (pinD * 10))
 
-    # --- interference: sensor vs shell (and the plug, parked in the bore) ---
+    # --- interference: sensor vs plate (the pod), shell (its notched +X
+    # wall is 0.3 mm from the tower) and the plug parked in the bore ---
+    plate = find_occ(root, ("BackPlate",))
     shell = find_occ(root, ("FrontShell",))
     plug = find_occ(root, ("PirPlug",))
     ents = adsk.core.ObjectCollection.create()
     for b in all_bodies(sensor):
+        ents.add(b)
+    for b in all_bodies(plate):
         ents.add(b)
     for b in all_bodies(shell):
         ents.add(b)
@@ -179,11 +188,12 @@ def run(_context: str):
     print("interference check over", ents.count, "bodies")
     # Since 2026-10-25 the plug's OD (12.1) is larger than the bore (11.8)
     # on purpose, to come out as a press fit on a printer whose outside
-    # walls print 0.2 under. The parked plug therefore overlaps the shell by
-    # a thin annulus: that one pair is expected, and is only checked to be
-    # no bigger than the full annulus (anything larger means the plug is
+    # walls print 0.2 under. The parked plug therefore overlaps the PLATE
+    # (which carries the bore since the pod moved to its wing) by a thin
+    # annulus: that one pair is expected, and is only checked to be no
+    # bigger than the full annulus (anything larger means the plug is
     # hitting something other than the bore wall). Any pair involving the
-    # sensor is a failure, as before.
+    # sensor, or the plate against the shell, is a failure.
     odR, boreR, plugL = p(des, "pirPlugOD") / 2, p(des, "pirBoreR"), p(des, "pirPlugL")
     press_max = math.pi * max(odR * odR - boreR * boreR, 0.0) * plugL   # cm^3, slot ignored
     inp = des.createInterferenceInput(ents)
@@ -199,7 +209,7 @@ def run(_context: str):
         total += max(vol, 0.0)
         names = {c1, c2}
         press_fit = (any(n.startswith("PirPlug") for n in names)
-                     and any(n.startswith("FrontShell") for n in names)
+                     and any(n.startswith("BackPlate") for n in names)
                      and not any(n.startswith(SENSOR_PREFIXES) for n in names))
         if press_fit and 0 <= vol <= press_max * 1.02:
             print("press fit: %.2f mm^3 between %s and %s (designed annulus "

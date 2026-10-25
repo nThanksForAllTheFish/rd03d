@@ -1,63 +1,9 @@
-import math
-
 import adsk.core
 import adsk.fusion
 
 
 def p(des, name):
     return des.userParameters.itemByName(name).value  # cm
-
-
-def ensure_params(des):
-    """PIR pod parameters. Not in 01_setup.py: re-running that resets hand-tuned values."""
-    spec = [
-        # radii measured on Panasonic's STEP by point probing (2026-10-11):
-        # base/can r 5.5 (not the 4.65 first assumed), neck r 5.3 -> 5.0,
-        # flange r 9.3 with its underside at z 6.4..6.6, lens ring r 10.3,
-        # and TWO lens latch tabs at 45/225 deg reaching r 11.1 over
-        # z 6.6..8.4 whose hook lips (r 9.6..10.7) hang down to z 5.5.
-        ("pirRecessR", "11.5 mm", "recess radius: latch tabs r 11.1 + 0.3 (lens ring is r 10.3)"),
-        ("pirRecessD", "2.0 mm", "recess depth to the flange ledge (flange underside at sensor z 6.4..6.6)"),
-        ("pirFlangeR", "9.3 mm", "flange radius: the sensor seats on the ledge r pirBoreR..pirFlangeR"),
-        ("pirHookD", "3.3 mm", "groove depth outside the ledge for the latch hook lips (bottom at z 5.5 -> d 2.9)"),
-        ("pirBoreR", "5.9 mm", "bore radius: base/can r 5.5 + 0.3; neck r 5.3..5.0 passes"),
-        ("pirTilt", "18 deg", "bore tilt from the shell normal, toward +X"),
-        ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up"),
-        ("pirPodWall", "2.0 mm", "pod wall around the recess"),
-        ("pirWireDia", "3.0 mm", "wire pass-through into the XIAO bay"),
-        # The horizontal hole meets the -X bore wall pirBoreR*tan(pirTilt)
-        # = 5.9*tan18 = 1.9 mm deeper than its axis point. The opening is
-        # centred on the pin tips (sensor z -5.5 = d 13.9), inside the plug
-        # span d 9.3..15.3 where the plug's slot is: 13.9 - 1.9 = 12.0.
-        ("pirWireD", "12.0 mm", "pass-through axis point depth: pin tips d 13.9 minus boreR*tan(tilt) 1.9"),
-        # Test print 2026-10-25: bore measured 11.8 (holes on this printer
-        # come out true to size), plug OD measured 11.5 for 11.7 nominal
-        # (outside walls print 0.2 under), and the plug fell out under
-        # gravity. 12.1 nominal prints at about 11.9 for the 11.8 bore:
-        # 0.05 mm per side of interference, taken up by the slot.
-        ("pirPlugOD", "12.1 mm", "plug tube OD: holes print true, outside walls 0.2 under (measured 2026-10-25); 12.1 prints ~11.9 for the 11.8 bore, 0.05/side interference taken up by the slot"),
-        ("pirPlugID", "8.0 mm", "plug tube ID: pins on r2.5 plus room for three soldered joints"),
-        ("pirPlugL", "6.0 mm", "plug tube length"),
-        ("pirSeatD", "9.3 mm", "plug front rim depth: the base's underside (sensor z -0.9); read by 03_shell.py and 91_pir_fit.py"),
-        ("pirPlugSlotW", "3.2 mm", "lengthwise slot through one plug wall: wire exit into the pass-through, and a little compliance for the press fit"),
-        # Keeper pin (2026-10-25): a stub of 1.75 mm filament pushed through
-        # a cross-hole in the pod, along Y, that crosses the bore just
-        # behind the plug's back end so the plug cannot fall out even if
-        # the press fit is loose. The axis depth is the plug's back end
-        # (pirSeatD + pirPlugL = 15.3) plus the pin's radius plus 0.5 mm of
-        # clearance between the plug and the pin's front surface: 16.75.
-        # (Measuring the 0.5 from the axis instead would put the hole's
-        # front edge 0.45 mm into the plug's wall.) pirPinD is an
-        # expression, so it follows the plug parameters.
-        ("pirPinDia", "1.9 mm", "keeper pin cross-hole diameter: 1.75 mm filament stub plus 0.15"),
-        ("pirPinD", "pirSeatD + pirPlugL + pirPinDia / 2 + 0.5 mm", "keeper pin axis depth along the bore from the front face: plug back end + pin radius + 0.5 clearance (= 16.75)"),
-    ]
-    ups = des.userParameters
-    for name, expr, comment in spec:
-        if ups.itemByName(name) is None:
-            unit = "deg" if "deg" in expr else ("" if expr.lstrip("-").isdigit() else "mm")
-            ups.add(name, adsk.core.ValueInput.createByString(expr), unit, comment)
-            print("added", name, "=", expr)
 
 
 def rect(sk, cx, cy, w, h):
@@ -95,22 +41,17 @@ def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
     root = des.rootComponent
-    ensure_params(des)
 
     for occ in list(root.occurrences):
-        name = occ.component.name
-        if name.startswith(("FrontShell", "PirPlug")):
+        if occ.component.name.startswith("FrontShell"):
             # rename before deleting: the dead component keeps its name
             # reserved in the document's name registry (until save), which
-            # would force the rebuilt component to "FrontShell (1)"
-            occ.component.name = name + "_deleted"
+            # would force the rebuilt component to "FrontShell (1)".
+            # (PirPlug and the sensor import belong to 02_backplate.py
+            # since the pod moved to the plate on 2026-10-25.)
+            occ.component.name = occ.component.name + "_deleted"
             occ.deleteMe()
-            print("removed existing", name)
-        elif name.startswith(("EKMC", "PaPIRs")):
-            # the PIR sensor placed by 91_pir_fit.py; it is re-imported
-            # against the rebuilt shell by re-running that script
-            occ.deleteMe()
-            print("removed prior sensor import:", name)
+            print("removed existing FrontShell")
 
     occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     comp = occ.component
@@ -320,53 +261,19 @@ def run(_context: str):
           "z %.2f..%.2f)" % (BOSS_W * 10, BOSS_W * 10, BOSS_CX * 10,
                              BOSS_CY * 10, BOSS_Z0 * 10, intD * 10))
 
-    # 6. PIR POD BLOCK (2026-10-11; moved ahead of the edge finishing on
-    # 2026-10-24): a block on the outer +X wall, full shell depth so its
-    # front face prints on the bed with the shell. It is joined BEFORE the
-    # corner fillets, front chamfer and rim fillet so those run around the
-    # pod instead of stopping dead at its footprint (the pod used to be
-    # added last, with sharp edges, and swallowed the finishing over its
-    # footprint). The pod sits on the flat part of the +X face (|y| <=
-    # podL/2 = 13.5, the shell's corner fillets start at |y| = 22.5). The
-    # recess, bore, wire hole, keeper pin hole and plug are cut in step 8.
-    recessR, recessD = p(des, "pirRecessR"), p(des, "pirRecessD")
-    boreR, podWall = p(des, "pirBoreR"), p(des, "pirPodWall")
-    flangeR, hookD = p(des, "pirFlangeR"), p(des, "pirHookD")
-    # Fusion hands angle parameters back in radians (18 deg -> 0.314); the
-    # guard also accepts a value typed in degrees.
-    tilt = p(des, "pirTilt") if p(des, "pirTilt") < 1.6 else math.radians(p(des, "pirTilt"))
-    sgn = 1.0 if p(des, "pirTiltSign") >= 0 else -1.0
-    xOuter = intW / 2 + wall                     # +X outer face of the shell
-    zTop, zBack = intD + wall, -backT
-    depth = zTop - zBack
-    podW = 2 * (recessR + podWall) + depth * math.tan(tilt)
-    podL = 2 * (recessR + podWall)
-    podCx = xOuter + podW / 2
-
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, podCx, 0, podW, podL)
-    extrude(comp, sk.profiles.item(0), zBack, zTop,
-            adsk.fusion.FeatureOperations.JoinFeatureOperation,
-            participants=[shell_body])
-    if comp.bRepBodies.count != 1:
-        raise RuntimeError("pir pod did not merge with the shell: %d bodies"
-                           % comp.bRepBodies.count)
-    print("pir pod block ok (%.1f x %.1f mm at x=%.1f)" % (podW * 10, podL * 10, podCx * 10))
-
-    # 7. soften exterior edges for hand comfort (change request 2026-09-07).
+    # 6. soften exterior edges for hand comfort (change request 2026-09-07).
     # Operates on shell_body ONLY (fillet/chamfer features act on its edges,
     # so they are participant-safe by construction; BackPlate untouched).
     # Order matters: vertical corner fillets FIRST (they change the corner
     # topology the later perimeter selections rely on).
-    # Since 2026-10-24 the outline includes the PIR pod: in plan it is the
-    # shell rectangle with the pod rectangle standing off the +X face, so
-    # there are 8 vertical edges (4 shell corners, 2 pod corners, 2 concave
-    # junctions) and each z-level perimeter loop is 8 straights + 8 arcs.
+    # 2026-10-24..25: for one day the PIR pod block stood off the +X face
+    # and this ran around it (8 vertical edges, 16-edge loops). The pod now
+    # lives on the back plate's wing (02_backplate.py step 14), so the
+    # outline is the plain shell rectangle again: 4 corners, 8-edge loops.
     corner = p(des, "cornerFillet")
     cham = p(des, "frontChamfer")
     soft = p(des, "softFillet")
     ox, oy = intW / 2 + wall, intH / 2 + wall   # outer half-extents (cm)
-    px, py = ox + podW, podL / 2                # pod outer face x, pod half-length
     z_top, z_back = intD + wall, -backT
     EPS = 0.005  # 0.05 mm tolerance (cm)
 
@@ -391,18 +298,8 @@ def run(_context: str):
             inp.addConstantRadiusEdgeSet(collection(edges), rv, False)
         return fil.add(inp)
 
-    def near(a, b):
-        return abs(a - b) < EPS
-
-    # 7a. vertical edges: lines parallel to Z at the outline's corners.
-    # Convex: shell (|x|=ox, |y|=oy) and pod (x=px, |y|=py). Concave: the
-    # pod-to-wall junctions (x=ox, |y|=py). All get the same radius; the
-    # concave pair is what blends the pod into the wall.
-    def vertical_corner(mx, my):
-        return ((near(abs(mx), ox) and near(abs(my), oy))
-                or (near(mx, px) and near(abs(my), py))
-                or (near(mx, ox) and near(abs(my), py)))
-
+    # 6a. four outer vertical corner edges: lines parallel to Z with both
+    # |x| and |y| at the outer values.
     verts = []
     for e in shell_body.edges:
         g = e.geometry
@@ -412,26 +309,22 @@ def run(_context: str):
         if abs(abs(d.z) - 1) > 1e-6:
             continue
         mx, my, _ = mid(g)
-        if vertical_corner(mx, my):
+        if abs(abs(mx) - ox) < EPS and abs(abs(my) - oy) < EPS:
             verts.append(e)
     print("corner fillet edges found:", len(verts))
-    if len(verts) != 8:
-        raise RuntimeError("expected 8 vertical corner edges (4 shell, 2 pod, "
-                           "2 junction), found %d" % len(verts))
+    if len(verts) != 4:
+        raise RuntimeError("expected 4 vertical corner edges, found %d"
+                           % len(verts))
     add_fillet(verts, corner)
-    print("corner fillets ok (r=%.2f mm on 8 edges)" % (corner * 10))
+    print("corner fillets ok (r=%.2f mm on 4 edges)" % (corner * 10))
 
     # Outer-perimeter edge selector at a z level: straight edges lying on the
-    # outer faces (shell |x|=ox or |y|=oy; pod x=px, or |y|=py beyond the
-    # shell face) plus the corner-fillet arcs, whose centres sit at
-    # (+-(ox-r), +-(oy-r)) for the shell corners, (px-r, +-(py-r)) for the
-    # pod corners and (ox+r, +-(py+r)) for the concave junctions. The window
+    # outer faces (|x|=ox or |y|=oy) plus the corner-fillet arcs. The window
     # pocket is on the interior face and never touches the outer boundary.
-    # At both z_top and z_back the boundary is one closed loop of 16 edges.
-    arc_centres = [(sx * (ox - corner), sy * (oy - corner)) for sx in (1, -1) for sy in (1, -1)]
-    arc_centres += [(px - corner, sy * (py - corner)) for sy in (1, -1)]
-    arc_centres += [(ox + corner, sy * (py + corner)) for sy in (1, -1)]
-
+    # At both z_top and z_back the boundary is one clean closed loop
+    # (4 straights + 4 arcs = 8 edges). Before 2026-09-09 the USB notch
+    # split the +X segment at z_back, giving 9; the wing notch (step 7) is
+    # cut AFTER this block for the same reason.
     def perimeter_edges(zlev):
         found = []
         for e in shell_body.edges:
@@ -441,13 +334,14 @@ def run(_context: str):
                         or abs(g.endPoint.z - zlev) > EPS):
                     continue
                 mx, my, _ = mid(g)
-                if (near(abs(mx), ox) or near(abs(my), oy) or near(mx, px)
-                        or (near(abs(my), py) and mx > ox + EPS)):
+                if abs(abs(mx) - ox) < EPS or abs(abs(my) - oy) < EPS:
                     found.append(e)
             elif isinstance(g, (adsk.core.Arc3D, adsk.core.Circle3D)):
                 c = g.center
-                if (abs(c.z - zlev) < EPS and near(g.radius, corner)
-                        and any(near(c.x, cx) and near(c.y, cy) for cx, cy in arc_centres)):
+                if (abs(c.z - zlev) < EPS
+                        and abs(g.radius - corner) < EPS
+                        and abs(abs(c.x) - (ox - corner)) < EPS
+                        and abs(abs(c.y) - (oy - corner)) < EPS):
                     found.append(e)
         return found
 
@@ -457,190 +351,63 @@ def run(_context: str):
         chi.setToEqualDistance(adsk.core.ValueInput.createByReal(dist))
         return ch.add(chi)
 
-    # 7b. front-face perimeter chamfer (prints clean bed-side). The pod's
-    # front face is coplanar with the shell's, so the loop runs around it:
-    # 8 straights + 8 corner-fillet arcs, chamfered as a single feature.
-    # On the pod's +-Y sides the chamfer takes 1 mm off a 2 mm wall at the
-    # very front edge only; the recess behind it is a pocket for the lens
-    # ring, not a load path.
+    # 6b. front-face perimeter chamfer (prints clean bed-side). With the
+    # window pocket on the interior face, the z=16 outer boundary is one
+    # clean closed loop - 4 straights + 4 corner-fillet arcs = 8 edges -
+    # chamfered as a single feature.
     front = perimeter_edges(z_top)
     print("front perimeter edges found:", len(front))
-    if len(front) != 16:
-        raise RuntimeError("expected 16 front perimeter edges, found %d"
+    if len(front) != 8:
+        raise RuntimeError("expected 8 front perimeter edges, found %d"
                            % len(front))
     add_chamfer(front, cham)
-    print("front chamfer ok (%.2f mm on 16 edges)" % (cham * 10))
+    print("front chamfer ok (%.2f mm on 8 edges)" % (cham * 10))
 
-    # 7c. back rim outer edge fillet, same loop at z_back.
+    # 6c. back rim outer edge fillet.
     rim = perimeter_edges(z_back)
     print("back rim edges found:", len(rim))
-    if len(rim) != 16:
-        raise RuntimeError("back rim should be 16 edges with the pod, "
+    if len(rim) != 8:
+        raise RuntimeError("back rim should be 8 edges before the wing notch, "
                            "found %d" % len(rim))
     add_fillet(rim, soft)
     print("rim fillet ok (r=%.2f mm on %d edges)" % (soft * 10, len(rim)))
 
-
-    # 8. PIR POD cuts (2026-10-11): the block itself is joined in step 6,
-    # before the edge finishing, so the fillets and chamfer run around it.
-    # The EKMC1603111's lens (dia 20.6, 11 mm tall) is wider than its neck,
-    # so the sensor enters from the FRONT: lens ring + flange in a 2 mm
-    # recess, the flange seated on a ledge with an annular groove outside it
-    # for the lens's two latch hooks (so the sensor can go in at any
-    # rotation), neck and base through a bore, a plug tube pressed in from
-    # the back holds it. The bore tilts pirTilt toward +X so the PIR looks
-    # 18 deg down with the case hanging XIAO-end-down.
-    # PRINTING (review 2026-10-11): the recess opens onto the bed, so its
-    # floor (the flange ledge and the groove floor) is an unsupported
-    # overhang in the face-down orientation. Accepted: the shell now needs
-    # supports INSIDE THE PIR RECESS ONLY (paint-on or tree supports in the
-    # dia 23 pocket; the surface they touch is hidden under the sensor's
-    # flange). Everything else prints as before, without supports.
-
-    # bore axis through the pod centre at the front face, direction
-    # (sgn*sin t, 0, cos t); along(d) is the axis point d into the pod.
-    ax = adsk.core.Vector3D.create(sgn * math.sin(tilt), 0.0, math.cos(tilt))
-    front_pt = adsk.core.Point3D.create(podCx, 0.0, zTop)
-
-    def along(d):
-        return adsk.core.Point3D.create(front_pt.x - ax.x * d, 0.0, front_pt.z - ax.z * d)
-
-    # read every parameter BEFORE startEdit(): inside a base feature the
-    # design is in direct-modelling mode and userParameters raises
-    # "this is not a parametric design".
-    wireR, wp = p(des, "pirWireDia") / 2, along(p(des, "pirWireD"))
-    pinR, pinD = p(des, "pirPinDia") / 2, p(des, "pirPinD")
-    plugBack = p(des, "pirSeatD") + p(des, "pirPlugL")
-    pp = along(pinD)
-    # keeper pin guards (see ensure_params): its front surface must be
-    # behind the plug's back end, it must stay clear of the wire hole
-    # (both sit at y 0, so only their z separation keeps them apart) and
-    # inside the pod's depth
-    if pinD - pinR <= plugBack:
-        raise RuntimeError("keeper pin front surface at d %.2f is not behind the "
-                           "plug's back end at d %.2f" % ((pinD - pinR) * 10, plugBack * 10))
-    if abs(pp.z - wp.z) <= pinR + wireR:
-        raise RuntimeError("keeper pin (z %.2f) would break into the wire hole (z %.2f)"
-                           % (pp.z * 10, wp.z * 10))
-    if pp.z - pinR <= zBack + 0.1:
-        raise RuntimeError("keeper pin z %.2f leaves under 1 mm of pod behind it"
-                           % (pp.z * 10))
-    tbm = adsk.fusion.TemporaryBRepManager.get()
-    base = comp.features.baseFeatures.add()
-    base.startEdit()
-    # The recess is a TILTED cylinder, so its +X rim exits the flat front
-    # face recessR*tan(tilt) (~3.7 mm) further out along the axis than its
-    # -X rim does. Starting the cut only 0.5 mm outside the face left a
-    # crescent of pod under the dome's +X flank (180 mm^3 of interference
-    # with the real sensor, 2026-10-11). Start it where the cylinder has
-    # cleared the face plane entirely; beyond that it cuts only air.
-    recess_out = recessR * math.tan(tilt) + 0.1
-    recess_cyl = tbm.createCylinderOrCone(along(-recess_out), recessR, along(recessD), recessR)
-    # latch-hook groove: the recess floor stays at recessD only over the
-    # flange ledge (r boreR..flangeR); outside it the floor drops to hookD
-    groove = tbm.createCylinderOrCone(along(recessD - 0.01), recessR, along(hookD), recessR)
-    ledge = tbm.createCylinderOrCone(along(recessD - 0.02), flangeR, along(hookD + 0.01), flangeR)
-    tbm.booleanOperation(groove, ledge, adsk.fusion.BooleanTypes.DifferenceBooleanType)
-    bore_cyl = tbm.createCylinderOrCone(along(recessD - 0.01), boreR,
-                                        along(depth / math.cos(tilt) + 0.3), boreR)
-    wire_cyl = tbm.createCylinderOrCone(
-        adsk.core.Point3D.create(wp.x, 0.0, wp.z), wireR,
-        adsk.core.Point3D.create(intW / 2 - 0.015, 0.0, wp.z), wireR)
-    # keeper pin cross-hole: along Y (perpendicular to the bore axis and to
-    # the tilt plane) at the axis point pinD, through both pod walls and
-    # across the bore, overrunning the pod's +-Y faces by 1 mm
-    pin_cyl = tbm.createCylinderOrCone(
-        adsk.core.Point3D.create(pp.x, -(podL / 2 + 0.1), pp.z), pinR,
-        adsk.core.Point3D.create(pp.x, podL / 2 + 0.1, pp.z), pinR)
-    for b in (recess_cyl, groove, bore_cyl, wire_cyl, pin_cyl):
-        comp.bRepBodies.add(b, base)
-    base.finishEdit()
-    # the proxies returned by bRepBodies.add() go stale when the edit
-    # closes (Combine fails with ALL_TOOL_BODY_REFERENCE_LOST); use the
-    # base feature's own body list instead
-    tools = [base.bodies.item(i) for i in range(base.bodies.count)]
-    if len(tools) != 5:
-        raise RuntimeError("expected 5 pir tool bodies, found %d" % len(tools))
-    ci = comp.features.combineFeatures.createInput(shell_body, collection(tools))
-    ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
-    ci.isKeepToolBodies = False
-    comp.features.combineFeatures.add(ci)
-    if comp.bRepBodies.count != 1:
-        raise RuntimeError("pir bore split the shell: %d bodies" % comp.bRepBodies.count)
-    print("pir recess r=%.2f d=%.2f (ledge r %.2f..%.2f, hook groove to d %.2f), "
-          "bore r=%.2f, tilt %.1f deg ok"
-          % (recessR * 10, recessD * 10, boreR * 10, flangeR * 10, hookD * 10,
-             boreR * 10, math.degrees(tilt)))
-    # hand-drill location for a print made before the pin existed: on the
-    # pod's +-Y side faces, measured from the front face and from the
-    # shell's +X outer wall
-    print("pir keeper pin hole dia %.2f along Y at d %.1f (plug back end d %.1f, "
-          "clearance %.2f): on the pod's side faces %.2f mm from the front face, "
-          "%.2f mm from the shell's +X wall ok"
-          % (pinR * 20, pinD * 10, plugBack * 10, (pinD - pinR - plugBack) * 10,
-             (zTop - pp.z) * 10, (pp.x - xOuter) * 10))
-
-    # 8b. PLUG: tube pressed into the bore from the back; its front rim bears
-    # on the base's underside (r up to 5.5, pins inside r 2.5). Separate component,
-    # exported as its own STL, printed standing on either end.
-    plug_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
-    plug = plug_occ.component
-    plug.name = "PirPlug"
-    sk = plug.sketches.add(plug.xYConstructionPlane)
-    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugOD") / 2)
-    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugID") / 2)
-    ring = None
-    for i in range(sk.profiles.count):            # the annular profile, not the inner disc
-        pr = sk.profiles.item(i)
-        if ring is None or pr.areaProperties().area > ring.areaProperties().area:
-            ring = pr
-    plugL = p(des, "pirPlugL")
-    slotWall = (p(des, "pirPlugOD") - p(des, "pirPlugID")) / 2
-    if slotWall < 0.12:
-        raise RuntimeError("plug wall %.2f mm is under 1.2 mm" % (slotWall * 10))
-    plug_ext = extrude(plug, ring, 0, plugL,
-                       adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    plug_body = plug_ext.bodies.item(0)
-    # lengthwise slot through the -X wall, full length: the wires leave the
-    # pins radially through it into the pass-through (which runs -X from
-    # the bore axis), and the split lets the tube compress a little for the
-    # press fit. The parking frame below maps local -X toward the case
-    # (world -X), so "slot toward the case" is the insertion rule.
-    slotW, odR = p(des, "pirPlugSlotW"), p(des, "pirPlugOD") / 2
-    sk = plug.sketches.add(plug.xYConstructionPlane)
-    rect(sk, -(odR + 0.1) / 2, 0, odR + 0.1, slotW)      # x -(odR+1mm)..0
-    extrude(plug, sk.profiles.item(0), -0.05, plugL + 0.05,
+    # 7. NOTCH FOR THE PLATE'S PIR WING (2026-10-25). The PIR pod now stands
+    # on a 6 mm wing that grows out of the back plate's +X edge (z -8..-2,
+    # y +/-13.5; 02_backplate.py step 14) and passes UNDER this wall. Cut
+    # the +X wall away over the wing's width from the back rim up to z +2:
+    # z -8..-2 makes room for the wing itself, and the 4 mm above it
+    # (z -2..+2) is the slot the sensor's three wires come through, out of
+    # the dia 3 hole in the tower's -X face (exit centred z 0.2) and onto
+    # the plate, to the XIAO bay. The wall keeps its full 2 mm thickness
+    # above z +2. The notch's +/-Y faces straddle the wing with 0.3 mm a
+    # side, which also locates the shell in Y at this end.
+    #
+    # Side effect, accepted: the two +X snap bumps (y 9..15, z -1.6..-0.4)
+    # lie almost entirely inside the notch; only their outer 1.2 mm (y
+    # 13.8..15) survives, so the shell's +X end is retained mostly by the
+    # -X bumps and by the wing sitting in the notch.
+    #
+    # Done AFTER 6a-6c, which count edges on the virgin outline (the notch
+    # would split the +X rim segment and give 9 at z_back). It takes the
+    # back-rim fillet off the +X wall over the notch's width, which is
+    # fine: that stretch of rim is cut away.
+    podHalf = p(des, "pirRecessR") + p(des, "pirPodWall")          # 13.5 mm
+    NOTCH_CLEAR = 0.3 * MM
+    NOTCH_TOP = 2.0 * MM
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    nx0, nx1 = intW / 2 - 0.1 * MM, intW / 2 + wall + 0.1 * MM
+    ny = podHalf + NOTCH_CLEAR
+    rect(sk, (nx0 + nx1) / 2, 0, nx1 - nx0, 2 * ny)
+    extrude(comp, sk.profiles.item(0), -backT - 0.1 * MM, NOTCH_TOP,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[plug_body])
-    if plug.bRepBodies.count != 1:
-        raise RuntimeError("plug slot left %d bodies" % plug.bRepBodies.count)
-    print("pir plug slot ok (%.1f mm wide, -X wall, full length)" % (slotW * 10))
-    # park the occurrence in the bore where it will sit: local +Z along the
-    # bore (deeper = -Z of the shell), local z=0 (the front rim) at d 9.3,
-    # the can's underside (sensor z -0.9). Purely for the picture and for
-    # 91_pir_fit.py's interference check; the STL is exported in local coords.
-    # Explicit frame rather than setToRotateTo(): that would spin the tube
-    # 162 deg about -Y and put the slot on the +X side. Local Z = inward
-    # along the bore, local X = the in-plane direction that keeps -X
-    # pointing at the case, Y = Z x X.
-    m = adsk.core.Matrix3D.create()
-    inward = adsk.core.Vector3D.create(-ax.x, 0.0, -ax.z)
-    xloc = adsk.core.Vector3D.create(math.cos(tilt), 0.0, -sgn * math.sin(tilt))
-    yloc = inward.crossProduct(xloc)
-    seat = along(p(des, "pirSeatD"))
-    m.setWithCoordinateSystem(seat, xloc, yloc, inward)
-    # guard for future edits of the frame above: the slot (local -X) must
-    # end up on the case side, where the wire hole is, or the README's
-    # insertion rule and the fit check stop describing the same thing
-    chk = adsk.core.Point3D.create(-odR, 0, 0)
-    chk.transformBy(m)
-    if chk.x >= seat.x:
-        raise RuntimeError("plug parked with its slot away from the case")
-    plug_occ.transform2 = m
-    if des.snapshots.hasPendingSnapshot:
-        des.snapshots.add()
-    print("pir plug ok (OD %.1f ID %.1f L %.1f, wall %.2f, rim at d %.1f)"
-          % (p(des, "pirPlugOD") * 10, p(des, "pirPlugID") * 10, plugL * 10,
-             slotWall * 10, p(des, "pirSeatD") * 10))
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("wing notch split the shell: %d bodies"
+                           % comp.bRepBodies.count)
+    print("wing notch ok (+X wall x %.2f..%.2f cut over y +/-%.2f from the back "
+          "rim up to z %.1f: %.0f mm for the wing, %.0f mm wire slot above it)"
+          % (nx0 * 10, nx1 * 10, ny * 10, NOTCH_TOP * 10, (backT - 0.2) * 10,
+             (NOTCH_TOP + 0.2) * 10))
 
     print("FrontShell bodies:", comp.bRepBodies.count)

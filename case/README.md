@@ -15,52 +15,73 @@ The living design is in your Fusion; save it to your own project.
   jack's mouth — which sits flush in it — the rear face is flat (great
   first layer; tape sticks directly to it), and so is the interior floor,
   which carries no counterbores.
+  Since 2026-10-25 the plate also carries the **PIR pod**, on a **wing**:
+  a 6 mm tab (z −8..−2, the same back face as the plate) growing out of
+  the plate's +X edge (the end that hangs down) to x 58, 27 mm wide, with
+  a 34.8 × 27 mm **tower** standing on it beside the shell's +X wall
+  (0.3 mm gap), top face flush with the shell's front face. It is for a
+  Panasonic EKMC1603111 PaPIRs with the long-distance lens. The sensor
+  goes in from the **front**, dome out: the lens ring and flange drop into
+  an 11.5 mm-radius recess and the flange seats on a ledge 2 mm down; an
+  annular groove outside the ledge clears the lens's two latch hooks
+  (which reach 0.9 mm below the flange), so the sensor can go in at any
+  rotation. The neck and Ø11 base pass through a Ø11.8 bore tilted 18°
+  toward +X, so the PIR looks outward and 18° down when the case hangs
+  XIAO-end-down; the bore runs on through the wing and comes out of the
+  back face (centred about x 32.9). A Ø3 pass-through for the three sensor
+  wires leaves the bore's −X wall centred on the pin tips (about 13.9 mm
+  down the bore, inside the plug's span, so it opens straight onto the
+  plug's slot) and slopes down (18°) to come out of the tower's −X face at
+  about z 0, in line with the shell's wire slot (next item). Two more
+  Technic holes, at (48.95, ±4) on the same 8 mm grid, go 8 mm into the
+  wing from the back, with the same counterbore, under the tower's far
+  end; with the original six that is eight mount points.
 - `rd03d_case_shell.stl` — front shell: a radome step that brings the
   front wall down to 1.2 mm in front of the antennas (solid 3.1 mm of
   plastic there, exterior face still perfectly flat), a hold-down boss
-  over the XIAO, four snap bumps engage the plate's edge grooves. Its
-  side walls are unbroken: the old side USB notch is **gone** — see the
-  USB-C base jack section below. Since 2026-10-11 it also carries a
-  **PIR pod** on its +X wall (the end that hangs down): a 34.8 × 27 mm
-  block, full case depth, for a Panasonic EKMC1603111 PaPIRs with the
-  long-distance lens. The sensor goes in from the **front**, dome out: the
-  lens ring and flange drop into an 11.5 mm-radius recess and the flange
-  seats on a ledge 2 mm down; an annular groove outside the ledge clears
-  the lens's two latch hooks (which reach 0.9 mm below the flange), so the
-  sensor can go in at any rotation. The neck and Ø11 base pass through a
-  Ø11.8 bore tilted 18° toward +X, so the PIR looks outward and 18° down
-  when the case hangs XIAO-end-down. A Ø3 pass-through for the three
-  sensor wires leaves the bore's −X wall centred on the pin tips (about
-  13.9 mm down the bore, inside the plug's span, so it opens straight onto
-  the plug's slot) and runs horizontally through the shell wall into the
-  XIAO bay at about z 4.6 mm, just above the XIAO's top face.
-- `rd03d_pir_plug.stl` — the PIR retaining plug: a Ø12.1 × 6 mm tube with
-  a Ø8 bore, pressed into the pod's Ø11.8 bore from the **back** until its
-  front rim bears on the sensor's base, which holds the flange against its
-  ledge. The pins and wires run inside the Ø8, and a 3.2 mm slot runs the
-  full length of one wall so the wires can leave radially: **insert the
-  plug with its slot facing the case (toward −X)** so it lines up with the
-  wire hole into the XIAO bay. The slot also lets the tube squeeze a
-  little for the press fit (the OD is 0.3 over the bore on purpose; see
-  Tweaking fit). Print it standing on either end. A **keeper pin** backs
-  up the press fit: a Ø1.9 cross-hole runs through the pod from side to
-  side (along Y), crossing the bore 0.5 mm behind the plug's back end.
-  Once the plug is in, push a stub of 1.75 mm filament through the hole on
-  the pod's side; it bridges the bore behind the plug so the plug cannot
-  fall out, and the wires run past it. Pull the stub to disassemble.
+  over the XIAO, four snap bumps engage the plate's edge grooves. The old
+  side USB notch is **gone** — see the USB-C base jack section below. The
+  only opening in its walls is the **wing notch**: the +X wall is cut away
+  at its bottom edge over 27.6 mm (y ±13.8) from the rim up to z +2, so
+  the plate's wing passes under the wall (z −8..−2) and the 4 mm above the
+  wing is the slot the PIR wires come through onto the plate. (The pod
+  lived on this wall from 2026-10-11 to 2026-10-25; it moved to the plate
+  so that every wire stays on the plate and the shell lifts off clean, and
+  so that nothing needs supports any more.) The notch takes most of the
+  two +X snap bumps with it — only their outer 1.2 mm survives — so the +X
+  end of the lid is held by the wing sitting in the notch and by the two
+  −X bumps.
+- `rd03d_pir_plug.stl` — the PIR retaining plug: a Ø12.1 × 10 mm tube
+  with a Ø9 bore, pressed into the pod's Ø11.8 bore from the **back**
+  until its front rim bears on the sensor's base, which holds the flange
+  against its ledge. The pins, their solder joints and the 0.1 µF film cap
+  standing on the VDD/GND pins (about 7 × 2.5 × 6.5 mm, top about 8.5 mm
+  above the base) all sit inside the Ø9, and a 3.2 mm slot runs the full
+  length of one wall so the wires can leave radially: **insert the plug
+  with its slot facing the case (toward −X)** so it lines up with the wire
+  hole. The slot also lets the tube squeeze a little for the press fit
+  (the OD is 0.3 over the bore on purpose; see Tweaking fit). Print it
+  standing on either end. A **keeper pin** backs up the press fit: a Ø1.9
+  cross-hole runs through the **wing** from side to side (along Y, at
+  x ≈ 34.3, 4.3 mm above the back face, 11 mm out from the tower's −X
+  face), crossing the bore 0.5 mm behind the plug's back end. Once the
+  plug is in, push a stub of 1.75 mm filament through the hole on the
+  wing's side; it bridges the bore behind the plug so the plug cannot fall
+  out, and the wires run past it. Pull the stub to disassemble.
 
 ## Printing
 
 **PETG preferred** — the five retention clips are live springs and PLA is
 brittle enough to snap one on the first insertion. 0.4–0.6 mm nozzle,
-0.2 mm layers. No supports, with one exception since 2026-10-11: the
-shell needs supports **inside the PIR recess only** — the Ø23 pocket in the
-front face opens onto the bed, so its floor (the ledge the sensor's flange
-seats on) is an overhang. Paint-on or tree supports in that pocket; the
-surface they touch is hidden under the flange. Nothing else changed.
-The keeper pin hole in the pod is a horizontal Ø1.9 hole, printed on its
-side; it may close up a little and need a 1.8–1.9 mm drill run through it
-after printing before the filament stub will pass.
+0.2 mm layers. **No supports** on any part (again, since 2026-10-25): with
+the pod on the plate its Ø23 recess is a top-side pocket, the tilted bore
+is an 18° hole, and the shell's notch is a bottom-edge cut-out. The two
+small horizontal holes in the plate print on their side and may close up
+a little: the Ø1.9 keeper pin hole through the wing may need a 1.8–1.9 mm
+drill run through it before the filament stub will pass, and the Ø3 wire
+hole out of the tower's −X face (sloping 18°) a 3 mm drill if the wires
+are snug. The two wing Technic holes are blind (8 mm deep) and bridge
+their Ø4.9 ceiling inside the tower; that bridges fine at 0.2 mm layers.
 Back plate: print flat (back face down). Shell: print open-side-up.
 Print the **shell at high or solid infill** (≥50 %, ideally 100 % over the
 front wall): the 3.1 mm radome in front of the antennas should be
@@ -120,14 +141,31 @@ down means holding an iron over them.
    component-free bands across the board's back — its 5-pin connector
    hangs free in the space between them, so don't force the board down
    onto anything.
-2. Snap the shell on (bumps click into the plate grooves). There is no
-   longer a USB notch to hook a fingernail into, so to get the lid back
-   off, work a thin plastic spudger or guitar pick into the parting seam
-   at a corner and walk it along until the bumps let go.
-3. Mounting: push Technic pins / ball-pins into the six back holes
-   (8 mm LEGO pitch: 1×4 column + 1×2 column); a ball-and-socket arm
-   gives adjustable aim. Or stick VHB tape directly to the flat back
-   if you prefer adhesive mounting.
+2. PIR sensor, on the plate's pod, **before the shell goes on** so you can
+   see the wires land:
+   - Drop the sensor into the recess from the front, dome out, at any
+     rotation. The flange seats on the ledge 2 mm down; the neck and base
+     slide into the tilted bore.
+   - Push the plug into the bore from the **back face**, slot toward the
+     case (−X), until its rim bears on the sensor's base. It is a press
+     fit; the slot lets it squeeze. The cap on the pins goes up inside it.
+   - Push a stub of 1.75 mm filament through the keeper pin hole on the
+     wing's side (either side; it goes right through), behind the plug.
+     Trim it flush.
+   - Lead the three wires out of the plug's slot into the Ø3 hole in the
+     tower's −X face, over the wing, and onto the plate at the XIAO's +X
+     end (the fence bars are 5 mm tall; the wires climb over the −Y one
+     or run across the bay above the board to D1, 3V3 and GND).
+3. Snap the shell on: its +X wall drops over the wing through the notch,
+   the wires pass through the 4 mm slot above the wing, and the −X bumps
+   click into the plate grooves. There is no USB notch to hook a
+   fingernail into, so to get the lid back off, work a thin plastic
+   spudger or guitar pick into the parting seam at a corner and walk it
+   along until the bumps let go.
+4. Mounting: push Technic pins / ball-pins into the back holes (8 mm LEGO
+   pitch: 1×4 column + 1×2 column on the plate, plus a 1×2 pair under the
+   PIR tower); a ball-and-socket arm gives adjustable aim. Or stick VHB
+   tape directly to the flat back if you prefer adhesive mounting.
 
 ## USB-C base jack (added 2026-09-09)
 
@@ -241,7 +279,12 @@ the bore, 12.1, to print at about 11.9 for 0.05 mm per side of
 interference, which the slot takes up — drop it 0.1 if the plug will not
 go in, raise it if it is loose. On a printer that prints holes undersize
 start lower. The keeper pin (`pirPinDia`, `pirPinD`) holds the plug
-either way. No metal or foil in front of the radar, ever.
+either way; `pirPinD` is an expression on `pirSeatD + pirPlugL`, so a
+longer or shorter plug moves the pin hole with it (at 10 mm it lands in
+the wing, 4.3 mm above the back face). `pirPlugID` (9) and `pirPlugL` (10)
+are sized for the decoupling cap soldered standing on the sensor's pins;
+a bare sensor could use 8 and 6 again. No metal or foil in front of the
+radar, ever.
 The retention clips and the radome step are local constants inside
 `fusion_scripts/02_backplate.py` and `03_shell.py` (grab amounts, lip
 heights, `RADOME_Z0`), not user parameters — edit them there and re-run
@@ -251,17 +294,20 @@ not by `01_setup.py`, so they only exist once that script has run.
 Re-export STLs after edits (File → 3D Print, or re-run
 `fusion_scripts/05_export.py` via `run_fusion.py`).
 The `pir*` parameters (recess, ledge, groove, bore, tilt, plug, keeper
-pin) are created
-by `03_shell.py` the same way; the radii come from point-probing Panasonic's
-STEP of the sensor (base r 5.5, flange r 9.3, latch tabs r 11.1), not from
-its datasheet drawing, with 0.3 mm of clearance on each.
+pin) are created by `02_backplate.py` the same way (they moved there from
+`03_shell.py` with the pod; the shell only reads two of them to size its
+notch); the radii come from point-probing Panasonic's STEP of the sensor
+(base r 5.5, flange r 9.3, latch tabs r 11.1), not from its datasheet
+drawing, with 0.3 mm of clearance on each.
 `fusion_scripts/90_verify.py` is a read-only probe harness that asserts the
-jack, cradle, notches, clips, the absent shell notch and the PIR pod with
+jack, cradle, notches, clips, the shell's wing notch and the PIR pod (wing,
+tower, recess, bore, pin and wire holes, the two wing Technic holes) with
 `pointContainment`; run it after any change and expect `VERIFY OK`.
 `fusion_scripts/91_pir_fit.py` imports the sensor's STEP (a local vendor
-download under `case/models/`, not in the repo), seats it in the pod and runs
-Fusion's interference analysis against the shell and the plug; expect
-`PIR FIT OK` (zero pairs).
+download under `case/models/`, not in the repo), seats it in the plate's
+pod and runs Fusion's interference analysis against the plate, the shell
+and the plug; expect `PIR FIT OK` (the plug's designed press-fit annulus
+against the plate is the one expected pair).
 
 ## Design notes
 
