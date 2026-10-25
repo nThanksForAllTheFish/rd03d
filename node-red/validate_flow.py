@@ -66,15 +66,12 @@ rbe = one("rbe")
 if rbe.get("septopics") is not False:
     fail("rbe must have septopics=false (single stream across target topics)")
 
-change = one("change")
-rule = change["rules"][0]
-if not (rule["t"] == "set" and rule["p"] == "topic"
-        and rule["to"] == "cmnd/stairlight/POWER"):
-    fail("change node must SET msg.topic to cmnd/stairlight/POWER")
-
+change = one("function", lambda n: n.get("name", "").startswith("to Sonoff RF bridge"), "RF bridge")
+if "RfKey1" not in change["func"] or "RfKey2" not in change["func"] or "BRIDGE" not in change["func"]:
+    fail("RF bridge node must map ON/OFF to RfKey1/RfKey2 via BRIDGE")
 out = one("mqtt out")
 if out.get("topic", "") != "":
-    fail("mqtt out topic must be empty (msg.topic from the change node)")
+    fail("mqtt out topic must be empty (msg.topic from the RF bridge node)")
 
 injects = [n for n in nodes if n["type"] == "inject"]
 if sorted(n["payload"] for n in injects) != ["OFF", "ON"]:
@@ -84,7 +81,7 @@ debugs = [n for n in nodes if n["type"] == "debug"]
 if len(debugs) != 2:
     fail(f"expected 2 debug nodes, got {len(debugs)}")
 
-# Wiring spine: targets -> zone -> source switch -> trigger -> rbe -> change -> mqtt out
+# Wiring spine: targets -> zone -> source switch -> trigger -> rbe -> RF bridge -> mqtt out
 def wired(a, b):
     return any(b["id"] in out for out in a.get("wires", []))
 
@@ -95,7 +92,7 @@ for a, b in zip(spine, spine[1:]):
         fail(f"{a['type']} not wired to {b['type']}")
 for inj in injects:
     if not wired(inj, change):
-        fail("inject buttons must wire into the change node")
+        fail("inject buttons must wire into the RF bridge node")
 
 dbg_zone = next(n for n in debugs if n["name"] == "in-zone events")
 dbg_stat = next(n for n in debugs if n["name"] == "sensor status")

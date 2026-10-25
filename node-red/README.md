@@ -15,8 +15,12 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
    (`iotstack.local:1883`, anonymous). If your Node-RED already has a broker
    config for the same server, you can repoint the four MQTT nodes at it
    instead.
-2. **Device topic** — double-click *"to Tasmota topic (EDIT DEVICE)"* and
-   replace `stairlight` in `cmnd/stairlight/POWER` with your relay's topic.
+2. **Device** — the light is a radio-controlled lamp driven through a Tasmota
+   Sonoff RF Bridge: double-click *"to Sonoff RF bridge (EDIT DEVICE)"* and set
+   `BRIDGE` to the bridge's Tasmota topic. ON sends `cmnd/<BRIDGE>/RfKey1`,
+   OFF sends `RfKey2` (payload `1` = send the learned code). For a Tasmota
+   relay instead, make the node set `msg.topic` to `cmnd/<device>/POWER` and
+   leave the payload as ON/OFF.
 3. **Zone** — double-click *"zone filter (EDIT ZONE)"* and set the four
    `ZONE` numbers (mm). Tune them with the walk test below.
 4. **Source** — double-click *"source switch (EDIT SOURCE)"* and set

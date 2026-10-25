@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Stair Light",
         "disabled": false,
-        "info": "Radar-driven stair lighting: rd03d MQTT events -> zone filter -> 60s hold -> Tasmota relay.\nEdit points: ZONE constants in the zone filter node; device topic in the change node.\nPIR companion: rd03d/pir events enter through the source switch (edit SOURCE) and, with the in-zone radar events, feed the compare log, which appends to /data/stair_compare.csv."
+        "info": "Radar-driven stair lighting: rd03d MQTT events -> zone filter -> 60s hold -> Tasmota relay.\nEdit points: ZONE constants in the zone filter node; BRIDGE in the RF bridge node.\nPIR companion: rd03d/pir events enter through the source switch (edit SOURCE) and, with the in-zone radar events, feed the compare log, which appends to /data/stair_compare.csv."
     },
     {
         "id": "stairbroker1",
@@ -123,23 +123,16 @@
     },
     {
         "id": "stairmap1",
-        "type": "change",
+        "type": "function",
         "z": "stairtab1",
-        "name": "to Tasmota topic (EDIT DEVICE)",
-        "rules": [
-            {
-                "t": "set",
-                "p": "topic",
-                "pt": "msg",
-                "to": "cmnd/stairlight/POWER",
-                "tot": "str"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "name": "to Sonoff RF bridge (EDIT DEVICE)",
+        "func": "// The stair light is a radio-controlled lamp driven through a Tasmota Sonoff\n// RF Bridge. RfKey1 is the learned ON code, RfKey2 the learned OFF code.\n// Edit BRIDGE if the bridge's Tasmota topic changes.\nconst BRIDGE = \"sonoffBridge\";\nmsg.topic = \"cmnd/\" + BRIDGE + (msg.payload === \"ON\" ? \"/RfKey1\" : \"/RfKey2\");\nmsg.payload = \"1\";   // 1 = send the learned (or default) code for that key\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 950,
         "y": 120,
         "wires": [["stairout1"]]
