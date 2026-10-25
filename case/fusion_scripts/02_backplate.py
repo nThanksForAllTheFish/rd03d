@@ -993,9 +993,14 @@ def run(_context: str):
     #          plate's +X edge (x 20.85, fused to it) out to the tower's
     #          far end, y +/-13.5 (the tower's length).
     #   tower  the same 34.8 x 27 pod block as before, standing on the wing
-    #          from z -2 up to the shell's front face (z 16), starting 0.3 mm
-    #          outside the shell's +X outer wall (x 23.3) so the two parts
-    #          never touch there.
+    #          from z -2, starting 0.3 mm outside the shell's +X outer wall
+    #          (x 23.3) so the two parts never touch there. Its TOP FACE is
+    #          CANTED pirTilt, normal to the bore axis, through the axis
+    #          point at z 16 on the tower's centre (2026-10-25, user review
+    #          of the side view: with a flat top the lens ring broke
+    #          through on the uphill side). Uphill (-X) corner about z 21.7,
+    #          downhill (+X) edge about z 10.4; every depth along the axis
+    #          (recess, ledge, groove, seat, pin, wire hole) is unchanged.
     #   cuts   recess, flange ledge, latch-hook groove, tilted bore, wire
     #          hole and keeper pin cross-hole: the code from 03_shell.py
     #          step 8, re-anchored on the tower's centre. The bore exits the
@@ -1040,20 +1045,129 @@ def run(_context: str):
     extrude(comp, sk.profiles.item(0), zBack, zWing,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
-    # 14b. tower, overlapping 0.5 mm down into the wing
+    # 14b. tower, overlapping 0.5 mm down into the wing, extruded past the
+    # canted top's uphill corner (zTop + podW/2 * tan tilt) so the cant cut
+    # below has material to shape on the -X side
+    zTowerBox = zTop + (podW / 2) * math.tan(tilt) + 0.1
     sk = comp.sketches.add(comp.xYConstructionPlane)
     box(sk, xTow0, xTow1, -podL / 2, podL / 2)
-    extrude(comp, sk.profiles.item(0), zWing - 0.5 * MM, zTop,
+    extrude(comp, sk.profiles.item(0), zWing - 0.5 * MM, zTowerBox,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
     if comp.bRepBodies.count != 1:
         raise RuntimeError("pir wing/tower did not merge with the plate: %d bodies"
                            % comp.bRepBodies.count)
     print("pir wing ok (x %.2f..%.2f, y +/-%.1f, z %.0f..%.0f); tower %.1f x %.1f "
-          "at x %.2f..%.2f, z %.0f..%.0f, %.1f mm clear of the shell wall"
+          "at x %.2f..%.2f, z %.0f up (box to %.2f before the cant), %.1f mm clear "
+          "of the shell wall"
           % (xEdge * 10, xTow1 * 10, podL / 2 * 10, zBack * 10, zWing * 10,
-             podW * 10, podL * 10, xTow0 * 10, xTow1 * 10, zWing * 10, zTop * 10,
-             POD_GAP * 10))
+             podW * 10, podL * 10, xTow0 * 10, xTow1 * 10, zWing * 10,
+             zTowerBox * 10, POD_GAP * 10))
+
+    # bore axis through the tower centre at z 16, direction (sgn*sin t, 0,
+    # cos t) pointing OUT of the pod; along(d) is the axis point d into the
+    # pod; uvec is the in-plane direction across the tilt (toward +X when
+    # the pod leans +X), so (uvec, +Y, ax) is a right-handed frame on the
+    # canted top: uvec x Y = ax.
+    ax = adsk.core.Vector3D.create(sgn * math.sin(tilt), 0.0, math.cos(tilt))
+    uvec = adsk.core.Vector3D.create(math.cos(tilt), 0.0, -sgn * math.sin(tilt))
+    front_pt = adsk.core.Point3D.create(podCx, 0.0, zTop)
+
+    def along(d):
+        return adsk.core.Point3D.create(front_pt.x - ax.x * d, 0.0, front_pt.z - ax.z * d)
+
+    def on_top(d, u, y=0.0):
+        """Point d along the axis INTO the pod, u across the tilt, y sideways."""
+        return adsk.core.Point3D.create(front_pt.x - ax.x * d + uvec.x * u,
+                                        y, front_pt.z - ax.z * d + uvec.z * u)
+
+    # 14b'. CANT THE TOP: remove everything above the plane through front_pt
+    # with normal ax. Tool: a 200 x 200 x 100 mm oriented box whose height
+    # axis is ax and whose bottom face is that plane, Combine-cut from the
+    # plate body only. The plane rises toward -X (z 22.5 over the plate's
+    # edge, higher beyond), so nothing else of the plate is touched.
+    z_up = zTop + (podCx - xTow0) * math.tan(tilt)      # uphill (-X) top edge
+    z_dn = zTop - (xTow1 - podCx) * math.tan(tilt)      # downhill (+X) top edge
+    if sgn < 0:
+        z_up, z_dn = z_dn, z_up
+    if max(z_up, z_dn) >= 2.3:
+        raise RuntimeError("canted top's uphill edge at z %.2f is not below 23 mm"
+                           % (max(z_up, z_dn) * 10))
+    tbm = adsk.fusion.TemporaryBRepManager.get()
+    BIG, H = 20.0, 10.0
+    centre = adsk.core.Point3D.create(front_pt.x + ax.x * H / 2, 0.0,
+                                      front_pt.z + ax.z * H / 2)
+    obb = adsk.core.OrientedBoundingBox3D.create(centre, uvec,
+                                                 adsk.core.Vector3D.create(0, 1, 0),
+                                                 BIG, BIG, H)
+    half_space = tbm.createBox(obb)
+    base = comp.features.baseFeatures.add()
+    base.startEdit()
+    comp.bRepBodies.add(half_space, base)
+    base.finishEdit()
+    tools = [base.bodies.item(i) for i in range(base.bodies.count)]
+    if len(tools) != 1:
+        raise RuntimeError("expected 1 cant tool body, found %d" % len(tools))
+    vol_before = plate_body.volume
+    ci = comp.features.combineFeatures.createInput(plate_body, collection(tools))
+    ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
+    ci.isKeepToolBodies = False
+    comp.features.combineFeatures.add(ci)
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("cant cut split the plate: %d bodies" % comp.bRepBodies.count)
+    # the box's height axis is taken to be length x width = ax; prove it on
+    # the result rather than trust the OBB convention: material 0.3 mm
+    # under the plane and none 0.3 mm over it, at the four rim points and
+    # at both tower ends; and the box must have removed only the tower's
+    # downhill wedge, i.e. a volume well under the tower's own
+    IN = adsk.fusion.PointContainment.PointInsidePointContainment
+    u_edge = (xTow1 - podCx) / math.cos(tilt)      # tower end, in-plane, at d 0
+    for u in (-u_edge + 0.05, -(recessR + 0.1), 0.0, recessR + 0.1, u_edge - 0.05):
+        for y in (0.0, podL / 2 - 0.05, -(podL / 2 - 0.05)):
+            if plate_body.pointContainment(on_top(0.03, u, y)) != IN:
+                raise RuntimeError("no tower under the canted top at u %.1f y %.1f"
+                                   % (u * 10, y * 10))
+            if plate_body.pointContainment(on_top(-0.03, u, y)) == IN:
+                raise RuntimeError("tower material above the canted top at u %.1f y %.1f"
+                                   % (u * 10, y * 10))
+    removed = vol_before - plate_body.volume
+    # the pivot is the tower's centre, so the uphill wedge kept above zTop
+    # equals the downhill wedge removed below it and the net removal is
+    # exactly the box's slab above zTop
+    slab = podW * podL * (zTowerBox - zTop)
+    if abs(removed - slab) > 0.02:
+        raise RuntimeError("cant cut removed %.3f cm3, expected the %.3f cm3 slab"
+                           % (removed, slab))
+    # recess rim wall: the recess (r recessR, d 0..hookD) must keep at
+    # least pirPodWall of tower around it. +-Y: podL/2 - recessR = podWall
+    # by construction. Across the tilt the tower's +-X faces are vertical,
+    # so the in-plane wall changes with depth: measure it at the top (d 0)
+    # and at the groove floor (d hookD), both directions.
+    walls = {}
+    for d in (0.0, hookD):
+        a = along(d)
+        walls[("downhill" if sgn > 0 else "uphill", d)] = (xTow1 - a.x) / math.cos(tilt) - recessR
+        walls[("uphill" if sgn > 0 else "downhill", d)] = (a.x - xTow0) / math.cos(tilt) - recessR
+        walls[("+Y", d)] = walls[("-Y", d)] = podL / 2 - recessR
+    thin = min(walls.values())
+    if thin < podWall - 1e-6:
+        raise RuntimeError("recess rim wall %.2f mm is under pirPodWall %.2f: %s"
+                           % (thin * 10, podWall * 10,
+                              {k: round(v * 10, 2) for k, v in walls.items()}))
+    # the downhill top edge sits above the groove floor's downhill rim
+    floor_dn = on_top(hookD, (recessR if sgn > 0 else -recessR))
+    if z_dn <= floor_dn.z:
+        raise RuntimeError("downhill top edge z %.2f is below the recess floor's rim z %.2f"
+                           % (z_dn * 10, floor_dn.z * 10))
+    print("pir tower top canted %.1f deg (normal to the bore axis, through the axis "
+          "point at z %.1f): uphill edge z %.2f, downhill edge z %.2f (%.2f mm above "
+          "the groove floor's downhill rim at z %.2f); removed %.2f cm3; recess rim "
+          "wall at d 0 / d %.1f: downhill %.2f / %.2f, uphill %.2f / %.2f, +-Y %.2f ok"
+          % (math.degrees(tilt), zTop * 10, z_up * 10, z_dn * 10,
+             (z_dn - floor_dn.z) * 10, floor_dn.z * 10, removed, hookD * 10,
+             walls[("downhill", 0.0)] * 10, walls[("downhill", hookD)] * 10,
+             walls[("uphill", 0.0)] * 10, walls[("uphill", hookD)] * 10,
+             walls[("+Y", 0.0)] * 10))
 
     # 14c. the cuts. The EKMC1603111's lens (dia 20.6, 11 mm tall) is wider
     # than its neck, so the sensor enters from the FRONT: lens ring + flange
@@ -1063,14 +1177,7 @@ def run(_context: str):
     # from the back holds it. The bore tilts pirTilt toward +X so the PIR
     # looks 18 deg down with the case hanging XIAO-end-down.
     #
-    # bore axis through the tower centre at the front face, direction
-    # (sgn*sin t, 0, cos t); along(d) is the axis point d into the pod.
-    ax = adsk.core.Vector3D.create(sgn * math.sin(tilt), 0.0, math.cos(tilt))
-    front_pt = adsk.core.Point3D.create(podCx, 0.0, zTop)
-
-    def along(d):
-        return adsk.core.Point3D.create(front_pt.x - ax.x * d, 0.0, front_pt.z - ax.z * d)
-
+    # (ax, front_pt, along() are defined above, with the cant.)
     # read every parameter BEFORE startEdit(): inside a base feature the
     # design is in direct-modelling mode and userParameters raises
     # "this is not a parametric design".
@@ -1118,17 +1225,11 @@ def run(_context: str):
     if pp.z - pinR <= zBack + 0.1:
         raise RuntimeError("keeper pin z %.2f leaves under 1 mm of wing behind it "
                            "(back face z %.1f)" % (pp.z * 10, zBack * 10))
-    tbm = adsk.fusion.TemporaryBRepManager.get()
     base = comp.features.baseFeatures.add()
     base.startEdit()
-    # The recess is a TILTED cylinder, so its +X rim exits the flat front
-    # face recessR*tan(tilt) (~3.7 mm) further out along the axis than its
-    # -X rim does. Starting the cut only 0.5 mm outside the face left a
-    # crescent of pod under the dome's +X flank (180 mm^3 of interference
-    # with the real sensor, 2026-10-11). Start it where the cylinder has
-    # cleared the face plane entirely; beyond that it cuts only air.
-    recess_out = recessR * math.tan(tilt) + 0.1
-    recess_cyl = tbm.createCylinderOrCone(along(-recess_out), recessR, along(recessD), recessR)
+    # the top is normal to the axis (14b'), so the recess cylinder meets it
+    # square all round and can start just 0.5 mm proud of it
+    recess_cyl = tbm.createCylinderOrCone(along(-0.05), recessR, along(recessD), recessR)
     # latch-hook groove: the recess floor stays at recessD only over the
     # flange ledge (r boreR..flangeR); outside it the floor drops to hookD
     groove = tbm.createCylinderOrCone(along(recessD - 0.01), recessR, along(hookD), recessR)

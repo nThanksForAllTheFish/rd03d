@@ -19,10 +19,15 @@ The living design is in your Fusion; save it to your own project.
   a 6 mm tab (z −8..−2, the same back face as the plate) growing out of
   the plate's +X edge (the end that hangs down) to x 58, 27 mm wide, with
   a 34.8 × 27 mm **tower** standing on it beside the shell's +X wall
-  (0.3 mm gap), top face flush with the shell's front face. It is for a
-  Panasonic EKMC1603111 PaPIRs with the long-distance lens. The sensor
-  goes in from the **front**, dome out: the lens ring and flange drop into
-  an 11.5 mm-radius recess and the flange seats on a ledge 2 mm down; an
+  (0.3 mm gap). The tower's top face is **canted 18°, square to the
+  sensor's axis** (it pivots about the tower's centre at z 16: the uphill
+  edge beside the shell rises to z 21.7, the downhill edge drops to 10.4),
+  so the lens ring sits flush all the way round instead of breaking
+  through on the uphill side. It is for a Panasonic EKMC1603111 PaPIRs
+  with the long-distance lens. The sensor goes in from the **front**, dome
+  out: the lens ring and flange drop into an 11.5 mm-radius recess and
+  the flange seats on a ledge 2 mm down (depths along the axis, from the
+  canted top); an
   annular groove outside the ledge clears the lens's two latch hooks
   (which reach 0.9 mm below the flange), so the sensor can go in at any
   rotation. The neck and Ø11 base pass through a Ø11.8 bore tilted 18°
@@ -75,8 +80,10 @@ The living design is in your Fusion; save it to your own project.
 **PETG preferred** — the five retention clips are live springs and PLA is
 brittle enough to snap one on the first insertion. 0.4–0.6 mm nozzle,
 0.2 mm layers. **No supports** on any part (again, since 2026-10-25): with
-the pod on the plate its Ø23 recess is a top-side pocket, the tilted bore
-is an 18° hole, and the shell's notch is a bottom-edge cut-out. The two
+the pod on the plate its Ø23 recess is a top-side pocket whose walls
+lean 18° (its floor and the tower's top face are 18° slopes, printed as
+ordinary stepped surfaces), the tilted bore is an 18° hole, and the
+shell's notch is a bottom-edge cut-out. The two
 small horizontal holes in the plate print on their side and may close up
 a little: the Ø1.9 keeper pin hole through the wing may need a 1.8–1.9 mm
 drill run through it before the filament stub will pass, and the Ø3 wire

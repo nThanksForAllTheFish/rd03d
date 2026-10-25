@@ -345,10 +345,13 @@ def check_pir_pod(plate, shell, des):
     podCx = xTow0 + podW / 2
     xTow1 = xTow0 + podW
     ax = (sgn * math.sin(tilt), math.cos(tilt))
+    uv = (math.cos(tilt), -sgn * math.sin(tilt))   # across the tilt, in the top plane
     # solid()/void() take MILLIMETRES (they scale by MM internally); the
     # parameters above are cm, so along() converts on the way out.
     def along(d, side=0.0):            # cm along the axis in, cm sideways in Y -> mm tuple
         return ((podCx - ax[0] * d) * 10, side * 10, (zTop - ax[1] * d) * 10)
+    def on_top(d, u, y=0.0):           # d in along the axis, u across the tilt, y sideways
+        return ((podCx - ax[0] * d + uv[0] * u) * 10, y * 10, (zTop - ax[1] * d + uv[1] * u) * 10)
     # wing: solid between the plate edge and the tower, under the tower,
     # and nothing above it outside the tower (the notch region)
     solid(plate, (intW / 2 - rimGap + xTow0) / 2 * 10, 0.0, -5.0, "wing fused to the plate edge")
@@ -356,7 +359,26 @@ def check_pir_pod(plate, shell, des):
     solid(plate, (xTow1 - 0.1) * 10, 0.0, -5.0, "wing reaches the tower's far end")
     void(plate, (intW / 2 - rimGap + xTow0) / 2 * 10, 0.0, -1.0, "nothing above the wing between plate and tower")
     void(plate, (intW / 2 - rimGap + xTow0) / 2 * 10, 0.0, -8.5, "wing back face flush with the plate's")
-    solid(plate, (xTow1 - 0.1) * 10, 12.5, 14.0, "tower corner solid near the top")
+    # canted top (02 step 14b', 2026-10-25): the top face is the plane
+    # through the axis point at z 16 with the bore axis as its normal, so
+    # the downhill (+X) corner is at z 16 - 17.4*tan18 = 10.35 and the
+    # uphill (-X) corner at 21.65. Probe just under / over the plane at the
+    # four rim points 1 mm outside the recess, and at both tower ends.
+    z_dn = (zTop - (xTow1 - podCx) * math.tan(tilt)) * 10
+    z_up = (zTop + (podCx - xTow0) * math.tan(tilt)) * 10
+    solid(plate, (xTow1 - 0.1) * 10, 12.5, z_dn - 1.0, "tower downhill corner solid 1 mm under the canted top")
+    void(plate, (xTow1 - 0.1) * 10, 12.5, z_dn + 0.5, "nothing above the canted top at the downhill corner")
+    solid(plate, (xTow0 + 0.1) * 10, 12.5, z_up - 1.0, "tower uphill corner solid 1 mm under the canted top")
+    void(plate, (xTow0 + 0.1) * 10, 12.5, z_up + 0.5, "nothing above the canted top at the uphill corner")
+    for tag, u, y in (("downhill", sgn * (recessR + 0.1), 0.0), ("uphill", -sgn * (recessR + 0.1), 0.0),
+                      ("+Y", 0.0, recessR + 0.1), ("-Y", 0.0, -(recessR + 0.1))):
+        x, yy, z = on_top(0.03, u, y); solid(plate, x, yy, z, "rim solid 0.3 mm under the canted top, %s" % tag)
+        x, yy, z = on_top(-0.03, u, y); void(plate, x, yy, z, "nothing 0.3 mm above the canted top, %s" % tag)
+    # lens ring flush: the recess is open right up to the top plane all round
+    for tag, u, y in (("downhill", sgn * (recessR - 0.03), 0.0), ("uphill", -sgn * (recessR - 0.03), 0.0),
+                      ("+Y", 0.0, recessR - 0.03), ("-Y", 0.0, -(recessR - 0.03))):
+        x, yy, z = on_top(-0.05, u, y); void(plate, x, yy, z, "recess open at the top plane (d -0.5), %s side" % tag)
+        x, yy, z = on_top(0.05, u, y); void(plate, x, yy, z, "recess open just under the top plane (d 0.5), %s side" % tag)
     # recess, ledge, groove
     x, y, z = along(0.1); void(plate, x, y, z, "recess centre")   # passes trivially: the bore is under it
     x, y, z = along(0.1, side=recessR - 0.03); void(plate, x, y, z, "recess edge")
