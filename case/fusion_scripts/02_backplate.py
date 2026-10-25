@@ -1347,6 +1347,144 @@ def run(_context: str):
           % (WING_HOLE_D * 10, (wx - cbD / 2 - exit_pt.x - exit_half_w) * 10,
              (wx - cbD / 2 - pp.x - pinR) * 10))
 
+    # 14d'. SOFTEN THE WING AND TOWER EDGES (2026-10-25, user: "redo the
+    # chamfering"): the same treatment the shell gets in 03_shell.py steps
+    # 6a-6c, so the two parts match in the hand. After all the cuts, so
+    # the selectors see the final topology; before the plug, which is its
+    # own component. Fillet/chamfer features act on the plate body's edges
+    # only, so they are participant-safe by construction.
+    EPS = 0.005                                   # 0.05 mm (cm)
+    corner = p(des, "cornerFillet")
+    cham = p(des, "frontChamfer")
+    soft = p(des, "softFillet")
+
+    def near(a, b):
+        return abs(a - b) < EPS
+
+    def mid(g):
+        return ((g.startPoint.x + g.endPoint.x) / 2,
+                (g.startPoint.y + g.endPoint.y) / 2,
+                (g.startPoint.z + g.endPoint.z) / 2)
+
+    def line_dir(g):
+        v = g.startPoint.vectorTo(g.endPoint)
+        v.normalize()
+        return v
+
+    def add_fillet(edges, radius, label):
+        fil = comp.features.filletFeatures
+        inp = fil.createInput()
+        rv = adsk.core.ValueInput.createByReal(radius)
+        try:
+            inp.edgeSetInputs.addConstantRadiusEdgeSet(collection(edges), rv, False)
+        except AttributeError:  # older API shape
+            inp.addConstantRadiusEdgeSet(collection(edges), rv, False)
+        feat = fil.add(inp)
+        if comp.bRepBodies.count != 1:
+            raise RuntimeError("%s split the plate: %d bodies" % (label, comp.bRepBodies.count))
+        return feat
+
+    def add_chamfer(edges, dist, label):
+        ch = comp.features.chamferFeatures
+        chi = ch.createInput(collection(edges), False)
+        chi.setToEqualDistance(adsk.core.ValueInput.createByReal(dist))
+        feat = ch.add(chi)
+        if comp.bRepBodies.count != 1:
+            raise RuntimeError("%s split the plate: %d bodies" % (label, comp.bRepBodies.count))
+        return feat
+
+    # (i) vertical corner fillets, r cornerFillet: the pod's four outer
+    # vertical edges. The wing's and tower's +X faces (x 58.1) and +-Y
+    # faces (y +-13.5) are coplanar and merge on the Join, so the +X
+    # corners are single edges from the back face (z -8) to the canted
+    # top; the -X corners (x 23.3) run from the wing's top (z -2) to the
+    # canted top. Filleting the x 23.3 corners only rounds the outside of
+    # the tower; the flat -X face (the 0.3 mm gap to the shell) keeps its
+    # full height over |y| < 11. If Fusion ever left the +X faces unmerged
+    # the corners would be two collinear edges each (6 in all): accepted,
+    # same fillet.
+    verts = []
+    for e in plate_body.edges:
+        g = e.geometry
+        if not isinstance(g, adsk.core.Line3D):
+            continue
+        d = line_dir(g)
+        if abs(abs(d.z) - 1) > 1e-6:
+            continue
+        mx, my, _ = mid(g)
+        if (near(mx, xTow0) or near(mx, xTow1)) and near(abs(my), podL / 2):
+            verts.append(e)
+    print("pod corner fillet edges found:", len(verts))
+    if len(verts) not in (4, 6):
+        raise RuntimeError("expected 4 (or 6 unmerged) pod vertical corner edges, found %d"
+                           % len(verts))
+    add_fillet(verts, corner, "pod corner fillet")
+    print("pod corner fillets ok (r=%.2f mm on %d edges)" % (corner * 10, len(verts)))
+
+    # (ii) 1 mm chamfer round the canted top's outer perimeter, as the
+    # shell's front face has. The top is the plane through front_pt with
+    # normal ax, so select every edge whose ends and midpoint lie in that
+    # plane, then drop the recess rim (the circle r recessR about the
+    # axis, which must stay sharp: the lens ring seats on it). What is
+    # left is 4 straight edges + 4 corner-fillet arcs (ellipse arcs, the
+    # tilted plane cutting the fillet cylinders) = 8. On the +-Y sides the
+    # chamfer takes 1 mm off the 2 mm wall at the very top edge only.
+    def on_plane(pt):
+        return abs((pt.x - front_pt.x) * ax.x + (pt.z - front_pt.z) * ax.z) < EPS
+
+    def axis_r(pt):
+        dx, dz = pt.x - front_pt.x, pt.z - front_pt.z
+        a = dx * ax.x + dz * ax.z
+        return math.sqrt(max((dx - a * ax.x) ** 2 + pt.y ** 2 + (dz - a * ax.z) ** 2, 0.0))
+
+    top = []
+    for e in plate_body.edges:
+        ev = e.evaluator
+        ok, p0, p1 = ev.getParameterExtents()
+        pts = []
+        for t in (p0, (p0 + p1) / 2, p1):
+            ok, pt = ev.getPointAtParameter(t)
+            pts.append(pt)
+        if not all(on_plane(pt) for pt in pts):
+            continue
+        if all(axis_r(pt) < recessR + 0.05 for pt in pts):
+            continue                              # the recess rim
+        top.append(e)
+    print("pod top perimeter edges found:", len(top))
+    if len(top) != 8:
+        raise RuntimeError("expected 8 pod top perimeter edges (4 lines + 4 fillet arcs), "
+                           "found %d" % len(top))
+    add_chamfer(top, cham, "pod top chamfer")
+    print("pod top chamfer ok (%.2f mm on 8 edges)" % (cham * 10))
+
+    # (iii) softFillet on the wing's back-rim outer edges at z -8: the part
+    # of the back face's boundary outside the plate's footprint, i.e. the
+    # +X edge (x 58.1), the two +-Y edges (y +-13.5, x 20.85..55.6) and the
+    # two corner-fillet arcs between them (circular here: a horizontal
+    # plane cutting the fillet cylinders) = 5. The plate's own back
+    # perimeter stays sharp as it always was. The +-Y fillets end at the
+    # concave junction with the plate's +X edge at x 20.85.
+    rim = []
+    for e in plate_body.edges:
+        g = e.geometry
+        if isinstance(g, adsk.core.Line3D):
+            if not (near(g.startPoint.z, zBack) and near(g.endPoint.z, zBack)):
+                continue
+            mx, my, _ = mid(g)
+            if near(mx, xTow1) or (near(abs(my), podL / 2) and mx > xEdge + EPS):
+                rim.append(e)
+        elif isinstance(g, (adsk.core.Arc3D, adsk.core.Circle3D)):
+            c = g.center
+            if (near(c.z, zBack) and near(g.radius, corner)
+                    and near(c.x, xTow1 - corner) and near(abs(c.y), podL / 2 - corner)):
+                rim.append(e)
+    print("wing back rim edges found:", len(rim))
+    if len(rim) != 5:
+        raise RuntimeError("expected 5 wing back rim edges (3 lines + 2 arcs), found %d"
+                           % len(rim))
+    add_fillet(rim, soft, "wing rim fillet")
+    print("wing rim fillet ok (r=%.2f mm on 5 edges)" % (soft * 10))
+
     # 14e. PLUG: tube pressed into the bore from the back; its front rim
     # bears on the base's underside (r up to 5.5, pins inside r 2.5).
     # Separate component, exported as its own STL, printed standing on

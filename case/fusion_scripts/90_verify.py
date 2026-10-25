@@ -366,10 +366,30 @@ def check_pir_pod(plate, shell, des):
     # four rim points 1 mm outside the recess, and at both tower ends.
     z_dn = (zTop - (xTow1 - podCx) * math.tan(tilt)) * 10
     z_up = (zTop + (podCx - xTow0) * math.tan(tilt)) * 10
-    solid(plate, (xTow1 - 0.1) * 10, 12.5, z_dn - 1.0, "tower downhill corner solid 1 mm under the canted top")
-    void(plate, (xTow1 - 0.1) * 10, 12.5, z_dn + 0.5, "nothing above the canted top at the downhill corner")
-    solid(plate, (xTow0 + 0.1) * 10, 12.5, z_up - 1.0, "tower uphill corner solid 1 mm under the canted top")
-    void(plate, (xTow0 + 0.1) * 10, 12.5, z_up + 0.5, "nothing above the canted top at the uphill corner")
+    # (y 8: inboard of the r 2.5 corner fillets, see below)
+    solid(plate, (xTow1 - 0.1) * 10, 8.0, z_dn - 1.5, "tower downhill end solid 1.5 mm under the canted top")
+    void(plate, (xTow1 - 0.1) * 10, 8.0, z_dn + 0.5, "nothing above the canted top at the downhill end")
+    solid(plate, (xTow0 + 0.1) * 10, 8.0, z_up - 1.5, "tower uphill end solid 1.5 mm under the canted top")
+    void(plate, (xTow0 + 0.1) * 10, 8.0, z_up + 0.5, "nothing above the canted top at the uphill end")
+    # softened edges (02 step 14d'): r cornerFillet on the four outer
+    # vertical corners (void where the sharp corner was, 0.3 mm inside the
+    # old faces; solid 0.3 mm inside the fillet surface on the diagonal),
+    # frontChamfer round the canted top (void 0.3 mm inside the old +X top
+    # edge), softFillet on the wing's back rim (void 0.2 mm inside the old
+    # +X back edge).
+    r = pv("cornerFillet")
+    k = (r - 0.03) / math.sqrt(2)
+    for cx, zmid in ((xTow1, 4.0), (xTow0, 8.0)):
+        sx = 1 if cx > podCx else -1
+        for sy in (1, -1):
+            tag = "x %.1f y %+.1f" % (cx * 10, sy * podL / 2 * 10)
+            void(plate, (cx - sx * 0.03) * 10, sy * (podL / 2 - 0.03) * 10, zmid, "old sharp corner gone at " + tag)
+            solid(plate, (cx - sx * r + sx * k) * 10, sy * (podL / 2 - r + k) * 10, zmid, "fillet surface solid inside at " + tag)
+    ch = pv("frontChamfer")
+    void(plate, (xTow1 - 0.03) * 10, 0.0, z_dn + 0.03 * math.tan(tilt) * 10 - 0.3, "top chamfer: old +X top edge gone (0.3 mm inside both faces)")
+    solid(plate, (xTow1 - ch - 0.03) * 10, 0.0, z_dn + (ch + 0.03) * math.tan(tilt) * 10 - (ch + 0.03) * 10, "tower solid inboard of the top chamfer")
+    void(plate, (xTow1 - 0.02) * 10, 0.0, zBack * 10 + 0.2, "wing rim fillet: old +X back edge gone")
+    solid(plate, (xTow1 - 0.02) * 10, 0.0, zBack * 10 + 1.5, "+X face solid above the rim fillet")
     for tag, u, y in (("downhill", sgn * (recessR + 0.1), 0.0), ("uphill", -sgn * (recessR + 0.1), 0.0),
                       ("+Y", 0.0, recessR + 0.1), ("-Y", 0.0, -(recessR + 0.1))):
         x, yy, z = on_top(0.03, u, y); solid(plate, x, yy, z, "rim solid 0.3 mm under the canted top, %s" % tag)

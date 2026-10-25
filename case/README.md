@@ -96,7 +96,10 @@ front wall): the 3.1 mm radome in front of the antennas should be
 homogeneous plastic — sparse infill puts a patchwork of air pockets in the
 radar's beam path and scatters it unpredictably.
 Exterior edges are filleted/chamfered for comfort; the front face's 1 mm
-chamfer prints cleanly bed-side.
+chamfer prints cleanly bed-side. The plate's PIR wing and tower get the
+same treatment (2.5 mm corner fillets, 1 mm chamfer round the canted top,
+0.8 mm fillet on the wing's back rim); the plate's own back edges stay
+sharp for the flat first layer.
 
 ## Assembly
 
