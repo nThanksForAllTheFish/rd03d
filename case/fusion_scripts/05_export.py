@@ -22,7 +22,7 @@ def run(_context: str):
         if occ is None:
             raise RuntimeError("missing component " + comp_name)
         # export the COMPONENT, not the occurrence: the plug's occurrence is
-        # parked tilted in the pod's bore for the picture and the fit check,
+        # parked upright in the socket's bore for the picture and the fit check,
         # and the STL must come out flat in its own frame (z 0..pirPlugL).
         # BackPlate and FrontShell sit at identity, so nothing changes for them.
         opts = em.createSTLExportOptions(occ.component, f"{OUT}/{fname}")

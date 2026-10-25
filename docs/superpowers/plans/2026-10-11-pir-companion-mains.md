@@ -1340,6 +1340,8 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ### Task 9c: Straight socket on the plate, pod box on the shell (2026-10-25)
 
+As built (2026-10-25): pirCx 35.5 (34.5 put the Technic hole at (24.95, 4) 0.20 mm from the boss foot in plan), box x 21..51, cavity to 49, wing to 48.85, snapYpx 19; boss foot fillet r 1.0 added after review. Commits 71b7312, f02e55c.
+
 **Why:** two user decisions after the test print: the PIR must look where the radar looks (`pirTilt` = 0, max field overlap), and the plate should only hold the sensor while the shell carries the housing. Supersedes 9b's wing tower; keep its wing, plug, keeper pin, Technic holes and probe style.
 
 **Files:** `02_backplate.py` (step 14 rewritten: wing, socket boss, bore through, wire hole, keeper pin, two Technic holes at (24.95, ±4), `PirPlug`), `03_shell.py` (step 7 rewritten: pod box replacing the +X wall over the pod width, Ø23 lens hole in the top, edge softening; `snapYpx` 19), `90_verify.py`, `91_pir_fit.py`, `05_export.py` (unchanged unless needed), `case/README.md`, three STLs.

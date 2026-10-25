@@ -201,7 +201,7 @@ def ensure_params(des):
         # lens ring r 10.3 (top at z 8.4), and TWO lens latch tabs at
         # 45/225 deg reaching r 11.1 over z 6.6..8.4 whose hook lips
         # (r 9.6..10.7) hang down to z 5.5.
-        ("pirRecessR", "11.5 mm", "lens hole radius in the shell's pod box top: latch tabs r 11.1 + 0.4 (lens ring is r 10.3); the ring passes and sits flush with the face"),
+        ("pirRecessR", "11.5 mm", "lens hole radius in the shell's pod box top: latch tabs r 11.1 + 0.4 (lens ring is r 10.3); the ring passes and sits flush with the face. Tolerance stack: the tabs have 0.4 radial clearance, the sensor floats 0.4 in the bore and the plate 0.15 in the shell, so worst case a tab just touches the hole wall; do not tighten below 0.4"),
         ("pirBoreR", "5.9 mm", "socket bore radius: base/can r 5.5 + 0.4; neck r 5.3..5.0 passes"),
         ("pirSocketR", "7.7 mm", "socket boss outer radius: 1.8 mm wall round the bore; the flange (r 9.4) seats on its top rim and the latch hook lips (r 9.6..10.7) hang outside it"),
         ("pirSeatZ", "intD + wall - 2.0 mm", "socket boss top = the flange's underside (sensor z 6.4), 2.0 under the shell's face so the lens ring's top (sensor z 8.4) is flush with it (= 14.0)"),
@@ -252,6 +252,20 @@ def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
     root = des.rootComponent
+    # parameters of the tilted layouts (the shell pod of 2026-10-11 and the
+    # 9b wing tower of 2026-10-25 morning): recess depth, flange ledge,
+    # hook groove, pod wall, sloped wire hole, shell notch top and the
+    # along-the-axis pin depth. Nothing reads them since the straight
+    # socket; delete them so Change Parameters shows only live values.
+    for name in ("pirRecessD", "pirFlangeR", "pirHookD", "pirPodWall", "pirWireD",
+                 "pirWireExitZ", "pirNotchTop", "pirPinD"):
+        old = des.userParameters.itemByName(name)
+        if old is not None:
+            try:
+                old.deleteMe()
+                print("deleted obsolete param", name)
+            except Exception as exc:  # still referenced by something: say so, carry on
+                print("could not delete obsolete param %s: %s" % (name, exc))
     ensure_params(des)
 
     for occ in list(root.occurrences):

@@ -435,6 +435,8 @@ def check_pir_socket(plate, shell, des):
     pinZ, pinR = pv("pirPinZ"), pv("pirPinDia") / 2
     seatD, plugL = pv("pirSeatD"), pv("pirPlugL")
     xEdge = intW / 2 - rimGap                        # 20.85
+    if abs(des.userParameters.itemByName("pirTilt").value) > 1e-9:
+        FAILURES.append("pirTilt is not 0: the straight socket is only right upright")
     xWing1 = cx + hy - rimGap                        # 48.85
     wy = hy - rimGap                                 # 13.35
     zTop, zBack, zWing = intD + wall, -backT, -backT + 6.0
@@ -462,7 +464,7 @@ def check_pir_socket(plate, shell, des):
     void(plate, 21.5, 0.0, -1.0, "nothing above the wing between the plate and the boss")
     void(plate, cx, 10.0, -1.0, "nothing above the wing beside the boss")
     void(plate, cx + socketR + 0.3, 0.0, 0.0, "nothing above the wing 0.3 mm outside the boss")
-    void(plate, 21.5, 0.0, -8.5, "wing back face flush with the plate's")
+    void(plate, 21.5, 0.0, -8.5, "wing back face flush with the plate's")   # near-trivial: guards a future zBack change only
     void(plate, cx, 0.0, -1.0, "bore open where the boss meets the wing")
     # boss foot fillet (02 step 14c'): concave r 1.0 at the boss/wing
     # corner, arc centre at (r 8.7, z -1). Inside the fillet material at
@@ -539,6 +541,7 @@ def check_pir_socket(plate, shell, des):
     # plate and shell never touch here: the boss inside the lens hole's
     # footprint but under the top (z 14 vs 14..16), the wing inside the
     # cavity (rimGap), the shell's top over the boss
+    # (not the biting probe: check_pod_box asserts the hole's rim at r 11.2 / 11.5 + 0.5; this one only says the boss region is under open top)
     void(shell, cx + socketR + 0.5, 0.0, 15.0, "lens hole (r %.1f) open over the boss rim region: the flange and hooks pass" % pv("pirRecessR"))
     void(shell, cx + socketR + 0.5, 0.0, 13.8, "shell cavity just under its top, outside the boss")
     void(plate, cx + socketR + 0.5, 0.0, 13.8, "plate: nothing there either")

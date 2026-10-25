@@ -26,7 +26,7 @@ The living design is in your Fusion; save it to your own project.
   for a Panasonic EKMC1603111 PaPIRs with the long-distance lens. The
   sensor drops in from the **front**, dome out: its neck and Ø11 base go
   down the bore and the underside of its flange (Ø18.8) lands on the
-  boss's top rim; the lens's two latch hooks hang outside the boss. The
+  boss's top rim; the lens's two latch hooks hang outside the boss.
   A 1 mm concave fillet at the boss's foot ties it into the wing. The
   PIR's axis is **parallel to the radar's** (`pirTilt` 0): the user wants
   the two fields to overlap as much as they can, and the case already
@@ -76,8 +76,11 @@ The living design is in your Fusion; save it to your own project.
   to side (along Y, at x 35.5, 3.25 mm above the back face), crossing the
   bore 0.5 mm behind the plug's back end (z −3.3). Once the plug is in,
   push a stub of 1.75 mm filament through the hole on the wing's side; it
-  bridges the bore behind the plug so the plug cannot fall out, and the
-  wires run past it. Pull the stub to disassemble.
+  bridges the bore behind the plug so the plug cannot fall out. Do this
+  with the shell **off**: the hole's ends are covered by the box's walls
+  once the shell is on, so the stub is captive (and the drill note under
+  Printing applies with the shell off too). To disassemble, lift the
+  shell first, then pull the stub.
 
 ## Printing
 
@@ -321,7 +324,9 @@ The `pir*` parameters (socket bore and boss radii, seat height, axis x
 `pirTilt`) are created by `02_backplate.py` the same way; `03_shell.py`
 reads `pirCx`, `pirBoxHalfY` and `pirRecessR` to build its box and lens
 hole, so moving the socket moves the box. `pirTilt` must stay 0: the
-straight socket has no tilt and 02 refuses anything else. `pirCx` is
+straight socket has no tilt and 02 refuses anything else; if it refuses
+on a document that still has the old 18°, set `pirTilt` to 0 by hand in
+Change Parameters and re-run. `pirCx` is
 35.5 rather than the 34.5 that would centre the socket in the box,
 because at 34.5 the Technic hole at (24.95, 4) passes 0.2 mm from the
 boss's foot; at 35.5 it is 1.13 mm clear. The radii come from
