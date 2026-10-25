@@ -308,6 +308,22 @@ def check_pir_pod(shell, plate, des):
     x, y, z = along(depth / math.cos(tilt) - 0.1); void(shell, x, y, z, "bore open at the back")
     x, y, z = along(1.0, side=recessR + podWall / 2); solid(shell, x, y, z, "pod wall +Y")
     x, y, z = along(1.0, side=-(recessR + podWall / 2)); solid(shell, x, y, z, "pod wall -Y")
+    # keeper pin (2026-10-25): a cross-hole along Y at axis depth pirPinD
+    # through both pod walls. Its front surface must be behind the plug's
+    # back end (pirSeatD + pirPlugL) or the filament stub cannot go in with
+    # the plug seated; the wall 1.5 mm in front of and behind the axis is
+    # solid, so it is a hole and not a slot.
+    pinDia, pinD = pv("pirPinDia"), pv("pirPinD")
+    seatD, plugL = pv("pirSeatD"), pv("pirPlugL")
+    podL = 2 * (recessR + podWall)
+    if pinD - pinDia / 2 <= seatD + plugL:
+        FAILURES.append("keeper pin front surface d %.2f mm is not behind the plug's "
+                        "back end d %.2f mm" % ((pinD - pinDia / 2) * 10, (seatD + plugL) * 10))
+    for sy in (1, -1):
+        tag = "+Y" if sy > 0 else "-Y"
+        x, y, z = along(pinD, side=sy * (podL / 2 - 0.05)); void(shell, x, y, z, "keeper pin hole through the %s pod wall" % tag)
+    x, y, z = along(pinD - 0.15, side=podL / 2 - 0.05); solid(shell, x, y, z, "+Y pod wall solid 1.5 mm in front of the pin hole (hole, not a slot)")
+    x, y, z = along(pinD + 0.15, side=podL / 2 - 0.05); solid(shell, x, y, z, "+Y pod wall solid 1.5 mm behind the pin hole")
     xw, _, zw = along(pv("pirWireD"))
     void(shell, (intW / 2 + wall / 2) * 10, 0.0, zw, "wire hole through +X wall")
     void(plate, (intW / 2 - 0.05) * 10, 0.0, zw, "plate clear where the wire hole enters the bay")

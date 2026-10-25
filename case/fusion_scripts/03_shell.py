@@ -30,11 +30,27 @@ def ensure_params(des):
         # centred on the pin tips (sensor z -5.5 = d 13.9), inside the plug
         # span d 9.3..15.3 where the plug's slot is: 13.9 - 1.9 = 12.0.
         ("pirWireD", "12.0 mm", "pass-through axis point depth: pin tips d 13.9 minus boreR*tan(tilt) 1.9"),
-        ("pirPlugOD", "11.7 mm", "plug tube OD: nominal 0.05 clearance per side in the bore; the press fit relies on printed holes coming out undersize"),
+        # Test print 2026-10-25: bore measured 11.8 (holes on this printer
+        # come out true to size), plug OD measured 11.5 for 11.7 nominal
+        # (outside walls print 0.2 under), and the plug fell out under
+        # gravity. 12.1 nominal prints at about 11.9 for the 11.8 bore:
+        # 0.05 mm per side of interference, taken up by the slot.
+        ("pirPlugOD", "12.1 mm", "plug tube OD: holes print true, outside walls 0.2 under (measured 2026-10-25); 12.1 prints ~11.9 for the 11.8 bore, 0.05/side interference taken up by the slot"),
         ("pirPlugID", "8.0 mm", "plug tube ID: pins on r2.5 plus room for three soldered joints"),
         ("pirPlugL", "6.0 mm", "plug tube length"),
         ("pirSeatD", "9.3 mm", "plug front rim depth: the base's underside (sensor z -0.9); read by 03_shell.py and 91_pir_fit.py"),
         ("pirPlugSlotW", "3.2 mm", "lengthwise slot through one plug wall: wire exit into the pass-through, and a little compliance for the press fit"),
+        # Keeper pin (2026-10-25): a stub of 1.75 mm filament pushed through
+        # a cross-hole in the pod, along Y, that crosses the bore just
+        # behind the plug's back end so the plug cannot fall out even if
+        # the press fit is loose. The axis depth is the plug's back end
+        # (pirSeatD + pirPlugL = 15.3) plus the pin's radius plus 0.5 mm of
+        # clearance between the plug and the pin's front surface: 16.75.
+        # (Measuring the 0.5 from the axis instead would put the hole's
+        # front edge 0.45 mm into the plug's wall.) pirPinD is an
+        # expression, so it follows the plug parameters.
+        ("pirPinDia", "1.9 mm", "keeper pin cross-hole diameter: 1.75 mm filament stub plus 0.15"),
+        ("pirPinD", "pirSeatD + pirPlugL + pirPinDia / 2 + 0.5 mm", "keeper pin axis depth along the bore from the front face: plug back end + pin radius + 0.5 clearance (= 16.75)"),
     ]
     ups = des.userParameters
     for name, expr, comment in spec:
@@ -312,7 +328,7 @@ def run(_context: str):
     # added last, with sharp edges, and swallowed the finishing over its
     # footprint). The pod sits on the flat part of the +X face (|y| <=
     # podL/2 = 13.5, the shell's corner fillets start at |y| = 22.5). The
-    # recess, bore, wire hole and plug are cut in step 8.
+    # recess, bore, wire hole, keeper pin hole and plug are cut in step 8.
     recessR, recessD = p(des, "pirRecessR"), p(des, "pirRecessD")
     boreR, podWall = p(des, "pirBoreR"), p(des, "pirPodWall")
     flangeR, hookD = p(des, "pirFlangeR"), p(des, "pirHookD")
@@ -493,6 +509,22 @@ def run(_context: str):
     # design is in direct-modelling mode and userParameters raises
     # "this is not a parametric design".
     wireR, wp = p(des, "pirWireDia") / 2, along(p(des, "pirWireD"))
+    pinR, pinD = p(des, "pirPinDia") / 2, p(des, "pirPinD")
+    plugBack = p(des, "pirSeatD") + p(des, "pirPlugL")
+    pp = along(pinD)
+    # keeper pin guards (see ensure_params): its front surface must be
+    # behind the plug's back end, it must stay clear of the wire hole
+    # (both sit at y 0, so only their z separation keeps them apart) and
+    # inside the pod's depth
+    if pinD - pinR <= plugBack:
+        raise RuntimeError("keeper pin front surface at d %.2f is not behind the "
+                           "plug's back end at d %.2f" % ((pinD - pinR) * 10, plugBack * 10))
+    if abs(pp.z - wp.z) <= pinR + wireR:
+        raise RuntimeError("keeper pin (z %.2f) would break into the wire hole (z %.2f)"
+                           % (pp.z * 10, wp.z * 10))
+    if pp.z - pinR <= zBack + 0.1:
+        raise RuntimeError("keeper pin z %.2f leaves under 1 mm of pod behind it"
+                           % (pp.z * 10))
     tbm = adsk.fusion.TemporaryBRepManager.get()
     base = comp.features.baseFeatures.add()
     base.startEdit()
@@ -514,15 +546,21 @@ def run(_context: str):
     wire_cyl = tbm.createCylinderOrCone(
         adsk.core.Point3D.create(wp.x, 0.0, wp.z), wireR,
         adsk.core.Point3D.create(intW / 2 - 0.015, 0.0, wp.z), wireR)
-    for b in (recess_cyl, groove, bore_cyl, wire_cyl):
+    # keeper pin cross-hole: along Y (perpendicular to the bore axis and to
+    # the tilt plane) at the axis point pinD, through both pod walls and
+    # across the bore, overrunning the pod's +-Y faces by 1 mm
+    pin_cyl = tbm.createCylinderOrCone(
+        adsk.core.Point3D.create(pp.x, -(podL / 2 + 0.1), pp.z), pinR,
+        adsk.core.Point3D.create(pp.x, podL / 2 + 0.1, pp.z), pinR)
+    for b in (recess_cyl, groove, bore_cyl, wire_cyl, pin_cyl):
         comp.bRepBodies.add(b, base)
     base.finishEdit()
     # the proxies returned by bRepBodies.add() go stale when the edit
     # closes (Combine fails with ALL_TOOL_BODY_REFERENCE_LOST); use the
     # base feature's own body list instead
     tools = [base.bodies.item(i) for i in range(base.bodies.count)]
-    if len(tools) != 4:
-        raise RuntimeError("expected 4 pir tool bodies, found %d" % len(tools))
+    if len(tools) != 5:
+        raise RuntimeError("expected 5 pir tool bodies, found %d" % len(tools))
     ci = comp.features.combineFeatures.createInput(shell_body, collection(tools))
     ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
     ci.isKeepToolBodies = False
@@ -533,6 +571,14 @@ def run(_context: str):
           "bore r=%.2f, tilt %.1f deg ok"
           % (recessR * 10, recessD * 10, boreR * 10, flangeR * 10, hookD * 10,
              boreR * 10, math.degrees(tilt)))
+    # hand-drill location for a print made before the pin existed: on the
+    # pod's +-Y side faces, measured from the front face and from the
+    # shell's +X outer wall
+    print("pir keeper pin hole dia %.2f along Y at d %.1f (plug back end d %.1f, "
+          "clearance %.2f): on the pod's side faces %.2f mm from the front face, "
+          "%.2f mm from the shell's +X wall ok"
+          % (pinR * 20, pinD * 10, plugBack * 10, (pinD - pinR - plugBack) * 10,
+             (zTop - pp.z) * 10, (pp.x - xOuter) * 10))
 
     # 8b. PLUG: tube pressed into the bore from the back; its front rim bears
     # on the base's underside (r up to 5.5, pins inside r 2.5). Separate component,

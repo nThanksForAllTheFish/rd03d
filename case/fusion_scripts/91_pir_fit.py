@@ -153,6 +153,18 @@ def run(_context: str):
     print("plug rim at d %.1f bears on the base underside (r %.1f) ok"
           % (seatD * 10, rimR * 10))
 
+    # --- keeper pin (2026-10-25): the cross-hole at pirPinD crosses the bore
+    # behind the plug; the sensor (pins end at d 13.9) must not reach it, or
+    # the filament stub would go through the sensor. Probed on the axis and
+    # on the r 2.5 pin circle, where the pin hole passes at y 0.
+    pinD = p(des, "pirPinD")
+    for side in (0.0, 0.25, -0.25):
+        if sensor_solid(pinD, side):
+            raise RuntimeError("sensor body at the keeper pin axis point d %.2f "
+                               "(y %.1f): the pin would go through the sensor"
+                               % (pinD * 10, side * 10))
+    print("keeper pin at d %.2f clear of the sensor ok" % (pinD * 10))
+
     # --- interference: sensor vs shell (and the plug, parked in the bore) ---
     shell = find_occ(root, ("FrontShell",))
     plug = find_occ(root, ("PirPlug",))
@@ -165,9 +177,19 @@ def run(_context: str):
         for b in all_bodies(plug):
             ents.add(b)
     print("interference check over", ents.count, "bodies")
+    # Since 2026-10-25 the plug's OD (12.1) is larger than the bore (11.8)
+    # on purpose, to come out as a press fit on a printer whose outside
+    # walls print 0.2 under. The parked plug therefore overlaps the shell by
+    # a thin annulus: that one pair is expected, and is only checked to be
+    # no bigger than the full annulus (anything larger means the plug is
+    # hitting something other than the bore wall). Any pair involving the
+    # sensor is a failure, as before.
+    odR, boreR, plugL = p(des, "pirPlugOD") / 2, p(des, "pirBoreR"), p(des, "pirPlugL")
+    press_max = math.pi * max(odR * odR - boreR * boreR, 0.0) * plugL   # cm^3, slot ignored
     inp = des.createInterferenceInput(ents)
     res = des.analyzeInterference(inp)
     total = 0.0
+    bad = 0
     for i in range(res.count):
         r = res.item(i)
         c1 = r.entityOne.parentComponent.name
@@ -175,6 +197,15 @@ def run(_context: str):
         body = r.interferenceBody
         vol = body.volume if body else -1.0
         total += max(vol, 0.0)
+        names = {c1, c2}
+        press_fit = (any(n.startswith("PirPlug") for n in names)
+                     and any(n.startswith("FrontShell") for n in names)
+                     and not any(n.startswith(SENSOR_PREFIXES) for n in names))
+        if press_fit and 0 <= vol <= press_max * 1.02:
+            print("press fit: %.2f mm^3 between %s and %s (designed annulus "
+                  "<= %.2f mm^3), expected" % (vol * 1000, c1, c2, press_max * 1000))
+            continue
+        bad += 1
         line = "INTERFERENCE: %.4f mm^3 between %s and %s" % (vol * 1000, c1, c2)
         if body:
             ib = body.boundingBox
@@ -192,6 +223,7 @@ def run(_context: str):
                     zs.append((SEAT_Z - d) * 10)
             line += "; approx sensor-frame z %.1f..%.1f mm" % (min(zs), max(zs))
         print(line)
-    print("interference pairs: %d, total volume %.4f mm^3" % (res.count, total * 1000))
-    if res.count == 0:
+    print("interference pairs: %d (%d unexpected), total volume %.4f mm^3"
+          % (res.count, bad, total * 1000))
+    if bad == 0:
         print("PIR FIT OK")
