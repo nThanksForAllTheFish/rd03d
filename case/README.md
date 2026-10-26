@@ -73,8 +73,9 @@ The living design is in your Fusion; save it to your own project.
   the same day for this simpler part.)
 - `rd03d_pir_bezel.stl` — the PIR **bezel ring**: a thin ring dropped
   into the lens gap from the front. A flat flange (Ø20.8 inside, Ø25
-  outside, 1.5 thick, its top continuous) lies on the shell's face
-  round the hole, and two arc **skirts** under it (Ø20.8..23.3, 1.25 mm
+  outside, 1.5 thick, its top continuous, with a 0.5 mm chamfer on its
+  outer top edge and a 0.3 mm round on the inner one) lies on the
+  shell's face round the hole, and two arc **skirts** under it (Ø20.8..23.3, 1.25 mm
   wall, 2 mm tall, the top's thickness) fill the hole down to its
   underside. Two **notches** 180° apart, 6 mm wide, cut through the
   skirt and continue into the flange's underside as blind 0.4 mm relief

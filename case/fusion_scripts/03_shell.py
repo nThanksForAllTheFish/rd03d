@@ -668,6 +668,44 @@ def run(_context: str):
             adsk.fusion.FeatureOperations.CutFeatureOperation, participants=[bz_body])
     if bz.bRepBodies.count != 1:
         raise RuntimeError("bezel notches left %d bodies" % bz.bRepBodies.count)
+    # (d) soften the two visible top edges (user request): a 0.5 mm 45 deg
+    # chamfer on the flange's outer top edge (circle r flangeR at z
+    # flangeT) and a 0.3 mm fillet on the inner top edge (circle r innerR
+    # at z flangeT: a fillet keeps the ring's visible edge rounded without
+    # widening the gap to the dome much). Both are full circles (the tab
+    # pockets are blind, in the underside), selected by radius and z;
+    # printed flange-down they are up-facing edges. The chamfer first, so
+    # the fillet's selector (radius innerR exactly) cannot pick the
+    # chamfer's new circles (r 12.0 at z 1.5, r 12.5 at z 1.0).
+    EDGE_CHAM, EDGE_FIL = 0.05, 0.03
+    def top_circle(radius, label):
+        found = [e for e in bz_body.edges
+                 if isinstance(e.geometry, adsk.core.Circle3D)
+                 and abs(e.geometry.radius - radius) < 0.002
+                 and abs(e.geometry.center.z - flangeT) < 0.002]
+        if len(found) != 1:
+            raise RuntimeError("expected 1 %s edge (circle r %.2f at z %.2f), found %d"
+                               % (label, radius * 10, flangeT * 10, len(found)))
+        return found[0]
+    ch = bz.features.chamferFeatures
+    chi = ch.createInput(collection([top_circle(flangeR, "flange outer top")]), False)
+    chi.setToEqualDistance(adsk.core.ValueInput.createByReal(EDGE_CHAM))
+    ch.add(chi)
+    fil = bz.features.filletFeatures
+    finp = fil.createInput()
+    try:
+        finp.edgeSetInputs.addConstantRadiusEdgeSet(
+            collection([top_circle(innerR, "flange inner top")]),
+            adsk.core.ValueInput.createByReal(EDGE_FIL), False)
+    except AttributeError:  # older API shape
+        finp.addConstantRadiusEdgeSet(
+            collection([top_circle(innerR, "flange inner top")]),
+            adsk.core.ValueInput.createByReal(EDGE_FIL), False)
+    fil.add(finp)
+    if bz.bRepBodies.count != 1:
+        raise RuntimeError("bezel edge softening left %d bodies" % bz.bRepBodies.count)
+    print("bezel top edges softened: %.1f mm chamfer on the outer edge (r %.1f), %.1f mm fillet "
+          "on the inner edge (r %.2f)" % (EDGE_CHAM * 10, flangeR * 10, EDGE_FIL * 10, innerR * 10))
     # sanity on the built body, in its own frame
     IN = adsk.fusion.PointContainment.PointInsidePointContainment
     def bz_solid(r, ang, z):
@@ -693,7 +731,12 @@ def run(_context: str):
               (True, rs, 180, flangeT - 0.02, "flange top continuous over the pocket at 180"),
               (True, rs, 90, relief / 2, "flange solid at 90 at the pocket's height"),
               (True, (BRIDGE_RI + flangeR) / 2, 0, relief / 2, "flange solid outside the pocket at 0"),
-              (True, (BRIDGE_RI + flangeR) / 2, 180, relief / 2, "flange solid outside the pocket at 180"))
+              (True, (BRIDGE_RI + flangeR) / 2, 180, relief / 2, "flange solid outside the pocket at 180"),
+              (False, flangeR - 0.005, 90, flangeT - 0.005, "outer top edge chamfered (r 12.45, z 1.45 void)"),
+              (True, flangeR - EDGE_CHAM, 90, flangeT - 0.005, "flange top solid inboard of the chamfer (r 12.0, z 1.45)"),
+              (False, innerR + 0.005, 90, flangeT - 0.005, "inner top edge filleted (r 10.45, z 1.45 void)"),
+              (True, innerR + 0.005, 90, flangeT - EDGE_FIL - 0.01, "flange solid under the fillet (r 10.45, z 1.1)"),
+              (True, 1.09, 90, flangeT - 0.02, "flange top solid at r 10.9 (0.5 in from the inner edge, past the fillet)"))
     for want, r, ang, z, label in checks:
         if bz_solid(r, ang, z) != want:
             raise RuntimeError("bezel probe %s at (r %.2f, %.0f deg, z %.2f): expected %s"

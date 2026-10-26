@@ -689,7 +689,12 @@ def check_bezel_fit(shell, plate, des, bezel):
         B(False, innerR + 0.1, a, relief / 2, "relief pocket open at the bore at %d deg" % a)
         B(False, bridgeRi - 0.1, a, relief / 2, "relief pocket reaches r %.2f at %d deg" % (bridgeRi - 0.1, a))
         B(True, 10.9, a, 0.8, "flange solid above the pocket at %d deg (z 0.8)" % a)
-        B(True, 10.9, a, flangeT - 0.2, "flange top continuous over the pocket at %d deg (z %.1f)" % (a, flangeT - 0.2))
+        B(True, 10.9, a, flangeT - 0.2, "flange top continuous over the pocket at %d deg (z %.1f; past the 0.3 inner fillet)" % (a, flangeT - 0.2))
+        # top edges softened (03 step 8d): 0.5 chamfer outside, 0.3 fillet inside
+        B(False, flangeR - 0.05, a + 90, flangeT - 0.05, "outer top edge chamfered: void at r %.2f, z %.2f (%d deg)" % (flangeR - 0.05, flangeT - 0.05, a + 90))
+        B(True, flangeR - 0.5, a + 90, flangeT - 0.05, "flange top solid inboard of the chamfer at r %.1f (%d deg)" % (flangeR - 0.5, a + 90))
+        B(False, innerR + 0.05, a + 90, flangeT - 0.05, "inner top edge filleted: void at r %.2f, z %.2f (%d deg)" % (innerR + 0.05, flangeT - 0.05, a + 90))
+        B(True, innerR + 0.05, a + 90, flangeT - 0.4, "flange solid under the inner fillet at z %.1f (%d deg)" % (flangeT - 0.4, a + 90))
         B(True, 10.9, a + 90, 0.2, "flange solid at %d deg at the pocket's height" % (a + 90))
         B(True, bridgeRi + 0.1, a, relief / 2, "flange solid outside the pocket from r %.2f at %d deg" % (bridgeRi + 0.1, a))
         B(True, (bridgeRi + flangeR) / 2, a, 0.1, "flange solid to its underside outside the pocket at %d deg" % a)
