@@ -626,9 +626,10 @@ def check_bezel_fit(shell, plate, des, bezel):
     +Z, notches on +/-X): `find` returns the component's body, not the
     parked occurrence (91_pir_fit.py probes the fitted state in the case
     frame against the sensor). Flange ring r innerR..flangeR x flangeT,
-    two skirt arcs r innerR..pirHoleR x skirtH below it, two notches
-    pirNotchW wide through the skirt and through the flange out to
-    r pirHoleR - 0.2 (11.45), the flange's outer rim bridging them."""
+    with a continuous top, two skirt arcs r innerR..pirHoleR x skirtH
+    below it, two notches pirNotchW wide through the skirt, continued
+    into the flange's underside as blind relief pockets pirTabRelief
+    deep out to r pirHoleR - 0.2 (11.45)."""
     import math
     def pv(n): return des.userParameters.itemByName(n).value * 10
     intD, wall = pv("intD"), pv("wall")
@@ -636,7 +637,11 @@ def check_bezel_fit(shell, plate, des, bezel):
     flangeR, flangeT = pv("pirBezelFlangeR"), pv("pirBezelFlangeT")
     innerR, skirtH = pv("pirBezelInnerR"), pv("pirBezelSkirtH")
     tabW, notchW = pv("pirTabW"), pv("pirNotchW")
+    relief = pv("pirTabRelief")
     skirtRo, bridgeRi = lensR, lensR - 0.2
+    if not (0.2 - 1e-9 <= relief and flangeT - relief >= 1.0 - 1e-9):
+        FAILURES.append("tab relief %.2f / flange %.2f: need >= 0.2 of relief and >= 1.0 of solid flange over it"
+                        % (relief, flangeT))
     zTop = intD + wall
     # parameter-level guards (03 asserts the same at build time)
     if not (innerR >= 10.3 + 0.10 - 1e-9 and innerR >= 10.35 + 0.05 - 1e-9):
@@ -676,19 +681,25 @@ def check_bezel_fit(shell, plate, des, bezel):
     for a in (0, 180):
         B(False, rs, a, -skirtH / 2, "skirt notch open at %d deg" % a)
         B(False, rs, a, -skirtH + 0.1, "skirt notch open to the foot at %d deg" % a)
-        B(False, rs, a, flangeT / 2, "flange notch open at %d deg, r %.2f" % (a, rs))
-        B(False, innerR + 0.1, a, flangeT / 2, "flange notch open at its ID at %d deg" % a)
-        B(False, bridgeRi - 0.1, a, flangeT / 2, "flange notch open out to r %.1f at %d deg" % (bridgeRi - 0.1, a))
-        B(True, bridgeRi + 0.1, a, flangeT / 2, "flange bridge starts at r %.1f at %d deg" % (bridgeRi + 0.1, a))
-        B(True, (bridgeRi + flangeR) / 2, a, flangeT / 2, "flange bridge solid at r %.1f over the notch at %d deg" % ((bridgeRi + flangeR) / 2, a))
-        B(True, (bridgeRi + flangeR) / 2, a, 0.1, "flange bridge solid down to its underside at %d deg" % a)
-        B(False, (bridgeRi + flangeR) / 2, a, -0.1, "nothing under the bridge at %d deg" % a)
+        # relief pocket in the underside (void at r 10.9 = case z 16.2;
+        # solid above it at z 0.8 and on top at z 1.3; solid at +/-90 deg
+        # at the pocket's height)
+        B(False, 10.9, a, 0.2, "tab relief pocket open at %d deg (r 10.9, z 0.2)" % a)
+        B(False, rs, a, relief - 0.1, "relief pocket open up to its ceiling at %d deg" % a)
+        B(False, innerR + 0.1, a, relief / 2, "relief pocket open at the bore at %d deg" % a)
+        B(False, bridgeRi - 0.1, a, relief / 2, "relief pocket reaches r %.2f at %d deg" % (bridgeRi - 0.1, a))
+        B(True, 10.9, a, 0.8, "flange solid above the pocket at %d deg (z 0.8)" % a)
+        B(True, 10.9, a, flangeT - 0.2, "flange top continuous over the pocket at %d deg (z %.1f)" % (a, flangeT - 0.2))
+        B(True, 10.9, a + 90, 0.2, "flange solid at %d deg at the pocket's height" % (a + 90))
+        B(True, bridgeRi + 0.1, a, relief / 2, "flange solid outside the pocket from r %.2f at %d deg" % (bridgeRi + 0.1, a))
+        B(True, (bridgeRi + flangeR) / 2, a, 0.1, "flange solid to its underside outside the pocket at %d deg" % a)
+        B(False, (bridgeRi + flangeR) / 2, a, -0.1, "nothing under the flange outside the skirt at %d deg" % a)
     # notch width: open to +/-(notchW/2 - 0.3), solid at +/-(notchW/2 + 0.3), Cartesian on +X at r_s
     for sgn in (1, -1):
         void(bezel, rs, sgn * (notchW / 2 - 0.3), -skirtH / 2, "bezel: skirt notch open %.2f off its centre" % (sgn * (notchW / 2 - 0.3)))
         solid(bezel, rs, sgn * (notchW / 2 + 0.3), -skirtH / 2, "bezel: skirt solid %.2f off the notch centre" % (sgn * (notchW / 2 + 0.3)))
-        void(bezel, rs, sgn * (notchW / 2 - 0.3), flangeT / 2, "bezel: flange notch open %.2f off its centre" % (sgn * (notchW / 2 - 0.3)))
-        solid(bezel, rs, sgn * (notchW / 2 + 0.3), flangeT / 2, "bezel: flange solid %.2f off the notch centre" % (sgn * (notchW / 2 + 0.3)))
+        void(bezel, rs, sgn * (notchW / 2 - 0.3), relief / 2, "bezel: relief pocket open %.2f off its centre" % (sgn * (notchW / 2 - 0.3)))
+        solid(bezel, rs, sgn * (notchW / 2 + 0.3), relief / 2, "bezel: flange solid %.2f off the pocket centre" % (sgn * (notchW / 2 + 0.3)))
     # --- the shell where the bezel lands (case frame): face solid under
     # the flange all round, hole open round the skirt, hole wall at r lensR
     for a in range(0, 360, 45):

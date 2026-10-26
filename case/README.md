@@ -73,14 +73,15 @@ The living design is in your Fusion; save it to your own project.
   the same day for this simpler part.)
 - `rd03d_pir_bezel.stl` — the PIR **bezel ring**: a thin ring dropped
   into the lens gap from the front. A flat flange (Ø20.8 inside, Ø25
-  outside, 0.8 thick) lies on the shell's face round the hole, and two
-  arc **skirts** under it (Ø20.8..23.3, 1.25 mm wall, 2 mm tall, the
-  top's thickness) fill the hole down to its underside. Two **notches**
-  180° apart, 6 mm wide, cut through the skirt and through the flange's
-  inner region (out to r 11.45; the flange's outer 1.05 mm bridges them)
-  so the lens's two
+  outside, 1.5 thick, its top continuous) lies on the shell's face
+  round the hole, and two arc **skirts** under it (Ø20.8..23.3, 1.25 mm
+  wall, 2 mm tall, the top's thickness) fill the hole down to its
+  underside. Two **notches** 180° apart, 6 mm wide, cut through the
+  skirt and continue into the flange's underside as blind 0.4 mm relief
+  pockets (out to r 11.45, hidden under 1.1 mm of solid flange) so the
+  lens's two
   latch tabs (5 mm wide, at 45° and 225° round the lens, reaching the
-  face) pass through and are not covered. The skirt's outside is the
+  face) sit in them with nothing showing on top. The skirt's outside is the
   hole's size: an outside wall prints 0.2 under in a true-printing hole,
   so it is a light push fit (0.1 a side); inside, its bore (an inside
   surface, prints true) is 0.10 off the lens ring and 0.05 off the
@@ -106,9 +107,10 @@ right through the 6 mm wing, nothing to bridge. The socket boss is a
 perimeters on a 0.6 mm nozzle; print the plate with at least three
 walls so it comes out solid, and do not scale the plate.
 Back plate: print flat (back face down). Shell: print open-side-up.
-Bezel ring: print it **flange-down**, no supports — it is a flat 0.8 mm
-ring with two 2 mm arcs standing on it, 2.8 mm tall in all, nothing
-overhangs. The skirt arcs are 1.25 mm thick: two 0.6 mm lines on a
+Bezel ring: print it **flange-down**, no supports — it is a flat 1.5 mm
+ring with two 2 mm arcs standing on it, 3.5 mm tall in all, nothing
+overhangs; the two 0.4 mm tab pockets are two-layer recesses in the
+bed-side face. The skirt arcs are 1.25 mm thick: two 0.6 mm lines on a
 0.6 nozzle, three on a 0.4 (a 0.4 nozzle leaves a 0.05 gap or slightly
 fat lines — fine either way). Slow outer perimeters; the flange's top
 face is the one you see.

@@ -233,14 +233,15 @@ def ensure_params(des):
         # underside on z 0 = the shell's face, axis +Z). A flat flange on
         # the face round the lens, two arc skirts below it filling the
         # lens hole, two notches 180 deg apart (through the skirt, and
-        # through the flange's inner region leaving its outer rim as a
-        # bridge) that the lens's two latch tabs pass through. Inserted
+        # as blind pockets in the flange's underside, so its top stays
+        # whole) that the lens's two latch tabs sit in. Inserted
         # from the front clocked to the tabs; a light push fit in the hole
         # and round the lens ring; holds the lens ring by friction and
         # closes the gap. Nothing clamps along the axis (user's decision:
         # wall-mounted, horizontal axis, snug socket). Prints flange-down.
         ("pirBezelFlangeR", "12.5 mm", "bezel flange outer radius: 0.9 of face round the r 11.6 hole, 1.1 of bridge outside the flange notches (to r 11.4)"),
-        ("pirBezelFlangeT", "0.8 mm", "bezel flange thickness (z 0..0.8 in the bezel frame, 16..16.8 in the case): the only part above the face"),
+        ("pirBezelFlangeT", "1.5 mm", "bezel flange thickness (z 0..1.5 in the bezel frame, 16..17.5 in the case): the only part above the face; its top is continuous (the lens tabs are cleared by blind pockets in its underside, pirTabRelief), so 1.1 of solid flange stays over them"),
+        ("pirTabRelief", "0.4 mm", "bezel: depth of the two blind relief pockets in the flange's underside over the lens tabs (r pirBezelInnerR..pirHoleR - 0.2, pirNotchW wide): the tab tops are at the face plane, so this is their clearance under the solid flange"),
         ("pirBezelInnerR", "10.40 mm", "bezel inner radius (flange and skirt): lens ring r 10.3 + 0.10, dome flank r 10.35 (at the face) + 0.05; the bore is an inside surface and prints true, so the ring just grips the lens"),
         ("pirBezelSkirtH", "2.0 mm", "bezel skirt height below the flange: the top's thickness (wall), so the skirt's foot is flush with the top's underside and above the latch hook lips (which hang to case z 13.1 under the tabs, in the notches anyway)"),
         ("pirTabW", "5.0 mm", "lens latch tab tangential width, probed on the STEP 2026-10-25 (chord 5.04 at r 10.5, 5.00 at r 10.8; the tabs are at 45/225 deg in the sensor frame, r to 11.0, sensor z 6.2..8.4)"),

@@ -173,6 +173,7 @@ def run(_context: str):
     intD = p(des, "intD")
     flangeR, flangeT = p(des, "pirBezelFlangeR"), p(des, "pirBezelFlangeT")
     innerR, skirtH, lensR = p(des, "pirBezelInnerR"), p(des, "pirBezelSkirtH"), p(des, "pirHoleR")
+    relief = p(des, "pirTabRelief")
     TAB = (45.0, 225.0)                                        # the tabs (STEP probe; sensor unrotated)
     AWAY = (0.0, 90.0, 135.0, 180.0, 270.0, 315.0)
     rs = (innerR + lensR) / 2
@@ -180,8 +181,12 @@ def run(_context: str):
     for ang in TAB:
         probes += [(sbody, True, 1.08, ang, zTop - 0.1, "lens tab at %.0f deg (r 10.8, z 15.9)" % ang),
                    (bzb, False, rs, ang, zTop - skirtH / 2, "bezel skirt notch over the tab at %.0f" % ang),
-                   (bzb, False, rs, ang, zTop + flangeT / 2, "bezel flange notch over the tab at %.0f" % ang),
-                   (bzb, True, (lensR - 0.02 + flangeR) / 2, ang, zTop + flangeT / 2, "bezel flange bridge over the notch at %.0f" % ang)]
+                   (bzb, False, rs, ang, zTop + relief / 2, "bezel relief pocket over the tab at %.0f" % ang),
+                   (bzb, True, rs, ang, zTop + relief + 0.02, "bezel flange solid above the pocket at %.0f" % ang),
+                   (bzb, True, rs, ang, zTop + flangeT - 0.02, "bezel top continuous over the tab at %.0f" % ang),
+                   (sbody, False, 1.08, ang, zTop + 0.01, "tab top at the face: nothing of the sensor 0.1 above it at %.0f" % ang),
+                   (sbody, False, 1.08, ang, zTop + relief - 0.01, "tab clear of the pocket's ceiling at %.0f" % ang),
+                   (bzb, True, (lensR - 0.02 + flangeR) / 2, ang, zTop + relief / 2, "bezel flange solid outside the pocket at %.0f" % ang)]
     for ang in AWAY:
         probes += [(bzb, True, rs, ang, zTop - skirtH / 2, "bezel skirt in the hole at %.0f" % ang),
                    (shb, False, rs, ang, zTop - skirtH / 2, "hole open round the skirt at %.0f" % ang),
