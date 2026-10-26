@@ -1375,6 +1375,12 @@ Steps: as Task 9b (params → 02 → 03 → 91 → 90 → 05 → README → comm
 
 Steps as 9c (params → 02 → 03 → 91 → 90 → 05 → README → commit "case: bayonet bezel retains the PIR from the front; plug and keeper removed"). 91: the only expected interference pair is bezel/sensor (the lip preload ring, bound its volume to the designed 0.2 mm × contact band and print it); everything else zero. 90: probes for the hole r 12.8 (void at r 12.6 z 15, solid at r 13.0 z 15 away from the notches), each notch (void at r 13.7 at 60/180/300°, solid at r 13.7 at the rest angles 90/210/330°), the bore floor (solid at (pirCx, 0, −2.2), void at z −1.8), no keeper hole (solid at the old pin position), wing snap pockets and box bumps, the lugs' rest positions free of the box walls (void at r 14.5 at 90°, z 13), the bezel's own geometry (solid flange at r 13.5 z 16.6, void inside the lip at r 10.3 z 18.4, solid lip at r 10.9 z 18.0, lug solid at (r 13.5, 60°, z 13), skirt solid at r 12.0 z 15 and void at r 12.0 z 13 between lugs) when probed in the bezel's own frame.
 
+### Task 9e: Snug bezel ring in the lens gap; bayonet dropped (2026-10-25)
+
+**Why:** the user judged the widened hole and the locking bezel over-engineered. Final scheme: hole Ø23.3, a one-piece bezel ring (flange 0.8 mm proud, two skirt arcs in the gap, two notches over the lens tabs), friction retention only, box back to ±13.5.
+
+**As built (2026-10-25):** tabs at 45°/225°, 5.0 mm wide, r 11.0, z 14.2..16; hole r 11.65; box 13.5/15.5; bezel flange r 10.4..12.5 × 0.8, skirt r 10.4..11.65 × 2.0, notches 6.0 wide through the skirt and to r 11.4 in the flange; clearances: lens ring 0.10, dome flank ≈ 0.05, tab radial 0.4; `rimGapX` 0.03, `rimGapY` −0.20, `wingGap` −0.12, `pirBoreR` 5.55 from the user's calipers; wing snap pockets 0.72 deep at x 36.9..43.1, z −5.6..−4.4; one expected interference pair (plate/shell fit overlap, 179.8 mm³). Commits be5517c (9d bayonet, superseded), 7fddc05 (fit allowances), 6a6e4d1 (9e), plus the final tweak commit. The spec's Case section describes this layout.
+
 ### Task 10: Walk test, numbers, docs
 
 **Files:**

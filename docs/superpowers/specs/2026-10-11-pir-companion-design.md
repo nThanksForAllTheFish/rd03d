@@ -188,55 +188,59 @@ delay the light. The gate:
 
 ## Case
 
-Revised 2026-10-25 (third layout, after the test print and two reviews with the
-user). Two decisions drive it:
+Final layout (2026-10-25, after one test print and three rounds with the user).
+Three decisions drive it:
 
-1. **The PIR looks where the radar looks.** The user wants the PIR's field to
-   overlap the radar's as much as possible, so the PIR axis is parallel to the
-   radar's boresight (`pirTilt` = 0). The case already hangs on a ball joint
-   tilted slightly down to aim the radar at the stairs; the PIR rides along.
-   With the lens's ±46° vertical field centred on the same axis, the stair
-   wedge (6° up to 43° down) is inside it for any case tilt up to about 40°,
-   and the 102° × 92° PIR field covers the radar's ±60° fan almost entirely.
-   The earlier 18° pod tilt and its canted top go away.
+1. **The PIR looks where the radar looks** (`pirTilt` = 0): the user wants the
+   two fields to overlap as much as possible. The case hangs on its ball joint
+   aimed at the stairs; the PIR rides along. The lens's ±46° vertical field
+   centred on the radar's boresight covers the stair wedge (6° up to 43° down)
+   for any case tilt up to about 40°.
 2. **The plate holds the sensor; the shell covers it.** All wiring stays on the
-   plate; the shell lifts off over the sensor like it does over the boards.
+   plate and the shell lifts off over the sensor.
+3. **Retention is simple:** a snug socket and a snug bezel ring, no clamp, no
+   plug, no keeper. On a horizontal axis nothing pulls the sensor out.
 
 Geometry (case frame, z −8 back plane .. 16 front face):
 
 - **Wing.** The plate grows a 6 mm tab (z −8..−2) on its +X end, flush with
-  the plate's back, out to the pod box's inner wall less the rim gap.
-- **Socket.** A straight cylindrical boss on the wing, bore Ø11.8 along +Z,
-  outer Ø15.4, rising to z 14.0: the sensor's neck and can drop into it from
-  the front and the flange's underside seats on the boss's top rim (the lens
-  hooks hang outside the boss). The bore continues through the wing and exits
-  the back face; the slotted plug (OD 12.1, ID 9, 10 mm) goes in from the back
-  and bears on the can's underside at z 6.7; the Ø1.9 keeper-pin hole crosses
-  the wing along Y just behind the plug's back end. A Ø3 wire hole leaves the
-  socket's −X side at pin level into the pod cavity.
-- **Two Technic holes** in the wing on the 8 mm grid at (x 24.95, y ±4),
-  through the wing (a pin stands 2 mm proud into the pod cavity, which is
-  empty there).
-- **Pod box on the shell.** The shell's +X wall over the pod's width is
-  replaced by a hollow box: walls 2 mm, inner y ±13.5, inner x from the old
-  wall line to the socket centre + 13.5, full height z −8..16, enclosing the
-  wing with the usual rim gap, open to the shell cavity so the wires pass
-  straight to the XIAO bay. Its top is the shell's flat front face with a
-  Ø23 hole: the lens ring (Ø20.6) and its hooks (Ø22.2) pass, the ring's top
-  face sits flush with the shell's face, the dome stands 11 mm proud. Exterior
-  edges softened like the rest of the shell.
-- **+X snap pair** of the shell moves to y ±19 (`snapYpx`), outboard of the
-  box's ±Y walls; the plate's +X pockets follow.
-- Printable without supports anywhere: the socket and wing are plain
-  extrusions on the plate; the box is walls plus a flat top with a through
-  hole, printed face-down.
-- Verification: `90_verify.py` probes socket, bore, plug seat, pin hole, wire
-  hole, wing, Technic holes, the box walls and the lens hole; `91_pir_fit.py`
-  places the sensor STEP in the socket and checks interference with plate,
-  shell and plug (the plug's press-fit annulus is the only expected pair).
+  the plate's back, y ±13.5 less the fit allowance, out to x 49 less the
+  allowance. Two Technic holes through it at (24.95, ±4). Snap pockets in its
+  ±Y faces.
+- **Socket.** A straight boss on the wing at (35.5, 0): outer Ø15.4, bore
+  Ø11.1 (0.15 per side on the measured Ø10.8 base; holes print true), from the
+  wing top to z 14.0 where the sensor's flange underside seats; 1 mm foot
+  fillet. The bore is blind at the wing top. A Ø3 wire hole leaves the boss's
+  −X side at z 4 (pin level) into the pod cavity; the wires run over the wing
+  into the XIAO bay.
+- **Pod box on the shell.** The shell's +X wall over |y| ≤ 13.5 is replaced by
+  a hollow box, walls 2 mm, inner y ±13.5, x 21..49, full height, open to the
+  shell cavity. Its flat top carries a Ø23.3 hole: the lens ring (Ø20.6) and
+  its two latch tabs (Ø22) pass, the ring's top sits flush with the face, the
+  dome stands 11 mm proud. Snap bumps on the box's inner ±Y walls engage the
+  wing's pockets; the shell's −X snap pair is unchanged; the old +X pair is
+  gone.
+- **Bezel.** A one-piece ring dropped into the gap from the front: flange
+  r 10.4..12.5 × 0.8 mm on the face, two skirt arcs r 10.4..11.65 × 2 mm in
+  the hole, two 6 mm notches 180° apart (through the skirt, and through the
+  flange out to r 11.4, leaving a bridge) that sit over the lens's tabs, which
+  are at 45°/225° on the sensor and 5 mm wide. Light push fit in the hole
+  (outside walls print 0.2 under, holes true) and 0.1 around the lens ring.
+  Clocked to wherever the tabs ended up; the sensor itself is placed at any
+  rotation.
+- **Fit allowances from calipers (2026-10-25):** plate outside prints 0.17
+  (X) and 0.27 (Y) under, the shell cavity true in X and 0.34 over in Y, the
+  wing 0.24 under, the box cavity 0.2 over. `rimGapX` 0.03, `rimGapY` −0.20,
+  `wingGap` −0.12 give about 0.1 mm per side everywhere.
+- Printable without supports: plate back-down, shell face-down, bezel
+  flange-down.
+- Verification: `90_verify.py` probes socket, bore, wing, Technic holes, box,
+  hole, snaps and the bezel in its own frame; `91_pir_fit.py` places the
+  sensor STEP and the bezel and checks interference (the plate/shell fit
+  overlap is the only expected pair; sensor-to-bezel clearances are printed).
 
-Parameters live in the scripts' `ensure_params()` (02 owns the pir* set),
-not in `01_setup.py`.
+Earlier layouts (shell pod with supports; plate tower with a canted top; bayonet
+bezel) are in the branch history and the plan's Tasks 9, 9b, 9c, 9d.
 
 ## Chart page
 
