@@ -1,3 +1,5 @@
+import math
+
 import adsk.core
 import adsk.fusion
 
@@ -10,7 +12,7 @@ def p02(des, name):
     """A parameter 02_backplate.py owns (its ensure_params creates it)."""
     if des.userParameters.itemByName(name) is None:
         raise RuntimeError("parameter %s is missing: run 02_backplate.py first "
-                           "(it creates snapYpx and the pir* parameters)" % name)
+                           "(it creates the pir*, wingSnap* parameters)" % name)
     return p(des, name)
 
 
@@ -51,15 +53,16 @@ def run(_context: str):
     root = des.rootComponent
 
     for occ in list(root.occurrences):
-        if occ.component.name.startswith("FrontShell"):
+        name = occ.component.name
+        if name.startswith(("FrontShell", "PirBezel")):
             # rename before deleting: the dead component keeps its name
             # reserved in the document's name registry (until save), which
-            # would force the rebuilt component to "FrontShell (1)".
-            # (PirPlug and the sensor import belong to 02_backplate.py
-            # since the pod moved to the plate on 2026-10-25.)
-            occ.component.name = occ.component.name + "_deleted"
+            # would force the rebuilt component to "FrontShell (1)". The
+            # bezel (step 8) is rebuilt with the shell since Task 9d. (The
+            # sensor import belongs to 02_backplate.py / 91_pir_fit.py.)
+            occ.component.name = name + "_deleted"
             occ.deleteMe()
-            print("removed existing FrontShell")
+            print("removed existing", name)
 
     occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     comp = occ.component
@@ -226,37 +229,23 @@ def run(_context: str):
     else:  # nice-to-have; square rib is acceptable
         print("RIB CHAMFER SKIPPED entirely")
 
-    # 5: snap bumps on inner +/-X walls, z centered -1mm (rects extend
+    # 5: snap bumps on the inner -X wall, z centered -1mm (rects extend
     # into the wall so the Join reliably merges with the shell body; proud
-    # amount into the cavity is snapBump). -X pair at y +/-12; the +X pair
-    # at y +/-snapYpx (19, created by 02_backplate.py) since 2026-10-25 so
-    # it sits outboard of the pod box (step 5c), whose +/-Y walls reach
-    # y +/-15.5: bumps span y 16..22, 0.5 mm past the box wall and 1 mm
-    # short of the cavity's +/-Y walls (23), nowhere near the outer corner
-    # fillets. The plate's pockets (02 step 3) move with it.
+    # amount into the cavity is snapBump), at y +/-12. The +X pair (at
+    # y +/-19 outboard of the pod box for most of 2026-10-25, snapYpx) is
+    # gone since Task 9d: the box's inner +/-Y walls carry the lid's +X
+    # snaps instead (step 5d, into the wing's pockets), so the +X wall
+    # stubs beside the box are plain.
     snap = p(des, "snapBump")
-    snapYpx = p02(des, "snapYpx")
-    boxHalfY = p02(des, "pirBoxHalfY")                       # 13.5 mm
-    boxOutY = boxHalfY + wall                                # 15.5 mm
-    if snapYpx - 3 * MM < boxOutY + 0.3 * MM:
-        raise RuntimeError("snapYpx %.1f puts the +X bump's inboard end (y %.1f) "
-                           "under 0.3 mm from the pod box's +/-Y wall (y +/-%.1f)"
-                           % (snapYpx * 10, (snapYpx - 3 * MM) * 10, boxOutY * 10))
-    if snapYpx + 3 * MM > intH / 2 - 0.5 * MM:
-        raise RuntimeError("snapYpx %.1f puts the +X bump's outboard end (y %.1f) "
-                           "under 0.5 mm from the cavity's +/-Y wall (y %.1f)"
-                           % (snapYpx * 10, (snapYpx + 3 * MM) * 10, intH / 2 * 10))
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    for sx in (-1, 1):
-        cx = sx * (intW / 2 + (wall - snap) / 2)  # spans intW/2-snap .. intW/2+wall
-        snapY = snapYpx if sx > 0 else 12 * MM
-        for sy in (-1, 1):
-            rect(sk, cx, sy * snapY, snap + wall, 6 * MM)
+    cx = -(intW / 2 + (wall - snap) / 2)  # spans -(intW/2+wall) .. -(intW/2-snap)
+    for sy in (-1, 1):
+        rect(sk, cx, sy * 12 * MM, snap + wall, 6 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, -1.6 * MM, -0.4 * MM,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[shell_body])
-    print("snap bumps ok (-X at y +/-12, +X at y +/-%.1f)" % (snapYpx * 10))
+    print("snap bumps ok (-X at y +/-12; the +X pair is on the pod box's walls, step 5d)")
 
     # 5b. XIAO hold-down boss (change request 2026-09-07). Nothing held the
     # XIAO down on its four 3 mm posts; the board could lift off them. This
@@ -286,12 +275,14 @@ def run(_context: str):
           "z %.2f..%.2f)" % (BOSS_W * 10, BOSS_W * 10, BOSS_CX * 10,
                              BOSS_CY * 10, BOSS_Z0 * 10, intD * 10))
 
-    # 5c. POD BOX (2026-10-25, third PIR layout; was step 7, the wing
-    # notch, until the same evening). The PIR sensor sits in a straight
-    # socket on the back plate's wing (02_backplate.py step 14); the shell
-    # covers it with a hollow box that REPLACES its +X wall over the pod's
-    # width. Done BEFORE step 6 so the edge-softening selectors see the
-    # final outline and fillet/chamfer the box with the rest.
+    # 5c. POD BOX (2026-10-25, third PIR layout; widened and given the
+    # bayonet notches by the fourth, Task 9d, the same day). The PIR sensor
+    # sits in a straight socket on the back plate's wing (02_backplate.py
+    # step 14); the shell covers it with a hollow box that REPLACES its +X
+    # wall over the pod's width, and the bezel (step 8) holds the sensor
+    # down through the box's top. Done BEFORE step 6 so the edge-softening
+    # selectors see the final outline and fillet/chamfer the box with the
+    # rest.
     #
     #   old wall   x 21..23 (the shell's +X wall) is removed over
     #              |y| <= pirBoxHalfY from the back rim up to z 14, so the
@@ -300,35 +291,70 @@ def run(_context: str):
     #              over it into the XIAO bay with nothing in the way. The
     #              2 mm top (z 14..16) stays: it is the shell's flat front
     #              face, which continues over the box.
-    #   box        outer x 21..(pirCx + pirBoxHalfY + wall) = 21..51,
-    #              y +/-(pirBoxHalfY + wall) = +/-15.5, z -8..16, joined
-    #              (it overlaps the wall stubs at |y| 13.5..15.5, which
+    #   box        outer x 21..(pirCx + pirBoxHalfX + wall) = 21..51,
+    #              y +/-(pirBoxHalfY + wall) = +/-17.5, z -8..16, joined
+    #              (it overlaps the wall stubs at |y| 15.5..17.5, which
     #              become the box's +/-Y walls' first 2 mm); its cavity
-    #              x 21..(pirCx + pirBoxHalfY) = 21..49, y +/-13.5,
+    #              x 21..(pirCx + pirBoxHalfX) = 21..49, y +/-15.5,
     #              z -8..14 is cut out again. Walls 2 mm, same as the
     #              shell's; the wing sits in it with rimGap all round like
-    #              the plate in the shell.
-    #   lens hole  r pirRecessR (11.5) through the top at (pirCx, 0): the
+    #              the plate in the shell. (9c: y +/-13.5 inside; 9d
+    #              widened it for the bezel's lugs, which reach r 14.3.)
+    #   lens hole  r pirHoleR (12.8) through the top at (pirCx, 0): the
     #              lens ring (r 10.3) and its two latch tabs (r 11.1) pass,
-    #              the ring's top face is flush with the shell's face and
-    #              the dome stands 11 mm proud. Its rim stays sharp (the
-    #              front chamfer in 6b skips it).
-    # Print: face-down the box is walls plus a flat top with a hole, no
-    # overhang anywhere.
+    #              the ring's top face is flush with the shell's face, the
+    #              dome stands 11 mm proud, and the bezel's skirt (r 12.6)
+    #              drops through round the lens with 0.2 to spare. Its rim
+    #              stays sharp (the front chamfer in 6b skips it).
+    #   notches    three, through the top skin (z 14..16) at 60, 180 and
+    #              300 deg from +X: radial pirHoleR..pirNotchR (12.8..14.6),
+    #              tangential width pirNotchW (4.6). The bezel's lugs
+    #              (r 12.6..14.3, 4.0 wide) drop through them; a 30 deg turn
+    #              then parks the lugs under the solid top at 90/210/330
+    #              (step 8 checks the lug sweep against the cavity walls).
+    #              They are hidden under the bezel's flange (r 15.3) once
+    #              it is on.
+    # Print: face-down the box is walls plus a flat top with a hole and
+    # three small cut-outs, no overhang anywhere.
     pirCx = p02(des, "pirCx")
-    lensR = p02(des, "pirRecessR")
+    boxHalfY = p02(des, "pirBoxHalfY")                       # 15.5 mm
+    boxOutY = boxHalfY + wall                                # 17.5 mm
+    lensR = p02(des, "pirHoleR")
+    notchW, notchR = p02(des, "pirNotchW"), p02(des, "pirNotchR")
+    boxHalfX = p02(des, "pirBoxHalfX")
     xIn = intW / 2                               # 21: the old wall's inner line
-    xBoxIn = pirCx + boxHalfY                    # 49
+    xBoxIn = pirCx + boxHalfX                    # 49
     xBoxOut = xBoxIn + wall                      # 51
     z_top, z_back = intD + wall, -backT          # 16, -8
+    NOTCH_ANGLES = (60.0, 180.0, 300.0)          # deg from +X; rest = +30
     if lensR + 0.1 >= boxHalfY:
         raise RuntimeError("lens hole r %.1f leaves under 1 mm of top to the box cavity "
                            "wall (y %.1f)" % (lensR * 10, boxHalfY * 10))
     if pirCx - lensR < xIn + 0.1:
         raise RuntimeError("lens hole reaches x %.2f, under 1 mm from the old wall line"
                            % ((pirCx - lensR) * 10))
-    if xBoxIn - (pirCx + lensR) < 0.1:
-        raise RuntimeError("lens hole leaves under 1 mm of top before the box's +X wall")
+    # (9d: the r 12.8 hole at x 35.5 ends 0.7 from the cavity's +X wall at
+    # 49, where the top runs on over the 2 mm wall, so 2.7 mm of material
+    # to the outside; 9c asked 1 mm here, 0.5 is the rule now)
+    if xBoxIn - (pirCx + lensR) < 0.05:
+        raise RuntimeError("lens hole leaves under 0.5 mm of top before the box's +X wall")
+    # the notches must stay over open ceiling: inside the box's +/-Y
+    # cavity walls and its +X wall by 0.5 (the lug then has a solid top to
+    # turn under), and at 180 deg they may run past the old wall line
+    # (x 21) onto the main cavity's ceiling, which is the same z 14, but
+    # not as far as the XIAO hold-down boss (x 2.5..9.5)
+    notch_corners = []
+    for a in NOTCH_ANGLES:
+        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
+        for rr in (lensR, notchR):
+            for t in (-notchW / 2, notchW / 2):
+                notch_corners.append((pirCx + rr * ca - t * sa, rr * sa + t * ca))
+    for x, y in notch_corners:
+        if abs(y) > boxHalfY - 0.05 or x > xBoxIn - 0.05 or x < 1.5:
+            raise RuntimeError("bayonet notch corner (%.2f, %.2f) is not over open ceiling "
+                               "(|y| < %.2f, %.1f < x < %.2f)"
+                               % (x * 10, y * 10, (boxHalfY - 0.05) * 10, 15.0,
+                                  (xBoxIn - 0.05) * 10))
     # (a) remove the old +X wall over the box's width, back rim to z 14
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, (xIn + intW / 2 + wall) / 2, 0, wall + 0.2 * MM, 2 * boxHalfY)
@@ -358,15 +384,75 @@ def run(_context: str):
     extrude(comp, sk.profiles.item(0), intD - 0.1 * MM, z_top + 0.1 * MM,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[shell_body])
+    # (e) the three bayonet notches: each a box in plan, radial from
+    # 0.3 inside the hole (so no sliver of top survives at the hole's rim)
+    # out to notchR, tangential +/-notchW/2, rotated to its angle about the
+    # hole's axis; one sketch, three profiles, one cut through the top
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    lines = sk.sketchCurves.sketchLines
+    for a in NOTCH_ANGLES:
+        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
+        pts = []
+        for rr, t in ((lensR - 0.03, -notchW / 2), (notchR, -notchW / 2),
+                      (notchR, notchW / 2), (lensR - 0.03, notchW / 2)):
+            pts.append(adsk.core.Point3D.create(pirCx + rr * ca - t * sa,
+                                                rr * sa + t * ca, 0))
+        for i in range(4):
+            lines.addByTwoPoints(pts[i], pts[(i + 1) % 4])
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 3:
+        raise RuntimeError("expected 3 bayonet notch profiles, found %d" % profs.count)
+    extrude(comp, profs, intD - 0.1 * MM, z_top + 0.1 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
     if comp.bRepBodies.count != 1:
-        raise RuntimeError("pod box cavity / lens hole split the shell: %d bodies"
+        raise RuntimeError("pod box cavity / lens hole / notches split the shell: %d bodies"
                            % comp.bRepBodies.count)
     print("pod box ok: +X wall removed over y +/-%.1f (z %.0f..%.0f); box x %.0f..%.0f, "
           "y +/-%.1f, z %.0f..%.0f, cavity to x %.0f; lens hole r %.1f at (%.1f, 0) "
-          "through the top"
+          "through the top; bayonet notches r %.1f..%.1f, %.1f wide, at %s deg"
           % (boxHalfY * 10, z_back * 10, intD * 10, xIn * 10, xBoxOut * 10,
              boxOutY * 10, z_back * 10, z_top * 10, xBoxIn * 10, lensR * 10,
-             pirCx * 10))
+             pirCx * 10, lensR * 10, notchR * 10, notchW * 10,
+             "/".join("%.0f" % a for a in NOTCH_ANGLES)))
+
+    # 5d. WING SNAP BUMPS (Task 9d): the lid's +X snap pair, on the box's
+    # inner +/-Y walls, snapBump (0.5) proud into the cavity, 6 long along
+    # X centred wingSnapX, z wingSnapZ +/-0.5, matching the blind pockets
+    # in the plate's wing (02_backplate.py step 14a': 0.6 deep, 6.2 long,
+    # +/-0.6 tall, so 0.1 of slop a side). The rects extend 1 mm into the
+    # wall so the Join merges by volume. The lid comes down over the wing
+    # from the front: the walls ride over the wing's edge (z -2) and click
+    # in 2.5 mm further down. Same guards as 02 on the position, so a
+    # hand-edited parameter cannot slip past a stale plate.
+    snapX, snapZ = p02(des, "wingSnapX"), p02(des, "wingSnapZ")
+    corner = p(des, "cornerFillet")
+    zWing = z_back + 6.0 * MM                    # wing top, -2
+    rimGap = p(des, "rimGap")
+    xWing1 = xBoxIn - rimGap
+    if not (intW / 2 - rimGap + 0.1 <= snapX - 0.31 and snapX + 0.31 <= xWing1 - corner - 0.05):
+        raise RuntimeError("wing snap bump x %.1f..%.1f is not inside the wing's straight "
+                           "+/-Y faces" % ((snapX - 0.3) * 10, (snapX + 0.3) * 10))
+    if not (z_back + 0.1 <= snapZ - 0.06 and snapZ + 0.06 <= zWing - 0.1):
+        raise RuntimeError("wing snap bump z %.1f..%.1f: the pocket would leave under 1 mm "
+                           "of wing above or below it" % ((snapZ - 0.05) * 10, (snapZ + 0.05) * 10))
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        y0, y1 = boxHalfY - snap, boxHalfY + 1.0 * MM
+        rect(sk, snapX, sy * (y0 + y1) / 2, 6 * MM, y1 - y0)
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 2:
+        raise RuntimeError("expected 2 wing bump profiles, found %d" % profs.count)
+    extrude(comp, profs, snapZ - 0.5 * MM, snapZ + 0.5 * MM,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("wing snap bumps did not merge with the shell: %d bodies"
+                           % comp.bRepBodies.count)
+    print("wing snap bumps ok: on the box's inner +/-Y walls (y +/-%.1f), %.1f proud, "
+          "x %.1f..%.1f, z %.1f..%.1f"
+          % (boxHalfY * 10, snap * 10, (snapX - 0.3) * 10, (snapX + 0.3) * 10,
+             (snapZ - 0.05) * 10, (snapZ + 0.05) * 10))
 
     # 6. soften exterior edges for hand comfort (change request 2026-09-07).
     # Operates on shell_body ONLY (fillet/chamfer features act on its edges,
@@ -374,12 +460,15 @@ def run(_context: str):
     # Order matters: vertical corner fillets FIRST (they change the corner
     # topology the later perimeter selections rely on).
     # Outline since 2026-10-25 (pod box, step 5c): the shell rectangle with
-    # the box grown off its +X side over |y| <= 15.5, so the outer boundary
-    # at any z level is 8 straights (-X; +/-Y; the two +X stubs at
-    # |y| 15.5..22.5; the box's +/-Y sides; the box's +X end) and, after
-    # 6a, 6 corner arcs (the shell's 4 and the box's 2) = 14 edges. The
-    # two concave T-junction corners at (23, +/-15.5) are vertices, not
-    # edges, and stay sharp.
+    # the box grown off its +X side over |y| <= boxOutY (17.5 since Task
+    # 9d, 15.5 before), so the outer boundary at any z level is 8
+    # straights (-X; +/-Y; the two +X stubs at |y| 17.5..22.5; the box's
+    # +/-Y sides; the box's +X end) and, after 6a, 6 corner arcs (the
+    # shell's 4 and the box's 2) = 14 edges. The two concave T-junction
+    # corners at (23, +/-17.5) are vertices, not edges, and stay sharp.
+    # The lens hole and the three bayonet notches lie inside the front
+    # face, away from its perimeter, so the counts did not change with 9d
+    # (checked on the 2026-10-25 build: 6 / 14 / 14).
     corner = p(des, "cornerFillet")
     cham = p(des, "frontChamfer")
     soft = p(des, "softFillet")
@@ -433,10 +522,12 @@ def run(_context: str):
     # Outer-perimeter edge selector at a z level: straight edges lying on the
     # outer faces (|x|=ox, |y|=oy, the box's |y|=boxOutY beyond x ox, or
     # the box's x=xBoxOut) plus the six corner-fillet arcs. The lens hole's
-    # circle (r pirRecessR) and the cavity outlines are other radii /
-    # other coordinates and are never picked. At both z_top and z_back the
-    # boundary is one closed loop of 8 straights + 6 arcs = 14 edges
-    # (8 before the pod box, 2026-10-25).
+    # circle (r pirHoleR, cut into arcs by the notches), the notches'
+    # short lines (at x 20.9..23.7 / y +/-2.3 for the 180 deg one, nowhere
+    # near |x| = 23 or |y| = 17.5 on a z-level face) and the cavity
+    # outlines are other radii / other coordinates and are never picked.
+    # At both z_top and z_back the boundary is one closed loop of 8
+    # straights + 6 arcs = 14 edges (8 before the pod box, 2026-10-25).
     def perimeter_edges(zlev):
         found = []
         for e in shell_body.edges:
@@ -497,3 +588,251 @@ def run(_context: str):
     # the wing instead.
 
     print("FrontShell bodies:", comp.bRepBodies.count)
+
+    # 8. PIR BEZEL (Task 9d, 2026-10-25). A separate component, built in
+    # its OWN frame (axis +Z, the flange's underside on z 0 = the shell's
+    # face when fitted; r is distance from the axis), exported as its own
+    # STL. It retains the sensor from the front: a bayonet ring that drops
+    # on over the dome, its lugs through the top's notches, and turns
+    # 30 deg so the lugs sit under the top; its lip then bears on the
+    # dome's flank with a designed preload, clamping the sensor's flange
+    # onto the socket boss's rim (the sensor still turns freely before the
+    # bezel goes on). One revolved profile plus three lugs = one body.
+    #
+    #   flange  ring r pirBezelInnerR..pirBezelFlangeR (11.6..15.3), z 0..
+    #           pirBezelFlangeT (1.2): sits on the face, hides the hole
+    #           and the notches.
+    #   lip     above the flange: inner surface a cone from (r 11.6, z 1.2)
+    #           up and in to (r pirBezelLipR 10.0, z 1.2 + pirBezelLipH),
+    #           outer surface the parallel cone 1.0 further out (from
+    #           r pirBezelSkirtRo 12.6 to 11.0), flat top 1 mm wide. The
+    #           upper inner edge is the bearing ring on the dome's
+    #           spherical cap (sphere R pirDomeR centred on the axis at
+    #           the face, valid above case z 19.8): the dome's surface at
+    #           r 10.0 is sqrt(R^2 - r^2) = 4.311 above the face, and
+    #           pirBezelLipH is COMPUTED (02's ensure_params) so that edge
+    #           sits pirBezelPreload (0.2) below it (= 2.912). Below the
+    #           cap the dome's flank is a 2 deg taper (r 10.35 at z 16.1
+    #           to 10.21 at z 19.8, probed on the STEP); the cone comes
+    #           in at 29 deg so it clears that flank except in the last
+    #           ~0.4 mm under the edge, where it wedges into the dome by
+    #           at most ~0.08 radially: that is the preload band, and the
+    #           guard below keeps it under 1 mm tall.
+    #   skirt   below the flange: tube r pirBezelSkirtRi..pirBezelSkirtRo
+    #           (11.5..12.6) from z 0 down to -pirBezelSkirtH (-3.8,
+    #           computed: through the 2 mm top, 0.3 of clearance, then the
+    #           lug): passes the r 12.8 hole with 0.2 and the lens's latch
+    #           tabs (r 11.1) with 0.4.
+    #   lugs    three, at the skirt's foot: z -3.8..-2.3 (pirLugT 1.5),
+    #           radial from inside the skirt wall out to pirLugRo (14.3),
+    #           tangential pirLugW (4.0), centred at 60/180/300 deg: they
+    #           drop through the notches (14.6 / 4.6) and, after a 30 deg
+    #           turn, sit at 90/210/330 under the top with their tops 0.3
+    #           below its underside (case z 13.7 vs 14.0). At 330 the
+    #           leading corner comes within about 0.1 mm of the box
+    #           cavity's +X wall (x 49) and meets it about 1.3 deg further
+    #           on: that wall is the turn's stop (the pattern is symmetric
+    #           about X, so turning the other way stops the same way at
+    #           30/150/270). The sweep is checked below.
+    # The occurrence is parked in the case at (pirCx, 0, zTop), turned to
+    # the REST angles, so 91_pir_fit.py tests the fitted state; the STL
+    # comes out in the local frame (05_export.py exports the component).
+    for occ in list(root.occurrences):
+        if occ.component.name.startswith("PirBezel"):
+            occ.component.name = occ.component.name + "_deleted"
+            occ.deleteMe()
+    flangeR, flangeT = p02(des, "pirBezelFlangeR"), p02(des, "pirBezelFlangeT")
+    innerR, lipR = p02(des, "pirBezelInnerR"), p02(des, "pirBezelLipR")
+    lipH, preload = p02(des, "pirBezelLipH"), p02(des, "pirBezelPreload")
+    skirtRi, skirtRo = p02(des, "pirBezelSkirtRi"), p02(des, "pirBezelSkirtRo")
+    skirtH = p02(des, "pirBezelSkirtH")
+    lugT, lugW, lugRo = p02(des, "pirLugT"), p02(des, "pirLugW"), p02(des, "pirLugRo")
+    domeR = p02(des, "pirDomeR")
+    lipWall = skirtRo - innerR                   # 1.0: the lip wall's horizontal width
+    lipTop = flangeT + lipH                      # 4.112 above the face
+    # the dome's flank below its spherical cap, probed on the STEP in the
+    # case frame (bezel frame = case - z_top): straight taper between
+    DOME_FLANK = ((16.1 * MM - z_top, 10.346 * MM), (19.8 * MM - z_top, 10.21 * MM))
+    REST_TURN = 30.0                             # deg, insertion -> rest
+    TAB_R, HOLE_CLEAR, LUG_CLEAR = 11.1 * MM, 0.02, 0.03
+    # --- guards, all in the bezel frame unless said ---
+    domeZ = math.sqrt(domeR * domeR - lipR * lipR)       # dome surface above the face at r lipR
+    if abs((domeZ - lipTop) - preload) > 1e-6:
+        raise RuntimeError("pirBezelLipH %.4f does not put the lip edge pirBezelPreload under "
+                           "the dome (dome %.4f, edge %.4f): it is an expression, re-create it"
+                           % (lipH * 10, domeZ * 10, lipTop * 10))
+    if lipR >= innerR or lipWall < 0.08:
+        raise RuntimeError("lip profile is not a cone leaning inward with >= 0.8 mm of wall")
+    # the lip edge must be on the spherical cap (above the taper flank)...
+    (zf0, rf0), (zf1, rf1) = DOME_FLANK
+    if lipTop < zf1 or lipR > rf1:
+        raise RuntimeError("lip edge (r %.2f, %.3f above the face) is on the dome's taper flank, "
+                           "not its spherical cap (cap above %.2f, r < %.2f): pirBezelLipR too big"
+                           % (lipR * 10, lipTop * 10, zf1 * 10, rf1 * 10))
+    # ...and the inner cone must clear the flank below the preload band:
+    # where the cone's radius is under the flank's, it is inside the dome;
+    # that may only happen within 1 mm under the edge (the band)
+    def cone_r(z):
+        return innerR - (innerR - lipR) * (z - flangeT) / lipH
+    def flank_r(z):
+        if z <= zf0:
+            return rf0
+        if z >= zf1:
+            return math.sqrt(max(domeR * domeR - z * z, 0.0))
+        return rf0 + (rf1 - rf0) * (z - zf0) / (zf1 - zf0)
+    band_z0 = lipTop
+    z = flangeT
+    while z < lipTop:
+        if cone_r(z) < flank_r(z):
+            band_z0 = min(band_z0, z)
+        z += 0.001
+    if lipTop - band_z0 > 0.1 + 1e-9:
+        raise RuntimeError("the lip's inner cone is inside the dome from %.3f to %.3f above the "
+                           "face (%.2f mm): more than the 1 mm preload band; steepen the cone "
+                           "(pirBezelInnerR) or move the edge" % (band_z0 * 10, lipTop * 10,
+                                                                  (lipTop - band_z0) * 10))
+    if skirtRo + HOLE_CLEAR > lensR + 1e-9:
+        raise RuntimeError("skirt r %.2f does not pass the r %.2f hole with 0.2" % (skirtRo * 10, lensR * 10))
+    if skirtRi < TAB_R + 0.04 - 1e-9:
+        raise RuntimeError("skirt inner r %.2f is under 0.4 mm from the latch tabs (r 11.1)" % (skirtRi * 10))
+    if lugRo + LUG_CLEAR > notchR + 1e-9 or lugW + 2 * LUG_CLEAR > notchW + 1e-9:
+        raise RuntimeError("lugs (r %.1f, %.1f wide) do not pass the notches (r %.1f, %.1f wide) "
+                           "with 0.3" % (lugRo * 10, lugW * 10, notchR * 10, notchW * 10))
+    lugTopCase = z_top - skirtH + lugT                   # 13.7
+    lugClear = intD - lugTopCase                         # 0.3
+    if lugClear < 0.02 - 1e-9:
+        raise RuntimeError("lug tops (case z %.2f) are under 0.2 mm below the top's underside "
+                           "(%.1f)" % (lugTopCase * 10, intD * 10))
+    if z_top - skirtH > intD - 0.05:
+        raise RuntimeError("skirt foot (case z %.2f) does not reach 0.5 under the top" % ((z_top - skirtH) * 10))
+    # lug sweep from the notches to the rest angles (and on to the stop):
+    # every corner of every lug must stay inside the box cavity (x < xBoxIn,
+    # |y| < boxHalfY); the lugs at 180 deg run over the main cavity (x < 21)
+    # where the ceiling is the same z 14, and must stay clear of the XIAO
+    # boss (x 9.5) by far
+    def lug_corners(angle_deg):
+        ca, sa = math.cos(math.radians(angle_deg)), math.sin(math.radians(angle_deg))
+        out = []
+        for rr in (skirtRi, lugRo):
+            for t in (-lugW / 2, lugW / 2):
+                out.append((pirCx + rr * ca - t * sa, rr * sa + t * ca))
+        return out
+    min_clear = 1e9
+    for step in range(0, int(REST_TURN * 10) + 1):
+        turn = step / 10.0
+        for a0 in NOTCH_ANGLES:
+            for x, y in lug_corners(a0 + turn):
+                c = min(xBoxIn - x, boxHalfY - abs(y))
+                min_clear = min(min_clear, c)
+                if c < 0.005 or x < 1.5:
+                    raise RuntimeError("lug corner (%.2f, %.2f) at %.1f deg hits the box cavity "
+                                       "wall (x < %.1f, |y| < %.1f)"
+                                       % (x * 10, y * 10, a0 + turn, xBoxIn * 10, boxHalfY * 10))
+    stop_turn = None
+    for step in range(int(REST_TURN * 10), int(REST_TURN * 10) + 300):
+        turn = step / 10.0
+        hit = any(x > xBoxIn or abs(y) > boxHalfY
+                  for a0 in NOTCH_ANGLES for x, y in lug_corners(a0 + turn))
+        if hit:
+            stop_turn = turn
+            break
+    print("bezel lug sweep ok: %s -> +%.0f deg, min corner clearance to the box cavity "
+          "walls %.2f mm (at rest); the +X wall stops the turn at +%s deg"
+          % ("/".join("%.0f" % a for a in NOTCH_ANGLES), REST_TURN, min_clear * 10,
+             ("%.1f" % stop_turn) if stop_turn is not None else "never"))
+    print("bezel lip: upper inner edge r %.2f at %.3f above the face; dome surface there "
+          "%.3f; designed preload %.2f mm; the inner cone wedges into the dome over the "
+          "last %.2f mm under the edge. Lug tops %.2f under the top's underside (note: "
+          "the preload lifts the bezel by up to %.2f before the lugs touch the top)"
+          % (lipR * 10, lipTop * 10, domeZ * 10, preload * 10, (lipTop - band_z0) * 10,
+             lugClear * 10, lugClear * 10))
+
+    bz_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+    bz = bz_occ.component
+    bz.name = "PirBezel"
+    # (a) the revolved profile: a closed polygon in the plane through the
+    # axis, (r, z) points, drawn with model->sketch mapping so the XZ
+    # plane's sketch axes need no guessing
+    sk = bz.sketches.add(bz.xZConstructionPlane)
+    prof = [(skirtRi, -skirtH), (skirtRo, -skirtH), (skirtRo, 0.0),
+            (flangeR, 0.0), (flangeR, flangeT), (skirtRo, flangeT),
+            (lipR + lipWall, lipTop), (lipR, lipTop), (innerR, flangeT),
+            (innerR, 0.0), (skirtRi, 0.0)]
+    spts = [sk.modelToSketchSpace(adsk.core.Point3D.create(r, 0.0, z)) for r, z in prof]
+    for i in range(len(spts)):
+        sk.sketchCurves.sketchLines.addByTwoPoints(spts[i], spts[(i + 1) % len(spts)])
+    if sk.profiles.count != 1:
+        raise RuntimeError("bezel profile sketch has %d profiles, expected 1" % sk.profiles.count)
+    rev = bz.features.revolveFeatures
+    ri = rev.createInput(sk.profiles.item(0), bz.zConstructionAxis,
+                         adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    ri.setAngleExtent(False, adsk.core.ValueInput.createByReal(2 * math.pi))
+    rev.add(ri)
+    if bz.bRepBodies.count != 1:
+        raise RuntimeError("bezel revolve left %d bodies" % bz.bRepBodies.count)
+    bz_body = bz.bRepBodies.item(0)
+    # (b) the lugs: rotated rectangles in plan, from inside the skirt
+    # wall (chord at r skirtRi + 0.3, whose corners stay inside r skirtRo)
+    # out to lugRo, extruded z -skirtH..-skirtH + lugT and joined. Sketched
+    # on the XY plane: extrude()'s start offset is measured from the
+    # sketch plane, so a sketch already at -skirtH would land the lugs at
+    # -2 skirtH, in the air (the first build did exactly that: 4 bodies).
+    sk = bz.sketches.add(bz.xYConstructionPlane)
+    r_in = skirtRi + 0.03
+    if math.hypot(r_in, lugW / 2) >= skirtRo:
+        raise RuntimeError("lug root chord corners fall outside the skirt wall")
+    lines = sk.sketchCurves.sketchLines
+    for a in NOTCH_ANGLES:
+        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
+        pts = []
+        for rr, t in ((r_in, -lugW / 2), (lugRo, -lugW / 2), (lugRo, lugW / 2), (r_in, lugW / 2)):
+            pts.append(adsk.core.Point3D.create(rr * ca - t * sa, rr * sa + t * ca, 0))
+        for i in range(4):
+            lines.addByTwoPoints(pts[i], pts[(i + 1) % 4])
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 3:
+        raise RuntimeError("expected 3 lug profiles, found %d" % profs.count)
+    extrude(bz, profs, -skirtH, -skirtH + lugT,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[bz_body])
+    if bz.bRepBodies.count != 1:
+        raise RuntimeError("bezel lugs did not merge: %d bodies" % bz.bRepBodies.count)
+    sk.isVisible = False
+    # sanity on the built body, in its own frame (the lip mid-wall probe
+    # sits halfway up the cone, 0.55 of the way across its horizontal
+    # width from the inner surface)
+    IN = adsk.fusion.PointContainment.PointInsidePointContainment
+    def bz_solid(r, ang, z):
+        a = math.radians(ang)
+        return bz_body.pointContainment(adsk.core.Point3D.create(r * math.cos(a), r * math.sin(a), z)) == IN
+    checks = ((True, (flangeR + innerR) / 2, 0.0, flangeT / 2, "flange"),
+              (True, lipR + lipWall / 2 + 0.55 * (innerR - lipR), 0.0, flangeT + lipH / 2, "lip mid-wall"),
+              (False, lipR - 0.02, 0.0, lipTop - 0.01, "inside the lip edge"),
+              (False, lipR + lipWall / 2, 0.0, lipTop + 0.02, "above the lip top"),
+              (True, (skirtRi + skirtRo) / 2, 0.0, -skirtH / 2, "skirt"),
+              (False, skirtRi - 0.03, 0.0, -skirtH / 2, "inside the skirt"),
+              (True, (skirtRo + lugRo) / 2, NOTCH_ANGLES[0], -skirtH + lugT / 2, "lug at 60"),
+              (True, (skirtRo + lugRo) / 2, NOTCH_ANGLES[1], -skirtH + lugT / 2, "lug at 180"),
+              (True, (skirtRo + lugRo) / 2, NOTCH_ANGLES[2], -skirtH + lugT / 2, "lug at 300"),
+              (False, (skirtRo + lugRo) / 2, NOTCH_ANGLES[0] + 30, -skirtH + lugT / 2, "no lug at 90"),
+              (False, (skirtRo + lugRo) / 2, NOTCH_ANGLES[0], -skirtH + lugT + 0.02, "above the lug at 60"))
+    for want, r, ang, z, label in checks:
+        if bz_solid(r, ang, z) != want:
+            raise RuntimeError("bezel probe %s at (r %.2f, %.0f deg, z %.2f): expected %s"
+                               % (label, r * 10, ang, z * 10, "solid" if want else "void"))
+    # (c) park it in the case, turned to the rest angles
+    m = adsk.core.Matrix3D.create()
+    m.setToRotation(math.radians(REST_TURN), adsk.core.Vector3D.create(0, 0, 1),
+                    adsk.core.Point3D.create(0, 0, 0))
+    m.translation = adsk.core.Vector3D.create(pirCx, 0.0, z_top)
+    bz_occ.transform2 = m
+    if des.snapshots.hasPendingSnapshot:
+        des.snapshots.add()
+    print("pir bezel ok: flange r %.1f..%.1f x %.1f, lip to %.3f (wall %.1f wide, edge r %.1f), "
+          "skirt r %.1f..%.1f to -%.1f, 3 lugs r ..%.1f x %.1f x %.1f at %s deg; parked at "
+          "(%.1f, 0, %.0f) turned +%.0f (lugs at %s)"
+          % (innerR * 10, flangeR * 10, flangeT * 10, lipTop * 10, lipWall * 10, lipR * 10,
+             skirtRi * 10, skirtRo * 10, skirtH * 10, lugRo * 10, lugW * 10, lugT * 10,
+             "/".join("%.0f" % a for a in NOTCH_ANGLES), pirCx * 10, z_top * 10, REST_TURN,
+             "/".join("%.0f" % (a + REST_TURN) for a in NOTCH_ANGLES)))
+    print("PirBezel bodies:", bz.bRepBodies.count)

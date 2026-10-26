@@ -6,10 +6,13 @@ Imports Panasonic's STEP of the sensor, drops it upright into the socket
 exactly as 02_backplate.py step 14 defines it (axis at (pirCx, 0) along +Z,
 lens ring top flush with the shell's face at z 16), snapshots the placement
 and runs Fusion's interference analysis between the sensor, the plate, the
-shell (its pod box) and the plug. Expected: the plug's designed press-fit
-annulus against the plate is the ONLY pair; anything involving the sensor
-is a failure. If it is not clean, fix the SOCKET in 02_backplate.py or the
-BOX in 03_shell.py, never the sensor.
+shell (its pod box) and the bezel parked on the face in its fitted (turned)
+position. Expected (Task 9d): the bezel's lip against the dome is the ONLY
+pair - the designed pirBezelPreload interference ring - bounded by the
+band volume; anything else (sensor against plate or shell, plate against
+shell, bezel against plate or shell) is a failure. If it is not clean, fix
+the SOCKET in 02_backplate.py or the BOX / BEZEL in 03_shell.py, never the
+sensor.
 """
 import math
 
@@ -23,7 +26,8 @@ SENSOR_PREFIXES = ("EKMC", "PaPIRs")
 # Sensor native frame: Z is the lens axis, z = 0 the metal base. Its lens
 # base ring top (z 8.4 mm) sits on the shell's front face plane (z 16), so
 # the flange's underside (z 6.4) lands on the socket boss's top rim
-# (pirSeatZ 14.0) and the can's underside (z -0.9) at the plug's rim (6.7).
+# (pirSeatZ 14.0); the pins (to z -5.5) and the cap on them (to about
+# -8.5) hang in the blind bore above its floor (case z -2).
 RING_TOP_Z = 0.84   # cm, sensor frame
 
 
@@ -136,37 +140,77 @@ def run(_context: str):
                            "seat on the boss rim" % (rimR * 10))
     print("flange underside at z %.1f bears on the boss rim (r %.2f) ok" % (seatZ * 10, rimR * 10))
 
-    # --- plug seat: pirSeatD (shared with 02_backplate.py, which parks the
-    # plug's front rim there) must be the base's underside. Probe the sensor
-    # 0.5 mm either side of it, at a radius inside the rim's bearing annulus.
-    seatD = p(des, "pirSeatD")
-    plugZ = zTop - seatD
-    plugRimR = (p(des, "pirPlugID") + p(des, "pirPlugOD")) / 4
-    if not sensor_solid(plugZ + 0.05, plugRimR):
-        raise RuntimeError("no sensor base 0.5 mm in front of pirSeatD (z %.2f) at r %.1f"
-                           % (plugZ * 10, plugRimR * 10))
-    if sensor_solid(plugZ - 0.05, plugRimR):
-        raise RuntimeError("sensor body behind pirSeatD at r %.1f: the plug "
-                           "rim would clash" % (plugRimR * 10))
-    print("plug rim at z %.1f bears on the base underside (r %.1f) ok"
-          % (plugZ * 10, plugRimR * 10))
-
-    # --- keeper pin (2026-10-25): the cross-hole at pirPinZ crosses the bore
-    # behind the plug; the sensor (pins end at case z 2.1) must not reach
-    # it, or the filament stub would go through the sensor. Probed on the
-    # axis and on the r 2.5 pin circle where the pin hole passes (y 0).
-    pinZ = p(des, "pirPinZ")
+    # --- bore floor: the blind bore ends at the wing top (z -2); nothing
+    # of the sensor may reach it (the pins end at z 2.1, the cap on them
+    # at about -0.9, which is not in the STEP). Probed on the axis and on
+    # the r 2.5 pin circle 0.3 above the floor.
+    floorZ = -p(des, "backT") + 0.6
     for r, ang in ((0.0, 0.0), (0.25, 0.0), (0.25, 180.0)):
-        if sensor_solid(pinZ, r, ang):
-            raise RuntimeError("sensor body at the keeper pin level z %.2f (r %.1f): "
-                               "the pin would go through the sensor" % (pinZ * 10, r * 10))
-    print("keeper pin at z %.2f clear of the sensor ok" % (pinZ * 10))
+        if sensor_solid(floorZ + 0.03, r, ang):
+            raise RuntimeError("sensor body 0.3 mm above the bore floor z %.1f (r %.1f): it "
+                               "would stand on the floor, not seat on the rim" % (floorZ * 10, r * 10))
+    print("bore floor at z %.1f clear of the sensor ok" % (floorZ * 10))
 
-    # --- interference: sensor vs plate (the socket), shell (its pod box and
-    # lens hole) and the plug parked in the bore ---
+    # --- the dome where the bezel's lip meets it: the sphere R pirDomeR
+    # centred on the axis at the face must be the STEP's dome. Probe 0.1
+    # inside and outside the sphere at the lip radius, at four azimuths.
+    domeR, lipR = p(des, "pirDomeR"), p(des, "pirBezelLipR")
+    domeZ = zTop + math.sqrt(domeR * domeR - lipR * lipR)       # 18.888
+    for ang in (0.0, 90.0, 180.0, 270.0):
+        if not sensor_solid(domeZ - 0.01, lipR, ang):
+            raise RuntimeError("no dome 0.1 mm under the sphere at r %.1f, %.0f deg (z %.3f): "
+                               "pirDomeR is wrong" % (lipR * 10, ang, (domeZ - 0.01) * 10))
+        if sensor_solid(domeZ + 0.01, lipR, ang):
+            raise RuntimeError("dome 0.1 mm above the sphere at r %.1f, %.0f deg: pirDomeR is wrong"
+                               % (lipR * 10, ang))
+    print("dome surface at r %.1f is z %.3f (sphere R %.2f at the face) ok" % (lipR * 10, domeZ * 10, domeR * 10))
+
+    # --- bezel fitted state (parked by 03_shell.py step 8 at (pirCx, 0,
+    # zTop), lugs at the rest angles): flange on the face, lugs 0.3 under
+    # the top's underside and clear of the box walls, probed in the case
+    # frame through the occurrence's body proxies
     plate = find_occ(root, ("BackPlate",))
     shell = find_occ(root, ("FrontShell",))
-    plug = find_occ(root, ("PirPlug",))
+    bezel = find_occ(root, ("PirBezel",))
+    if bezel is None:
+        raise RuntimeError("no PirBezel occurrence: run 03_shell.py first")
+    bzb, shb = all_bodies(bezel)[0], all_bodies(shell)[0]
+
+    def solid_at(body, r, ang, z):
+        a = math.radians(ang)
+        return body.pointContainment(adsk.core.Point3D.create(
+            pirCx + r * math.cos(a), r * math.sin(a), z)) == IN
+
+    intD = p(des, "intD")
+    lugRo, skirtRo = p(des, "pirLugRo"), p(des, "pirBezelSkirtRo")
+    lugT, skirtH = p(des, "pirLugT"), p(des, "pirBezelSkirtH")
+    lugTop = zTop - skirtH + lugT                             # 13.7
+    lugMid = zTop - skirtH + lugT / 2                         # 12.95
+    rLug = (skirtRo + lugRo) / 2                              # 13.45
+    REST = (90.0, 210.0, 330.0)
+    probes = []
+    for ang in REST:
+        probes += [(bzb, True, rLug, ang, lugMid, "bezel lug at the rest angle %.0f" % ang),
+                   (bzb, False, rLug, ang, lugTop + 0.015, "nothing of the bezel 0.15 above its lug top at %.0f" % ang),
+                   (shb, False, rLug, ang, intD - 0.015, "shell void 0.15 under its top at the lug's rest position %.0f" % ang),
+                   (shb, False, rLug, ang, lugMid, "shell void at the lug's rest position %.0f" % ang),
+                   (shb, True, rLug, ang, intD + 0.02, "shell top solid over the parked lug at %.0f" % ang),
+                   (shb, False, lugRo + 0.02, ang, lugMid, "box cavity open 0.2 past the lug's reach at %.0f" % ang)]
+        probes += [(bzb, False, rLug, ang - 30.0, lugMid, "no bezel lug at the notch angle %.0f (turned away)" % (ang - 30.0))]
+    probes += [(shb, True, 1.4, 0.0, zTop - 0.01, "shell face solid under the bezel flange (r 14)"),
+               (bzb, True, 1.4, 0.0, zTop + 0.06, "bezel flange on the face (r 14, 0.6 up)"),
+               (bzb, False, 1.4, 0.0, zTop - 0.01, "nothing of the bezel below the face at r 14"),
+               (bzb, True, 1.2, 0.0, intD + 0.1, "bezel skirt inside the lens hole (r 12, z 15)"),
+               (shb, False, 1.2, 0.0, intD + 0.1, "lens hole open round the skirt (r 12, z 15)")]
+    for body, want, r, ang, z, label in probes:
+        if solid_at(body, r, ang, z) != want:
+            raise RuntimeError("bezel fit probe '%s' at (r %.2f, %.0f deg, z %.2f): expected %s"
+                               % (label, r * 10, ang, z * 10, "solid" if want else "void"))
+    print("bezel fitted: flange on the face, lugs at %s deg %.2f under the top, clear of the "
+          "box walls ok" % ("/".join("%.0f" % a for a in REST), (intD - lugTop) * 10))
+
+    # --- interference: sensor vs plate (the socket), shell (its pod box,
+    # lens hole and notches) and the bezel parked on the face ---
     ents = adsk.core.ObjectCollection.create()
     for b in all_bodies(sensor):
         ents.add(b)
@@ -174,20 +218,19 @@ def run(_context: str):
         ents.add(b)
     for b in all_bodies(shell):
         ents.add(b)
-    if plug:
-        for b in all_bodies(plug):
-            ents.add(b)
+    for b in all_bodies(bezel):
+        ents.add(b)
     print("interference check over", ents.count, "bodies")
-    # Since 2026-10-25 the plug's OD (12.1) is larger than the bore (11.8)
-    # on purpose, to come out as a press fit on a printer whose outside
-    # walls print 0.2 under. The parked plug therefore overlaps the PLATE
-    # (which carries the bore) by a thin annulus: that one pair is
-    # expected, and is only checked to be no bigger than the full annulus
-    # (anything larger means the plug is hitting something other than the
-    # bore wall). Any pair involving the sensor, or the plate against the
-    # shell, is a failure.
-    odR, boreR, plugL = p(des, "pirPlugOD") / 2, p(des, "pirBoreR"), p(des, "pirPlugL")
-    press_max = math.pi * max(odR * odR - boreR * boreR, 0.0) * plugL   # cm^3, slot ignored
+    # Task 9d: the bezel's lip is built pirBezelPreload (0.2) into the dome
+    # on purpose (03_shell.py step 8), so ONE pair is expected: bezel
+    # against sensor, and only as big as that band can be. Bound: the
+    # radial interference 0.2 on a ring of radius pirBezelLipR over a
+    # contact height of about 2 sqrt(2 R d) (the chord of a sphere R at
+    # depth d): 2 pi 10.5 x 0.2 x 4.2 = 55 mm^3. (The real lip is a cone
+    # meeting the sphere at an angle, so the measured value is far
+    # smaller; it is printed.) Any other pair is a failure.
+    preload = p(des, "pirBezelPreload")
+    band_max = 2 * math.pi * lipR * preload * 2 * math.sqrt(2 * domeR * preload)
     inp = des.createInterferenceInput(ents)
     res = des.analyzeInterference(inp)
     total = 0.0
@@ -200,12 +243,17 @@ def run(_context: str):
         vol = body.volume if body else -1.0
         total += max(vol, 0.0)
         names = {c1, c2}
-        press_fit = (any(n.startswith("PirPlug") for n in names)
-                     and any(n.startswith("BackPlate") for n in names)
-                     and not any(n.startswith(SENSOR_PREFIXES) for n in names))
-        if press_fit and 0 <= vol <= press_max * 1.02:
-            print("press fit: %.2f mm^3 between %s and %s (designed annulus "
-                  "<= %.2f mm^3), expected" % (vol * 1000, c1, c2, press_max * 1000))
+        lip = (any(n.startswith("PirBezel") for n in names)
+               and any(n.startswith(SENSOR_PREFIXES) for n in names))
+        if lip and 0 <= vol <= band_max:
+            line = ("lip preload: %.3f mm^3 between %s and %s (band bound %.1f mm^3), expected"
+                    % (vol * 1000, c1, c2, band_max * 1000))
+            if body:
+                ib = body.boundingBox
+                line += ("; z %.3f..%.3f, r to %.3f mm"
+                         % (ib.minPoint.z * 10, ib.maxPoint.z * 10,
+                            max(abs(ib.minPoint.x - pirCx), abs(ib.maxPoint.x - pirCx)) * 10))
+            print(line)
             continue
         bad += 1
         line = "INTERFERENCE: %.4f mm^3 between %s and %s" % (vol * 1000, c1, c2)

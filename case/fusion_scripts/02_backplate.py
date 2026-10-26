@@ -185,59 +185,63 @@ def ensure_params(des):
         ("capDia", "8.2 mm", "bulk capacitor diameter"),
         ("capLen", "12 mm", "bulk capacitor body length"),
         ("capClear", "0.4 mm", "total capacitor cradle clearance"),
-        # 2026-10-25: the +X snap pair (shell bumps, plate pockets) sits at
-        # y +/-19, outboard of the shell's pod box (walls to y +/-15.5,
-        # 03_shell.py step 5c) with 0.3 mm to spare, and 1 mm short of the
-        # cavity's +/-Y walls (23). Read by 03_shell.py step 5 and 02 step 3;
-        # the -X pair stays at +/-12. (17 while the shell had a wing notch,
-        # 2026-10-25 morning.)
-        ("snapYpx", "19 mm", "y of the +X-side snap bump/pocket pair (the -X pair stays at 12): outboard of the shell's pod box walls (y +/-15.5), 6 mm long so it spans y 16..22"),
-        # PIR socket (step 14) and the shell's pod box (03_shell.py step 5c),
-        # third layout, 2026-10-25 evening: the sensor's axis is parallel to
-        # the radar's (pirTilt 0), the plate carries only a straight socket
-        # on its wing and the shell's box covers it. Radii measured on
-        # Panasonic's STEP by point probing (2026-10-11): base/can r 5.5,
-        # neck r 5.3 -> 5.0, flange r 9.4 with its underside at sensor z 6.4,
-        # lens ring r 10.3 (top at z 8.4), and TWO lens latch tabs at
-        # 45/225 deg reaching r 11.1 over z 6.6..8.4 whose hook lips
-        # (r 9.6..10.7) hang down to z 5.5.
-        ("pirRecessR", "11.5 mm", "lens hole radius in the shell's pod box top: latch tabs r 11.1 + 0.4 (lens ring is r 10.3); the ring passes and sits flush with the face. Tolerance stack: the tabs have 0.4 radial clearance, the sensor floats 0.4 in the bore and the plate 0.15 in the shell, so worst case a tab just touches the hole wall; do not tighten below 0.4"),
+        # PIR socket (step 14), the shell's pod box (03_shell.py step 5c)
+        # and the bayonet bezel (03_shell.py step 8), fourth layout
+        # (2026-10-25, Task 9d): the sensor's axis is parallel to the
+        # radar's (pirTilt 0), the plate carries only a straight socket on
+        # its wing, the shell's box covers it, and a bezel dropped on from
+        # the FRONT holds the sensor down (no plug, no keeper pin any more).
+        # Radii measured on Panasonic's STEP by point probing (2026-10-11):
+        # base/can r 5.5, neck r 5.3 -> 5.0, flange r 9.4 with its
+        # underside at sensor z 6.4, lens ring r 10.3 (top at z 8.4), TWO
+        # lens latch tabs at 45/225 deg reaching r 11.1 over z 6.6..8.4
+        # whose hook lips (r 9.6..10.7) hang down to z 5.5, and the dome
+        # (re-probed 2026-10-25 for the bezel): its flank is NOT a sphere
+        # down to the ring - it is a 2 deg taper, r 10.35 just above the
+        # ring top (sensor z 8.5) narrowing to r 10.21 at sensor z 11.8,
+        # and only above that a sphere R 10.89 centred on the axis at the
+        # ring top (apex at z 19.29). The dome's largest radius is 10.35.
         ("pirBoreR", "5.9 mm", "socket bore radius: base/can r 5.5 + 0.4; neck r 5.3..5.0 passes"),
         ("pirSocketR", "7.7 mm", "socket boss outer radius: 1.8 mm wall round the bore; the flange (r 9.4) seats on its top rim and the latch hook lips (r 9.6..10.7) hang outside it"),
         ("pirSeatZ", "intD + wall - 2.0 mm", "socket boss top = the flange's underside (sensor z 6.4), 2.0 under the shell's face so the lens ring's top (sensor z 8.4) is flush with it (= 14.0)"),
         ("pirCx", "35.5 mm", "socket / lens axis x. 34.5 would centre it in the box, but the Technic hole at (24.95, 4) would then pass 0.20 mm from the boss's foot in plan; 35.5 gives 1.13 (step 14d asserts >= 0.6). The box in 03_shell.py follows"),
-        ("pirBoxHalfY", "13.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less rimGap"),
+        ("pirBoxHalfY", "15.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less rimGap. 15.5 since Task 9d (was 13.5): room for the bezel's lugs (to r 14.3 at 90 deg) under the top"),
+        ("pirBoxHalfX", "13.5 mm", "shell pod box: cavity +X wall at pirCx + this (= 49, the 9c value: the box's x 21..49 is unchanged by 9d, only its width grew); the wing ends rimGap short of it. Was tied to pirBoxHalfY while the cavity was square"),
+        ("pirHoleR", "12.8 mm", "lens hole radius in the shell's pod box top (Task 9d, was pirRecessR 11.5): the bezel's skirt (r 12.6) passes with 0.2; the lens ring (r 10.3) and latch tabs (r 11.1) pass with room"),
+        ("pirNotchW", "4.6 mm", "bayonet notch tangential width through the box top, at 60/180/300 deg from +X: lug width 4.0 + 0.3 a side"),
+        ("pirNotchR", "14.6 mm", "bayonet notch outer radius (radial extent pirHoleR..this): lug reach 14.3 + 0.3"),
         ("pirTilt", "0 deg", "PIR axis tilt from the plate normal: 0 since 2026-10-25 (the PIR looks where the radar looks, max field overlap). Step 14 refuses anything else: a tilted axis needs the 9b tower, which is gone"),
         ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up. Unused by the geometry while pirTilt is 0; the firmware reads the orientation"),
         ("pirWireDia", "3.0 mm", "wire hole out of the socket's -X side, level, into the pod cavity"),
-        ("pirWireZ", "4.0 mm", "wire hole centre z: pin-tip level (sensor pins end at z 2.1), inside the plug's span (z -3.3..6.7) and its slot, so the wires leave the pins radially through the slot and the hole"),
-        # Test print 2026-10-25: bore measured 11.8 (holes on this printer
-        # come out true to size), plug OD measured 11.5 for 11.7 nominal
-        # (outside walls print 0.2 under), and the plug fell out under
-        # gravity. 12.1 nominal prints at about 11.9 for the 11.8 bore:
-        # 0.05 mm per side of interference, taken up by the slot.
-        ("pirPlugOD", "12.1 mm", "plug tube OD: holes print true, outside walls 0.2 under (measured 2026-10-25); 12.1 prints ~11.9 for the 11.8 bore, 0.05/side interference taken up by the slot"),
-        # 2026-10-25, from a photo of the real wiring: the user soldered the
-        # 0.1 uF film decoupling cap STANDING on the sensor's pins (a block
-        # about 7 x 2.5 x 6.5 mm over the VDD/GND pins, top about 8.5 mm
-        # above the base, d ~17.8), so the plug's bore has to hold the cap
-        # and the solder joints as well as the pins: ID 9.0 (slotted wall
-        # 1.55, still over the 1.2 mm check) and 10 mm long, spanning
-        # d 9.3..19.3 (z 6.7..-3.3). The keeper pin expression then lands
-        # the pin at z -4.75, in the wing (2.3 mm of wing behind it).
-        ("pirPlugID", "9.0 mm", "plug tube ID: pins on r2.5 plus room for the decoupling cap standing on the pins (7 x 2.5 x 6.5 block to d ~17.8) and its solder joints"),
-        ("pirPlugL", "10.0 mm", "plug tube length: covers the pins and the cap standing on them (to d ~17.8) from the seat at d 9.3"),
-        ("pirSeatD", "9.3 mm", "plug front rim depth from the shell face (z 16): the base's underside (sensor z -0.9, case z 6.7); read by 02_backplate.py and 91_pir_fit.py"),
-        ("pirPlugSlotW", "3.2 mm", "lengthwise slot through one plug wall: wire exit into the wire hole, and a little compliance for the press fit"),
-        # Keeper pin (2026-10-25): a stub of 1.75 mm filament pushed through
-        # a cross-hole in the wing, along Y, that crosses the bore just
-        # behind the plug's back end so the plug cannot fall out even if
-        # the press fit is loose. The axis sits the pin's radius plus
-        # 0.5 mm of clearance behind the plug's back end (z 16 - pirSeatD -
-        # pirPlugL = -3.3): -4.75. pirPinZ is an expression, so it follows
-        # the plug parameters.
-        ("pirPinDia", "1.9 mm", "keeper pin cross-hole diameter: 1.75 mm filament stub plus 0.15"),
-        ("pirPinZ", "(intD + wall - pirSeatD) - pirPlugL - pirPinDia / 2 - 0.5 mm", "keeper pin axis z, along Y through the wing: plug back end - pin radius - 0.5 clearance (= -4.75)"),
+        ("pirWireZ", "4.0 mm", "wire hole centre z: pin-tip level (sensor pins end at z 2.1; the cap standing on them reaches down to z -0.9), so the wires leave the pins radially through the hole"),
+        # Bezel (03_shell.py step 8; its own frame: flange underside on
+        # z 0 = the shell's face, axis +Z). Flange ring on the face, a lip
+        # above it whose upper inner edge bears on the dome's flank with
+        # pirBezelPreload of designed interference, a skirt below it
+        # through the lens hole, three lugs at the skirt's foot that drop
+        # through the top's notches and turn 30 deg under the top.
+        ("pirDomeR", "10.89 mm", "lens dome sphere radius, centred on the axis at the shell's face (sensor z 8.4), valid for the cap ABOVE case z 19.8 (r < 10.21); below it the flank is a 2 deg taper r 10.35 (z 16.1) -> 10.21 (z 19.8), not the sphere (probed on the STEP 2026-10-25). The bezel's lip height is computed from it, so pirBezelLipR must be on the cap"),
+        ("pirBezelFlangeR", "15.3 mm", "bezel flange outer radius: covers the notches (to r 14.6) by 0.7"),
+        ("pirBezelFlangeT", "1.2 mm", "bezel flange thickness (z 0..1.2 in the bezel frame, 16..17.2 in the case)"),
+        ("pirBezelInnerR", "11.6 mm", "bezel flange inner radius = the lip's inner base radius"),
+        ("pirBezelLipR", "10.0 mm", "bezel lip upper inner edge radius: the ring that bears on the dome's spherical cap. The plan said 10.5, but the dome's largest radius is 10.35 (probe, see pirDomeR) so a 10.5 lip touches nothing; 10.0 is on the cap (dome z 20.31 there, surface normal 67 deg from the axis), the largest round value with the lip's inner cone clear of the taper flank except in the designed band"),
+        ("pirBezelPreload", "0.2 mm", "designed interference of the lip's upper inner edge into the dome, measured along the axis"),
+        ("pirBezelLipH", "sqrt(pirDomeR ^ 2 - pirBezelLipR ^ 2) - pirBezelFlangeT - pirBezelPreload",
+         "lip height above the flange, COMPUTED so the lip's upper inner edge (r pirBezelLipR) sits pirBezelPreload under the dome's surface there: dome z at that r = sqrt(R^2 - r^2) above the face (= 2.888), less the flange, less the preload (= 1.488)"),
+        ("pirBezelSkirtRi", "11.5 mm", "bezel skirt inner radius: latch tabs r 11.1 + 0.4"),
+        ("pirBezelSkirtRo", "12.6 mm", "bezel skirt outer radius (= the lip's outer base radius, so the lip wall is pirBezelSkirtRo - pirBezelInnerR = 1.0 wide): lens hole r 12.8 - 0.2"),
+        ("pirLugT", "1.5 mm", "bayonet lug thickness (along the axis)"),
+        ("pirLugW", "4.0 mm", "bayonet lug tangential width"),
+        ("pirLugRo", "14.3 mm", "bayonet lug outer radius (radial extent pirBezelSkirtRo..this)"),
+        ("pirBezelSkirtH", "wall + 0.3 mm + pirLugT",
+         "bezel skirt height below the flange, COMPUTED: through the top (wall), 0.3 of clearance under its underside, then the lug (the lugs sit at the skirt's foot, their tops 0.3 under the top's underside) (= 3.8)"),
+        # Wing snap pair (Task 9d): the shell's +X-wall bumps and the
+        # plate's +X-edge pockets (snapYpx, retired) are replaced by bumps
+        # on the pod box's inner +/-Y walls (03_shell.py step 5d) into
+        # blind pockets in the wing's +/-Y faces (step 14a'), so the lid
+        # snaps at both ends as before.
+        ("wingSnapX", "40 mm", "x centre of the wing snap pair (6 mm long along X): between the boss (to x 43.2 at y 0; the pockets are at the wing's +/-Y faces, far outside it) and the wing's corner fillets (from x 46.35)"),
+        ("wingSnapZ", "-5.0 mm", "z centre of the wing snap pair: bumps +/-0.5, pockets +/-0.6, in the wing's z -8..-2 with 2.4 of wing above and below"),
     ]
     ups = des.userParameters
     for name, expr, comment in spec:
@@ -255,10 +259,15 @@ def run(_context: str):
     # parameters of the tilted layouts (the shell pod of 2026-10-11 and the
     # 9b wing tower of 2026-10-25 morning): recess depth, flange ledge,
     # hook groove, pod wall, sloped wire hole, shell notch top and the
-    # along-the-axis pin depth. Nothing reads them since the straight
-    # socket; delete them so Change Parameters shows only live values.
+    # along-the-axis pin depth; and (Task 9d, the bezel) the 9c plug,
+    # keeper pin, +X snap pair position and the old lens hole radius
+    # (pirRecessR -> pirHoleR). Nothing reads them any more; delete them so
+    # Change Parameters shows only live values. Dependents first: pirPinZ
+    # is an expression on pirSeatD / pirPlugL / pirPinDia.
     for name in ("pirRecessD", "pirFlangeR", "pirHookD", "pirPodWall", "pirWireD",
-                 "pirWireExitZ", "pirNotchTop", "pirPinD"):
+                 "pirWireExitZ", "pirNotchTop", "pirPinD",
+                 "pirPinZ", "pirPinDia", "pirPlugSlotW", "pirPlugL", "pirPlugID",
+                 "pirPlugOD", "pirSeatD", "snapYpx", "pirRecessR"):
         old = des.userParameters.itemByName(name)
         if old is not None:
             try:
@@ -273,8 +282,10 @@ def run(_context: str):
         if name.startswith(("BackPlate", "PirPlug")):
             # rename before deleting: the dead component keeps its name
             # reserved in the document's name registry (until save), which
-            # would force the rebuilt component to "BackPlate (1)". The
-            # plug (step 14e) is rebuilt with the plate since 2026-10-25.
+            # would force the rebuilt component to "BackPlate (1)". PirPlug
+            # (the 9c retaining plug) is gone since Task 9d (the bezel on
+            # the shell side holds the sensor); a document that still has
+            # one gets it removed here and nothing rebuilds it.
             occ.component.name = name + "_deleted"
             occ.deleteMe()
             print("removed existing", name)
@@ -313,34 +324,24 @@ def run(_context: str):
     # fully flat; adhesive tape sticks directly to it. The rear Technic
     # counterbores (0.9 deep, step 7) are unchanged.
 
-    # 3. snap pockets at plate +/-X edges (BLIND: z -1.7..-0.3, leaving
+    # 3. snap pockets at the plate's -X edge (BLIND: z -1.7..-0.3, leaving
     # material ledges at both z ends so the shell's bumps (z -1.6..-0.4)
-    # are retained axially with 0.1mm slop per side). -X pair at y +/-12;
-    # the +X pair at y +/-snapYpx (19) since 2026-10-25, outboard of the
-    # shell's pod box (walls to y +/-15.5, 03_shell.py step 5c): pockets
-    # y 15.9..22.1, 0.75 mm clear of the plate's +/-Y edges (half-height
-    # 22.85) and above the wing (z < -2, |y| <= 13.35). The -Y pocket
-    # (x 20.25..20.85) leaves a 1.99 mm web to the jack slot's +X wall at
-    # x 18.265 (step 9; the slot spans y -20.71..-17.29, inside the
-    # pocket's y range).
-    snapYpx = p(des, "snapYpx")
-    if snapYpx + 3.1 * MM >= intH / 2 - rimGap:
-        raise RuntimeError("snapYpx %.1f puts the +X pocket end (y %.2f) past the "
-                           "plate's +/-Y edge (%.2f)"
-                           % (snapYpx * 10, (snapYpx + 3.1 * MM) * 10,
-                              (intH / 2 - rimGap) * 10))
+    # are retained axially with 0.1mm slop per side), at y +/-12. The +X
+    # pair (at y +/-19 outboard of the pod box for most of 2026-10-25,
+    # snapYpx) is gone since Task 9d: the lid's +X end snaps into the
+    # WING instead (pockets in its +/-Y faces, step 14a'; bumps on the
+    # box's inner walls, 03_shell.py step 5d). The plate's +X edge is
+    # plain again.
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    for sx in (-1, 1):
-        edge = sx * (intW / 2 - rimGap)
-        snapY = snapYpx if sx > 0 else 12 * MM
-        for sy in (-1, 1):
-            # rect centered on the edge, 1.2 wide -> cuts 0.6 deep into plate
-            rect(sk, edge, sy * snapY, 0.12, 6.2 * MM)
+    edge = -(intW / 2 - rimGap)
+    for sy in (-1, 1):
+        # rect centered on the edge, 1.2 wide -> cuts 0.6 deep into plate
+        rect(sk, edge, sy * 12 * MM, 0.12, 6.2 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, -1.7 * MM, -0.3 * MM,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("snap pockets ok (-X at y +/-12, +X at y +/-%.1f)" % (snapYpx * 10))
+    print("snap pockets ok (-X at y +/-12; the +X pair is in the wing, step 14a')")
 
     # 4. radar bay: two +/-X side walls + crossbars. (Thin-wall fix
     # 2026-09-07: the old full perimeter fence ring left 0.6 mm +/-Y wall
@@ -1001,21 +1002,28 @@ def run(_context: str):
           % (CBL_X0 * 10, CBL_X1 * 10, CBL_Z0 * 10, PCB_REAR_Z * 10,
              (CBL_X0 - (rCx - bayW / 2)) * 10))
 
-    # 14. PIR SOCKET ON A WING (2026-10-25, third layout). History: the pod
-    # lived on the front shell's +X wall from 2026-10-11 (03_shell.py, up to
-    # commit 582091f); after the first test print it moved to a tower on
-    # the plate's wing, tilted 18 deg with a canted top (9b, same day). Two
-    # user decisions then fixed this layout: the PIR looks where the radar
-    # looks (pirTilt 0, maximum field overlap), and the plate only HOLDS
-    # the sensor while the shell carries the housing (its pod box,
+    # 14. PIR SOCKET ON A WING (2026-10-25, fourth layout, Task 9d).
+    # History: the pod lived on the front shell's +X wall from 2026-10-11
+    # (03_shell.py, up to commit 582091f); after the first test print it
+    # moved to a tower on the plate's wing, tilted 18 deg with a canted
+    # top (9b, same day); two user decisions then fixed the straight
+    # socket-in-a-box layout (9c, commit 71b7312): the PIR looks where the
+    # radar looks (pirTilt 0, maximum field overlap), and the plate only
+    # HOLDS the sensor while the shell carries the housing (its pod box,
     # 03_shell.py step 5c, replaces the +X wall over the pod's width).
+    # After 9c's print the user wanted the gap round the lens closed and a
+    # part fitted from the FRONT to hold the sensor down: the bayonet
+    # bezel (03_shell.py step 8) does that, so 9c's back-side retaining
+    # plug (PirPlug) and its filament keeper pin are gone, the bore is
+    # BLIND at the wing top, and the +X snap pair moved into the wing.
     #
     # Shape (case frame; the plate's occurrence is at identity):
     #   wing    z -8..-2 (6 mm, coplanar with the plate's back), from the
     #           plate's +X edge (x 20.85, fused to it) out to the box
     #           cavity's +X wall less rimGap (x 48.85), y +/-(pirBoxHalfY -
-    #           rimGap) = +/-13.35, so it sits in the shell's box like the
-    #           plate sits in the shell.
+    #           rimGap) = +/-15.35, so it sits in the shell's box like the
+    #           plate sits in the shell. Blind snap pockets in its +/-Y
+    #           faces (14a') take the box's bumps.
     #   boss    a straight cylinder r pirSocketR (7.7) at (pirCx, 0),
     #           standing on the wing from z -2 up to pirSeatZ (14.0): the
     #           sensor drops in from the FRONT, neck and can into the bore,
@@ -1023,16 +1031,16 @@ def run(_context: str):
     #           rim; the lens's latch hook lips (r 9.6..10.7, down to
     #           z 13.1) hang outside the boss. The lens ring and tabs are
     #           in the shell's lens hole above, the ring's top flush with
-    #           the shell's face.
-    #   cuts    bore r pirBoreR along Z through the boss and the wing, out
-    #           of the back face; level wire hole dia pirWireDia along -X
-    #           from the bore at z pirWireZ, out of the boss's side into the
-    #           pod cavity; keeper pin cross-hole along Y through the whole
-    #           wing at (pirCx, pirPinZ), just behind the plug's back end.
+    #           the shell's face, and the bezel's lip bears on the dome.
+    #   cuts    bore r pirBoreR along Z from above the boss top down to the
+    #           WING TOP (z -2) only: the pins (to case z 2.1) and the
+    #           decoupling cap standing on them (to about z -0.9) hang in
+    #           it with the floor 1.1 mm below; level wire hole dia
+    #           pirWireDia along -X from the bore at z pirWireZ, out of the
+    #           boss's side into the pod cavity.
     #   holes   two more Technic holes in the wing at (24.95, +/-4), on the
     #           8 mm grid, THROUGH the wing (a pin stands 2 mm proud into
     #           the pod cavity, which is empty there).
-    #   plug    the PirPlug component, parked in the bore.
     #
     # MUST come after step 6 (the plate-outline Intersect would trim the
     # wing off) and after step 7 (whose chamfer counts the rear bore edges
@@ -1041,8 +1049,8 @@ def run(_context: str):
     seatZ, pirCx = p(des, "pirSeatZ"), p(des, "pirCx")
     boxHalfY = p(des, "pirBoxHalfY")
     wireR, wireZ = p(des, "pirWireDia") / 2, p(des, "pirWireZ")
-    pinR, pinZ = p(des, "pirPinDia") / 2, p(des, "pirPinZ")
-    seatD, plugL = p(des, "pirSeatD"), p(des, "pirPlugL")
+    snapX, snapZ = p(des, "wingSnapX"), p(des, "wingSnapZ")
+    snap = p(des, "snapBump")
     # Fusion hands angle parameters back in radians; the geometry below is
     # only right for an upright axis, so refuse anything else rather than
     # silently building a straight socket for a tilted sensor.
@@ -1051,14 +1059,19 @@ def run(_context: str):
                            "tilt; set it to 0 deg (the 9b tilted tower is gone)"
                            % p(des, "pirTilt"))
     xEdge = intW / 2 - rimGap                    # plate's +X edge, 20.85
-    xBoxIn = pirCx + boxHalfY                    # box cavity's +X wall, 49
+    xBoxIn = pirCx + p(des, "pirBoxHalfX")       # box cavity's +X wall, 49
     xWing1 = xBoxIn - rimGap                     # wing's far end, 48.85
-    wingHalfY = boxHalfY - rimGap                # 13.35
+    wingHalfY = boxHalfY - rimGap                # 15.35
     WING_T = 6.0 * MM
     zTop, zBack = intD + wall, -backT            # 16, -8
-    zWing = zBack + WING_T                       # -2: wing top
-    plugBackZ = zTop - seatD - plugL             # -3.3
-    plugFrontZ = zTop - seatD                    # 6.7
+    zWing = zBack + WING_T                       # -2: wing top = the bore floor
+    # the sensor in the socket (91_pir_fit.py places it the same way): its
+    # origin (metal base plane) at zTop - 8.4 (ring top on the face); pins
+    # end at sensor z -5.5 and the cap soldered standing on them (user
+    # photo, 2026-10-25: top about 8.5 mm above the base) at about -8.5
+    SENSOR_ORIGIN_Z = zTop - 8.4 * MM            # 7.6
+    PIN_TIP_Z = SENSOR_ORIGIN_Z - 5.5 * MM       # 2.1
+    CAP_BOTTOM_Z = SENSOR_ORIGIN_Z - 8.5 * MM    # -0.9
 
     # sensor-driven guards (radii from the STEP probe, see ensure_params)
     HOOK_LIP_R = 9.6 * MM                        # latch hook lips' inner radius
@@ -1076,10 +1089,19 @@ def run(_context: str):
                            "wall line (21)" % ((pirCx - socketR) * 10))
     if pirCx + socketR > xWing1 - 0.1:
         raise RuntimeError("socket boss runs past the wing's far end")
+    # the blind bore's floor (the wing top) must clear the cap on the pins
+    # by >= 1 mm, or the sensor would stand on the cap instead of seating
+    # its flange on the boss rim
+    if CAP_BOTTOM_Z - zWing < 0.1 - 1e-9:
+        raise RuntimeError("bore floor z %.1f is %.2f mm under the cap on the pins (z %.1f); "
+                           "need 1.0" % (zWing * 10, (CAP_BOTTOM_Z - zWing) * 10,
+                                         CAP_BOTTOM_Z * 10))
 
     # 14a. wing, overlapping 0.5 mm into the plate so the Join merges by
-    # volume; the plate is solid there (the snap pockets at the edge sit
-    # above the wing, z -1.7..-0.3, and at y +/-19; the jack is at y < -17).
+    # volume; the plate is solid there (the -X snap pockets are at the far
+    # edge; the jack is at y < -17 and the wing reaches +/-15.35 at the
+    # plate's edge, where the jack slot's +X wall at x 18.265 is 2.6 mm
+    # inboard).
     sk = comp.sketches.add(comp.xYConstructionPlane)
     box(sk, xEdge - 0.5 * MM, xWing1, -wingHalfY, wingHalfY)
     extrude(comp, sk.profiles.item(0), zBack, zWing,
@@ -1101,36 +1123,65 @@ def run(_context: str):
              socketR * 10, boreR * 10, (socketR - boreR) * 10, pirCx * 10,
              zWing * 10, seatZ * 10))
 
+    # 14a'. WING SNAP POCKETS (Task 9d): the same section as the plate's
+    # -X pockets (step 3) - 0.6 deep, 6.2 long, 1.4 tall, blind at both z
+    # ends - cut into the wing's +/-Y faces, centred on (wingSnapX,
+    # wingSnapZ), for the bumps on the pod box's inner +/-Y walls
+    # (03_shell.py step 5d: 0.5 proud, 6 long, 1.0 tall). The lid comes
+    # down over the wing from the front, the box walls ride over the
+    # wing's edge and click in here. Guards: pocket inside the wing's x
+    # span with 1 mm to the plate edge and clear of the corner fillets,
+    # >= 1 mm of wing above and below it, and its floor outside the boss's
+    # foot fillet toe and the Technic counterbores.
+    POCKET_D, POCKET_HL, POCKET_HZ = 0.6 * MM, 3.1 * MM, 0.6 * MM
+    corner = p(des, "cornerFillet")
+    if not (xEdge + 0.1 <= snapX - POCKET_HL and snapX + POCKET_HL <= xWing1 - corner - 0.05):
+        raise RuntimeError("wing snap pocket x %.2f..%.2f is not inside the wing's straight "
+                           "+/-Y faces (x %.2f..%.2f)"
+                           % ((snapX - POCKET_HL) * 10, (snapX + POCKET_HL) * 10,
+                              (xEdge + 0.1) * 10, (xWing1 - corner - 0.05) * 10))
+    if not (zBack + 0.1 <= snapZ - POCKET_HZ and snapZ + POCKET_HZ <= zWing - 0.1):
+        raise RuntimeError("wing snap pocket z %.2f..%.2f leaves under 1 mm of wing above "
+                           "or below it" % ((snapZ - POCKET_HZ) * 10, (snapZ + POCKET_HZ) * 10))
+    if wingHalfY - POCKET_D < socketR + 0.1 + 0.1:
+        raise RuntimeError("wing snap pocket floor (y %.2f) is inside the boss foot fillet's "
+                           "toe (r %.2f) + 1 mm" % ((wingHalfY - POCKET_D) * 10, (socketR + 0.1) * 10))
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        # rect centred on the wing's face, 1.2 wide -> cuts 0.6 deep
+        box(sk, snapX - POCKET_HL, snapX + POCKET_HL,
+            sy * (wingHalfY - POCKET_D), sy * (wingHalfY + POCKET_D))
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 2:
+        raise RuntimeError("expected 2 wing pocket profiles, found %d" % profs.count)
+    extrude(comp, profs, snapZ - POCKET_HZ, snapZ + POCKET_HZ,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("wing snap pockets split the plate: %d bodies" % comp.bRepBodies.count)
+    print("wing snap pockets ok: x %.1f..%.1f, z %.1f..%.1f, %.1f deep into the wing's "
+          "+/-Y faces (y +/-%.2f), floor at y +/-%.2f"
+          % ((snapX - POCKET_HL) * 10, (snapX + POCKET_HL) * 10,
+             (snapZ - POCKET_HZ) * 10, (snapZ + POCKET_HZ) * 10, POCKET_D * 10,
+             wingHalfY * 10, (wingHalfY - POCKET_D) * 10))
+
     # 14c. the cuts, one Combine restricted to the plate body:
-    #   bore   r boreR along Z from above the boss top down through the
-    #          wing and out of the back face (the plug goes in there).
+    #   bore   r boreR along Z from above the boss top down to the wing
+    #          top, z -2 (BLIND since Task 9d: no plug goes in from the
+    #          back any more; the bezel holds the sensor from the front).
+    #          The pin tips (z 2.1) and the cap on them (to z -0.9) hang
+    #          free above the floor.
     #   wire   dia pirWireDia, level, along -X from the bore axis at
     #          z pirWireZ, through the boss's -X wall and 1 mm past its
-    #          outer face into the pod cavity (air). It lies inside the
-    #          plug's span and lines up with the plug's slot (parked
-    #          toward -X, 14e), at the level of the pin tips / the cap on
-    #          the pins, so the wires leave the pins radially.
-    #   pin    r pirPinDia/2 along Y at (pirCx, pirPinZ), through the whole
-    #          wing (both +/-Y faces, overrunning them by 1 mm) and across
-    #          the bore, just behind the plug's back end.
-    # Guards: the wire hole must sit inside the plug's span (or the wires
-    # would have to come out past the plug's rim or its back end); the pin
-    # must leave >= 1.5 mm of wing behind it, >= 1 mm of wing above it at
-    # the side faces (a hole, not a slot in the wing's top), and its top
-    # surface >= 0.5 mm behind the plug's back end.
-    if not (plugBackZ + 0.05 < wireZ - wireR and wireZ + wireR < plugFrontZ - 0.05):
-        raise RuntimeError("wire hole z %.2f..%.2f is not inside the plug's span z %.2f..%.2f"
+    #          outer face into the pod cavity (air), at the level of the
+    #          pin tips / the cap on the pins, so the wires leave the pins
+    #          radially; the only way out of the blind bore.
+    # Guard: the wire hole must sit inside the bore's blind span, above
+    # the floor and below the seat.
+    if not (zWing + 0.05 < wireZ - wireR and wireZ + wireR < seatZ - 0.1):
+        raise RuntimeError("wire hole z %.2f..%.2f is not inside the bore's span z %.2f..%.2f"
                            % ((wireZ - wireR) * 10, (wireZ + wireR) * 10,
-                              plugBackZ * 10, plugFrontZ * 10))
-    if pinZ - pinR - zBack < 0.15 - 1e-9:
-        raise RuntimeError("keeper pin z %.2f leaves %.2f mm of wing behind it (need 1.5)"
-                           % (pinZ * 10, (pinZ - pinR - zBack) * 10))
-    if zWing - (pinZ + pinR) < 0.10 - 1e-9:
-        raise RuntimeError("keeper pin z %.2f leaves %.2f mm of wing above it (need 1.0)"
-                           % (pinZ * 10, (zWing - pinZ - pinR) * 10))
-    if plugBackZ - (pinZ + pinR) < 0.05 - 1e-9:
-        raise RuntimeError("plug back end z %.2f is under 0.5 mm in front of the keeper "
-                           "pin's top surface z %.2f" % (plugBackZ * 10, (pinZ + pinR) * 10))
+                              zWing * 10, seatZ * 10))
     # (all parameters are read above: inside a base feature the design is
     # in direct-modelling mode and userParameters raises)
     tbm = adsk.fusion.TemporaryBRepManager.get()
@@ -1138,46 +1189,37 @@ def run(_context: str):
     base.startEdit()
     bore_cyl = tbm.createCylinderOrCone(
         adsk.core.Point3D.create(pirCx, 0.0, zTop + 0.05), boreR,
-        adsk.core.Point3D.create(pirCx, 0.0, zBack - 0.03), boreR)
+        adsk.core.Point3D.create(pirCx, 0.0, zWing), boreR)
     wire_cyl = tbm.createCylinderOrCone(
         adsk.core.Point3D.create(pirCx, 0.0, wireZ), wireR,
         adsk.core.Point3D.create(pirCx - socketR - 0.1, 0.0, wireZ), wireR)
-    pin_cyl = tbm.createCylinderOrCone(
-        adsk.core.Point3D.create(pirCx, -(wingHalfY + 0.1), pinZ), pinR,
-        adsk.core.Point3D.create(pirCx, wingHalfY + 0.1, pinZ), pinR)
-    for b in (bore_cyl, wire_cyl, pin_cyl):
+    for b in (bore_cyl, wire_cyl):
         comp.bRepBodies.add(b, base)
     base.finishEdit()
     # the proxies returned by bRepBodies.add() go stale when the edit
     # closes (Combine fails with ALL_TOOL_BODY_REFERENCE_LOST); use the
     # base feature's own body list instead
     tools = [base.bodies.item(i) for i in range(base.bodies.count)]
-    if len(tools) != 3:
-        raise RuntimeError("expected 3 pir tool bodies, found %d" % len(tools))
+    if len(tools) != 2:
+        raise RuntimeError("expected 2 pir tool bodies, found %d" % len(tools))
     ci = comp.features.combineFeatures.createInput(plate_body, collection(tools))
     ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
     ci.isKeepToolBodies = False
     comp.features.combineFeatures.add(ci)
     if comp.bRepBodies.count != 1:
         raise RuntimeError("pir socket cuts split the plate: %d bodies" % comp.bRepBodies.count)
-    print("pir bore r=%.2f along Z at (%.1f, 0) from the boss top (z %.1f) out of the "
-          "back face; flange seat on the boss rim r %.2f..%.2f at z %.1f ok"
-          % (boreR * 10, pirCx * 10, seatZ * 10, boreR * 10, socketR * 10, seatZ * 10))
+    print("pir bore r=%.2f along Z at (%.1f, 0) from the boss top (z %.1f) BLIND to the "
+          "wing top (z %.1f); pin tips at z %.1f, cap on the pins to z %.1f, %.1f mm "
+          "above the floor; flange seat on the boss rim r %.2f..%.2f at z %.1f ok"
+          % (boreR * 10, pirCx * 10, seatZ * 10, zWing * 10, PIN_TIP_Z * 10,
+             CAP_BOTTOM_Z * 10, (CAP_BOTTOM_Z - zWing) * 10, boreR * 10, socketR * 10,
+             seatZ * 10))
     print("pir wire hole dia %.1f level at z %.1f (rim z %.2f..%.2f) along -X from the "
-          "bore, out of the boss's side at x %.2f into the pod cavity; plug spans "
-          "z %.1f..%.1f ok"
+          "bore, out of the boss's side at x %.2f into the pod cavity ok"
           % (wireR * 20, wireZ * 10, (wireZ - wireR) * 10, (wireZ + wireR) * 10,
-             (pirCx - socketR) * 10, plugBackZ * 10, plugFrontZ * 10))
-    # hand-drill location for a print made without the pin: on the wing's
-    # +/-Y side faces, measured up from the back face and out from the
-    # plate's edge
-    print("pir keeper pin hole dia %.2f along Y at (x %.2f, z %.2f): plug back end "
-          "z %.2f, %.2f mm clear of the pin's top; on the wing's +/-Y side faces "
-          "%.2f mm above the back face (%.2f mm of wing behind the hole), %.2f mm "
-          "out from the plate's edge ok"
-          % (pinR * 20, pirCx * 10, pinZ * 10, plugBackZ * 10,
-             (plugBackZ - pinZ - pinR) * 10, (pinZ - zBack) * 10,
-             (pinZ - pinR - zBack) * 10, (pirCx - xEdge) * 10))
+             (pirCx - socketR) * 10))
+    # (the 9c keeper pin cross-hole through the wing at (pirCx, -4.75) is
+    # gone with the plug: the wing is solid under the bore floor)
 
     # 14c'. FOOT FILLET (2026-10-25, review): a 1.0 mm concave fillet where
     # the boss meets the wing top, so a side knock on the 16 mm post does
@@ -1217,16 +1259,15 @@ def run(_context: str):
     # measured in plan between circles: the bore to the socket boss's foot
     # (>= 0.6 mm, so a pin's proud end never rubs the boss: this is what
     # moved pirCx from 34.5 to 35.5, 0.20 -> 1.13), the counterbore to the
-    # socket bore (>= 0.6 mm of wing), and the bore to the keeper pin's
-    # cross-hole (which runs the wing's full width along Y at x pirCx).
+    # socket bore (>= 0.6 mm of wing; the bore is blind at the wing top
+    # since Task 9d, so in the wing itself only the counterbore matters,
+    # but the guard is kept as a plan-view rule).
     wx = x1 + 3 * pitch                           # 24.95
     wing_centers = [(wx, s * pitch / 2) for s in (-1, 1)]
     dc = math.hypot(pirCx - wx, pitch / 2)        # hole centre to the axis
     gap_boss = dc - socketR - holeD / 2
     gap_bore = dc - boreR - cbD / 2
-    gap_pin = (pirCx - pinR) - (wx + holeD / 2)
-    for label, gap in (("socket boss foot", gap_boss), ("socket bore", gap_bore),
-                       ("keeper pin hole", gap_pin)):
+    for label, gap in (("socket boss foot", gap_boss), ("socket bore", gap_bore)):
         if gap < 0.06 - 1e-9:
             raise RuntimeError("wing Technic holes at (%.2f, +/-%.0f) are %.2f mm from the "
                                "%s (need 0.6): move pirCx" % (wx * 10, pitch / 2 * 10, gap * 10, label))
@@ -1272,13 +1313,14 @@ def run(_context: str):
     print("wing technic holes ok:",
           [(round(cx / MM, 2), round(cy / MM, 2)) for cx, cy in wing_centers],
           "through the %.0f mm wing; plan clearance to the socket boss %.2f mm, "
-          "counterbore to the bore %.2f mm, to the keeper pin hole %.2f mm"
-          % (WING_T * 10, gap_boss * 10, gap_bore * 10, gap_pin * 10))
+          "counterbore to the bore %.2f mm"
+          % (WING_T * 10, gap_boss * 10, gap_bore * 10))
 
     # 14d'. SOFTEN THE WING'S EDGES: the same treatment the shell gets in
     # 03_shell.py steps 6a-6c, so the two parts match in the hand. After
-    # all the cuts, so the selectors see the final topology; before the
-    # plug, which is its own component. Fillet features act on the plate
+    # all the cuts, so the selectors see the final topology (the snap
+    # pockets in the +/-Y faces, 14a', touch neither the back rim at z -8
+    # nor the far corners). Fillet features act on the plate
     # body's edges only, so they are participant-safe by construction. The
     # boss keeps every edge sharp: the flange seats on its top rim.
     EPS = 0.005                                   # 0.05 mm (cm)
@@ -1359,81 +1401,9 @@ def run(_context: str):
     add_fillet(rim, soft, "wing rim fillet")
     print("wing rim fillet ok (r=%.2f mm on 5 edges)" % (soft * 10))
 
-    # 14e. PLUG: tube pressed into the bore from the back; its front rim
-    # bears on the base's underside (r up to 5.5, pins inside r 2.5).
-    # Separate component, exported as its own STL, printed standing on
-    # either end.
-    plug_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
-    plug = plug_occ.component
-    plug.name = "PirPlug"
-    sk = plug.sketches.add(plug.xYConstructionPlane)
-    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugOD") / 2)
-    sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), p(des, "pirPlugID") / 2)
-    # the annular profile, not the inner disc: the one bounded by TWO loops.
-    # (Until 2026-10-25 this picked the larger-area profile, which is the
-    # annulus only while ID < OD/sqrt(2); at ID 9 / OD 12.1 the disc is
-    # bigger and that rule silently built a solid plug.)
-    ring = None
-    for i in range(sk.profiles.count):
-        pr = sk.profiles.item(i)
-        if pr.profileLoops.count == 2:
-            ring = pr
-    if ring is None:
-        raise RuntimeError("plug sketch has no annular profile")
-    want_ring = math.pi * ((p(des, "pirPlugOD") / 2) ** 2 - (p(des, "pirPlugID") / 2) ** 2)
-    if abs(ring.areaProperties().area - want_ring) > 1e-3:
-        raise RuntimeError("plug annulus area %.3f cm2, expected %.3f"
-                           % (ring.areaProperties().area, want_ring))
-    slotWall = (p(des, "pirPlugOD") - p(des, "pirPlugID")) / 2
-    if slotWall < 0.12:
-        raise RuntimeError("plug wall %.2f mm is under 1.2 mm" % (slotWall * 10))
-    plug_ext = extrude(plug, ring, 0, plugL,
-                       adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    plug_body = plug_ext.bodies.item(0)
-    # lengthwise slot through the -X wall, full length: the wires leave the
-    # pins radially through it into the wire hole (which runs -X from the
-    # bore axis), and the split lets the tube compress a little for the
-    # press fit. The parking frame below maps local -X to world -X, so
-    # "slot toward the case" is the insertion rule.
-    slotW, odR = p(des, "pirPlugSlotW"), p(des, "pirPlugOD") / 2
-    sk = plug.sketches.add(plug.xYConstructionPlane)
-    rect(sk, -(odR + 0.1) / 2, 0, odR + 0.1, slotW)      # x -(odR+1mm)..0
-    extrude(plug, sk.profiles.item(0), -0.05, plugL + 0.05,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[plug_body])
-    if plug.bRepBodies.count != 1:
-        raise RuntimeError("plug slot left %d bodies" % plug.bRepBodies.count)
-    print("pir plug slot ok (%.1f mm wide, -X wall, full length)" % (slotW * 10))
-    # park the occurrence in the bore where it will sit: local +Z along the
-    # bore inward (world -Z), local z=0 (the front rim) at z plugFrontZ
-    # (6.7), the can's underside (sensor z -0.9). Purely for the picture
-    # and for 91_pir_fit.py's interference check; the STL is exported in
-    # local coords. Explicit frame: local Z = world -Z, local X = world +X
-    # (so the slot, local -X, faces the case), Y = Z x X = world -Y.
-    m = adsk.core.Matrix3D.create()
-    inward = adsk.core.Vector3D.create(0.0, 0.0, -1.0)
-    xloc = adsk.core.Vector3D.create(1.0, 0.0, 0.0)
-    yloc = inward.crossProduct(xloc)
-    seat = adsk.core.Point3D.create(pirCx, 0.0, plugFrontZ)
-    m.setWithCoordinateSystem(seat, xloc, yloc, inward)
-    # guard for future edits of the frame above: the slot (local -X) must
-    # end up on the case side, where the wire hole is, and the tube must
-    # run DOWN the bore from the seat, or the README's insertion rule and
-    # the fit check stop describing the same thing
-    chk = adsk.core.Point3D.create(-odR, 0, 0)
-    chk.transformBy(m)
-    if chk.x >= seat.x:
-        raise RuntimeError("plug parked with its slot away from the case")
-    chk = adsk.core.Point3D.create(0, 0, plugL)
-    chk.transformBy(m)
-    if abs(chk.z - plugBackZ) > 1e-6 or abs(chk.x - pirCx) > 1e-6:
-        raise RuntimeError("plug parked with its back end at (%.2f, %.2f), expected (%.2f, %.2f)"
-                           % (chk.x * 10, chk.z * 10, pirCx * 10, plugBackZ * 10))
-    plug_occ.transform2 = m
-    if des.snapshots.hasPendingSnapshot:
-        des.snapshots.add()
-    print("pir plug ok (OD %.1f ID %.1f L %.1f, wall %.2f, rim at z %.1f, back end z %.1f)"
-          % (p(des, "pirPlugOD") * 10, p(des, "pirPlugID") * 10, plugL * 10,
-             slotWall * 10, plugFrontZ * 10, plugBackZ * 10))
+    # 14e. (deleted, Task 9d) the PirPlug component: a slotted tube pressed
+    # into the bore from the back to hold the sensor's base down, backed
+    # by a filament keeper pin. The bezel on the shell (03_shell.py step
+    # 8) holds the sensor from the front instead; the bore is blind.
 
     print("BackPlate bodies:", comp.bRepBodies.count)

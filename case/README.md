@@ -18,7 +18,7 @@ The living design is in your Fusion; save it to your own project.
   only the wing's outer back edges (below) carry a 0.8 mm fillet.
   Since 2026-10-25 the plate also carries the **PIR socket**, on a
   **wing**: a 6 mm tab (z −8..−2, the same back face as the plate) growing
-  out of the plate's +X edge (the end that hangs down) to x 48.85, 26.7 mm
+  out of the plate's +X edge (the end that hangs down) to x 48.85, 30.7 mm
   wide, sized to sit inside the shell's pod box (next item) with the usual
   0.15 mm gap. On it stands a plain cylindrical **socket boss**, Ø15.4
   outside with a Ø11.8 bore straight along the case's Z axis, centred at
@@ -30,75 +30,94 @@ The living design is in your Fusion; save it to your own project.
   A 1 mm concave fillet at the boss's foot ties it into the wing. The
   PIR's axis is **parallel to the radar's** (`pirTilt` 0): the user wants
   the two fields to overlap as much as they can, and the case already
-  hangs on a ball joint aimed at the stairs. The bore runs on through the
-  wing and comes out of the back face, where the plug goes in. A level
-  Ø3 wire hole leaves the bore's −X side at z 4 (pin-tip level, in line
-  with the plug's slot) through the boss wall into the pod cavity; the
-  three wires then run over the wing straight into the XIAO bay, with no
-  wall in the way. The plate's +X edge snap pockets sit at y ±19,
-  outboard of the box. Two more Technic holes, at (24.95, ±4) on the same
-  8 mm grid, go **through** the wing from the back with the same
-  counterbore (a pin stands 2 mm proud into the empty pod cavity); with
-  the original six that is eight mount points.
+  hangs on a ball joint aimed at the stairs. The bore is **blind**: it
+  stops at the wing's top (z −2), 1.1 mm below the decoupling cap that
+  stands on the sensor's pins, so the back face is solid there — nothing
+  goes in from the back any more (the 9c plug and its keeper pin are
+  gone; the bezel on the shell holds the sensor, see below). A level Ø3
+  wire hole leaves the bore's −X side at z 4 (pin-tip level) through the
+  boss wall into the pod cavity; the three wires then run over the wing
+  straight into the XIAO bay, with no wall in the way. The lid's +X snap
+  pair engages the **wing**: a blind pocket in each of the wing's ±Y
+  faces (6.2 × 1.4 mm, 0.6 deep, centred x 40, z −5) takes a bump on the
+  box's inner wall; the plate's own +X edge is plain. Two more Technic
+  holes, at (24.95, ±4) on the same 8 mm grid, go **through** the wing
+  from the back with the same counterbore (a pin stands 2 mm proud into
+  the empty pod cavity); with the original six that is eight mount
+  points.
 - `rd03d_case_shell.stl` — front shell: a radome step that brings the
   front wall down to 1.2 mm in front of the antennas (solid 3.1 mm of
   plastic there, exterior face still perfectly flat), a hold-down boss
   over the XIAO, four snap bumps engage the plate's edge grooves. The old
   side USB notch is **gone** — see the USB-C base jack section below.
   Since 2026-10-25 the shell carries the **PIR pod box**: its +X wall is
-  replaced, over y ±13.5, by a hollow box 30 mm long (x 21..51), 31 mm
-  wide (y ±15.5), full height, with the same 2 mm walls, open to the
+  replaced, over y ±15.5, by a hollow box 30 mm long (x 21..51), 35 mm
+  wide (y ±17.5), full height, with the same 2 mm walls, open to the
   shell's cavity so the wing passes through and the wires run straight
   to the boards. Its top is the shell's flat front face carried on, with
-  a **Ø23 hole** at the socket's axis: the lens ring (Ø20.6) and its
+  a **Ø25.6 hole** at the socket's axis: the lens ring (Ø20.6) and its
   latch tabs (Ø22.2) pass through, the ring's top face sits **flush with
-  the face**, and the dome stands 11 mm proud. The box's outer edges get
-  the same rounding as the rest of the shell. (The pod lived on this wall
-  as a tilted tower from 2026-10-11, and on the plate's wing as a tilted
-  tower for most of 2026-10-25; the straight socket-in-a-box layout came
-  from the test print: the plate holds the sensor, the shell covers it,
-  the shell lifts off clean, and nothing needs supports.) The +X pair of
-  snap bumps sits at y ±19 (`snapYpx`), outboard of the box's walls, with
-  the plate's pockets, so the lid still snaps at both ends; the −X pair
-  stays at ±12.
-- `rd03d_pir_plug.stl` — the PIR retaining plug: a Ø12.1 × 10 mm tube
-  with a Ø9 bore, pressed into the socket's Ø11.8 bore from the **back**
-  until its front rim bears on the sensor's base (z 6.7), which holds the
-  flange down on the boss's rim. The pins, their solder joints and the
-  0.1 µF film cap standing on the VDD/GND pins (about 7 × 2.5 × 6.5 mm,
-  top about 8.5 mm above the base) all sit inside the Ø9, and a 3.2 mm
-  slot runs the full length of one wall so the wires can leave radially:
-  **insert the plug with its slot facing the case (toward −X)** so it
-  lines up with the wire hole. The slot also lets the tube squeeze a
-  little for the press fit (the OD is 0.3 over the bore on purpose; see
-  Tweaking fit). Print it standing on either end. A **keeper pin** backs
-  up the press fit: a Ø1.9 cross-hole runs through the **wing** from side
-  to side (along Y, at x 35.5, 3.25 mm above the back face), crossing the
-  bore 0.5 mm behind the plug's back end (z −3.3). Once the plug is in,
-  push a stub of 1.75 mm filament through the hole on the wing's side; it
-  bridges the bore behind the plug so the plug cannot fall out. Do this
-  with the shell **off**: the hole's ends are covered by the box's walls
-  once the shell is on, so the stub is captive (and the drill note under
-  Printing applies with the shell off too). To disassemble, lift the
-  shell first, then pull the stub.
+  the face**, the dome stands 11 mm proud, and the bezel's skirt (Ø25.2)
+  drops in round the lens. Three **bayonet notches** through the top at
+  60°, 180° and 300° from +X (radial 12.8..14.6, 4.6 wide) take the
+  bezel's lugs; they are hidden under its flange once it is on. The lid's
+  +X snaps are two bumps on the box's inner ±Y walls (0.5 proud, 6 long
+  at x 40, z −5) that click into the wing's pockets; the −X pair stays on
+  the −X wall at y ±12. The box's outer edges get the same rounding as
+  the rest of the shell. (The pod lived on this wall as a tilted tower
+  from 2026-10-11, and on the plate's wing as a tilted tower for most of
+  2026-10-25; the straight socket-in-a-box layout came from the test
+  print: the plate holds the sensor, the shell covers it, the shell lifts
+  off clean, and nothing needs supports. The bezel came from the second
+  print: the user wanted the gap round the lens closed and the sensor
+  held from the front.)
+- `rd03d_pir_bezel.stl` — the PIR **bezel**, a bayonet ring that goes on
+  from the front and holds the sensor down. A flat flange ring (Ø23.2
+  inside, Ø30.6 outside, 1.2 thick) sits on the shell's face round the
+  lens and covers the hole and the notches. Above it a conical **lip**,
+  1 mm wide, leans in to an upper inner edge of Ø20.0 standing 4.1 mm
+  above the face: that edge bears on the dome's spherical cap, built
+  0.2 mm into it (`pirBezelPreload`), so the sensor's flange is clamped
+  down onto the boss's rim between the two. Below the flange a **skirt**
+  (Ø23..25.2, 3.8 mm) drops through the top's hole with 0.2 mm to spare
+  and 0.4 mm clear of the lens's latch tabs, and carries three **lugs**
+  at its foot (1.5 thick, 4 wide, out to r 14.3) at 60°, 180° and 300°.
+  The lugs drop through the notches; a 30° turn parks them under the
+  solid top at 90°, 210° and 330°, their tops 0.3 mm under the top's
+  underside, where the lug at 330° meets the box's +X inner wall after
+  another 1.3° — that wall is the stop (the notch pattern is symmetric
+  about the long axis, so turning the other way stops the same way at
+  30°, 150°, 270°). The sensor still turns freely in its socket until
+  the bezel goes on. The lip edge radius is 10.0, not the 10.5 first
+  planned: probing the sensor's STEP showed the dome's flank is a
+  near-cylinder (r 10.35 at the ring tapering to 10.21 at 3.8 mm up)
+  and only above that the R 10.89 sphere; a 10.5 lip would touch nothing.
 
 ## Printing
 
 **PETG preferred** — the five retention clips are live springs and PLA is
 brittle enough to snap one on the first insertion. 0.4–0.6 mm nozzle,
-0.2 mm layers. **No supports** on any part: the socket boss is a plain
-vertical tube on the wing, the bore is a vertical hole, and the shell's
-pod box (printed face-down with the rest of the shell) is walls plus a
-flat top with a through hole. The two small horizontal holes in the plate
-print on their side and may close up a little: the Ø1.9 keeper pin hole
-through the wing may need a 1.8–1.9 mm drill run through it before the
-filament stub will pass, and the Ø3 wire hole out of the boss's side a
-3 mm drill if the wires are snug. The two wing Technic holes go right
-through the 6 mm wing, nothing to bridge. The socket boss is a 16 mm
-tall Ø15.4 post with a Ø11.8 bore, so its wall is 1.8 mm — three
+0.2 mm layers. **No supports** on the plate or the shell: the socket
+boss is a plain vertical tube on the wing, the bore is a blind vertical
+hole, and the shell's pod box (printed face-down with the rest of the
+shell) is walls plus a flat top with a hole and three small cut-outs.
+The one small horizontal hole in the plate, the Ø3 wire hole out of the
+boss's side, prints on its side and may close up a little; run a 3 mm
+drill through it if the wires are snug. The two wing Technic holes go
+right through the 6 mm wing, nothing to bridge. The socket boss is a
+16 mm tall Ø15.4 post with a Ø11.8 bore, so its wall is 1.8 mm — three
 perimeters on a 0.6 mm nozzle; print the plate with at least three
 walls so it comes out solid, and do not scale the plate.
 Back plate: print flat (back face down). Shell: print open-side-up.
+Bezel: print it **lip up, standing on its skirt and lugs** (the only
+orientation with the flange's top face, the one you see, printed as a
+clean top surface and the lugs' bearing faces printed flat). The
+flange's outer 2.7 mm then overhangs 3.8 mm above the bed all the way
+round; a 1.2 mm ring overhang like that droops rather than fails, but
+for a clean underside (it bears on the shell's face) turn on supports
+touching the bed for this one part — they peel off the flat ring in one
+piece. The lip is a 1 mm wall leaning in at 29°, which prints without
+support; the lugs are 1.5 mm thick. Three walls, slow outer perimeters.
 Print the **shell at high or solid infill** (≥50 %, ideally 100 % over the
 front wall): the 3.1 mm radome in front of the antennas should be
 homogeneous plastic — sparse infill puts a patchwork of air pockets in the
@@ -166,23 +185,31 @@ down means holding an iron over them.
    - Drop the sensor into the socket from the front, dome out, at any
      rotation. The neck and base slide down the bore and the flange's
      underside lands on the boss's top rim; the latch hooks hang outside
-     the boss.
-   - Push the plug into the bore from the **back face**, slot toward the
-     case (−X), until its rim bears on the sensor's base. It is a press
-     fit; the slot lets it squeeze. The cap on the pins goes up inside it.
-   - Push a stub of 1.75 mm filament through the keeper pin hole on the
-     wing's side (either side; it goes right through), behind the plug.
-     Trim it flush.
-   - Lead the three wires out of the plug's slot through the Ø3 hole in
-     the boss's −X side, over the wing, and onto the plate at the XIAO's
-     +X end (the fence bars are 5 mm tall; the wires climb over the −Y one
-     or run across the bay above the board to D1, 3V3 and GND).
+     the boss. The pins and the cap soldered on them hang in the blind
+     bore, 1 mm above its floor. Nothing holds it yet; it turns freely.
+   - Lead the three wires out through the Ø3 hole in the boss's −X side
+     (the only way out of the bore), over the wing, and onto the plate at
+     the XIAO's +X end (the fence bars are 5 mm tall; the wires climb
+     over the −Y one or run across the bay above the board to D1, 3V3
+     and GND).
 3. Drop the shell on over the sensor: the pod box comes down over the
-   wing and the socket, the lens passes up through the Ø23 hole until
-   its ring is flush with the face, and both snap pairs click into the
-   plate grooves. There is no USB notch to hook a fingernail into, so to
+   wing and the socket, the lens passes up through the hole until its
+   ring is flush with the face, and both snap pairs click — the −X pair
+   into the plate's edge grooves, the box's two bumps into the wing's
+   side pockets. There is no USB notch to hook a fingernail into, so to
    get the lid back off, work a thin plastic spudger or guitar pick into
    the parting seam at a corner and walk it along until the bumps let go.
+3b. Bezel: hold it lip up over the dome with its three lugs over the
+   three notches (one notch points straight along the box toward the
+   case, the other two 60° either side of the far end), drop it on so
+   the skirt goes down the hole, press it flat onto the face and **turn
+   it 30° until it stops** — either direction; a lug meets the box's +X
+   inner wall. The lip rides onto the dome's flank and clamps the sensor
+   down; the flange hides the hole and the notches. Expect a firm push
+   to seat it (the lip stretches about 0.1 mm over the dome). To remove,
+   turn it back the 30° and lift. The sensor cannot be turned once the
+   bezel is on, so aim its lens tabs before this step if you care where
+   they sit (the field is symmetric; it does not matter).
 4. Mounting: push Technic pins / ball-pins into the back holes (8 mm LEGO
    pitch: 1×4 column + 1×2 column on the plate, plus a 1×2 pair through
    the wing under the pod); a ball-and-socket arm gives adjustable aim.
@@ -291,26 +318,26 @@ at y ±4. The six centres are (0.95, ±12), (0.95, ±4) and (8.95, ±4).)
 ## Tweaking fit
 
 Open the design in Fusion → Modify → Change Parameters. `boardClear`,
-`rimGap`, and `snapBump` are the fit-critical ones (`snapYpx`, 19 mm, is
-where the +X snap pair sits — keep it above 15.5 + 3.3 so the 6 mm bump
-clears the pod box's wall, and below 22.5 − 3 for the cavity wall);
-`legoHole` is the
+`rimGap`, and `snapBump` are the fit-critical ones (`wingSnapX` 40 and
+`wingSnapZ` −5 place the +X snap pair on the wing: keep the 6 mm bump
+between the plate's edge and the wing's corner fillets, and the pocket
+with a millimetre of wing above and below it); `legoHole` is the
 Technic pin hole diameter (tune ±0.1 mm if pins are too tight/loose after
-a test print). `pirPlugOD` is the PIR plug's press fit. Calibration from
-the 2026-10-25 test print on this printer: holes print true to size (the
-Ø11.8 bore measured 11.8) and outside walls print 0.2 mm under (the
-Ø11.7 plug measured 11.5, and fell out). So `pirPlugOD` is set 0.3 over
-the bore, 12.1, to print at about 11.9 for 0.05 mm per side of
-interference, which the slot takes up — drop it 0.1 if the plug will not
-go in, raise it if it is loose. On a printer that prints holes undersize
-start lower. The keeper pin (`pirPinDia`, `pirPinZ`) holds the plug
-either way; `pirPinZ` is an expression on `pirSeatD + pirPlugL`, so a
-longer or shorter plug moves the pin hole with it (at 10 mm it lands in
-the wing, 3.25 mm above the back face, with 2.3 mm of wing behind it).
-`pirPlugID` (9) and `pirPlugL` (10)
-are sized for the decoupling cap soldered standing on the sensor's pins;
-a bare sensor could use 8 and 6 again. No metal or foil in front of the
-radar, ever.
+a test print). Calibration from the 2026-10-25 test print on this
+printer: holes print true to size (the Ø11.8 bore measured 11.8) and
+outside walls print 0.2 mm under (a Ø11.7 plug measured 11.5). The bezel:
+`pirBezelPreload` (0.2) is how far the lip's edge is built into the
+dome, measured along the axis; `pirBezelLipH` is an expression that
+places the edge from `pirDomeR` and `pirBezelLipR`, so change the
+preload, not the height. Its lugs sit 0.3 mm under the top at rest
+(`pirBezelSkirtH` is an expression on `wall`, the clearance and
+`pirLugT`); note that is more than the 0.2 preload, so nominally the
+dome lifts the bezel 0.2 off the face before the lugs touch the top and
+it floats 0.1 — if a print rattles, raise `pirBezelPreload` to 0.4 (the
+lugs then bear on the top) or take the 0.3 in `pirBezelSkirtH` down to
+0.1. If the bezel will not turn, the lugs (outside walls, printed 0.2
+under) are fine and it is the skirt in the hole: `pirHoleR` up 0.1. No
+metal or foil in front of the radar, ever.
 The retention clips and the radome step are local constants inside
 `fusion_scripts/02_backplate.py` and `03_shell.py` (grab amounts, lip
 heights, `RADOME_Z0`), not user parameters — edit them there and re-run
@@ -320,10 +347,12 @@ not by `01_setup.py`, so they only exist once that script has run.
 Re-export STLs after edits (File → 3D Print, or re-run
 `fusion_scripts/05_export.py` via `run_fusion.py`).
 The `pir*` parameters (socket bore and boss radii, seat height, axis x
-`pirCx`, box half-width, lens hole radius, wire hole, plug, keeper pin,
-`pirTilt`) are created by `02_backplate.py` the same way; `03_shell.py`
-reads `pirCx`, `pirBoxHalfY` and `pirRecessR` to build its box and lens
-hole, so moving the socket moves the box. `pirTilt` must stay 0: the
+`pirCx`, box half-width and length, lens hole and notch sizes, wire hole,
+the bezel's flange, lip, skirt and lug dimensions, `pirTilt`) and the
+`wingSnap*` pair are created by `02_backplate.py` the same way;
+`03_shell.py` reads them to build its box, lens hole, notches, wing
+bumps and the bezel, so moving the socket moves the box. `pirTilt` must
+stay 0: the
 straight socket has no tilt and 02 refuses anything else; if it refuses
 on a document that still has the old 18°, set `pirTilt` to 0 by hand in
 Change Parameters and re-run. `pirCx` is
@@ -334,15 +363,17 @@ point-probing Panasonic's STEP of the sensor (base r 5.5, flange r 9.4,
 hook lips r 9.6..10.7, latch tabs r 11.1), not from its datasheet
 drawing, with 0.3–0.4 mm of clearance on each.
 `fusion_scripts/90_verify.py` is a read-only probe harness that asserts the
-jack, cradle, notches, clips, the shell's pod box and lens hole, and the
-PIR socket (wing, boss, bore, pin and wire holes, the two wing Technic
-holes) with `pointContainment`; run it after any change and expect
-`VERIFY OK`.
+jack, cradle, notches, clips, the shell's pod box, lens hole and bayonet
+notches, both snap pairs, the PIR socket (wing, boss, blind bore, wire
+hole, the two wing Technic holes) and the bezel's own geometry with
+`pointContainment`; run it after any change and expect `VERIFY OK`.
 `fusion_scripts/91_pir_fit.py` imports the sensor's STEP (a local vendor
 download under `case/models/`, not in the repo), drops it upright into
-the plate's socket with its ring flush with the shell's face, and runs
-Fusion's interference analysis against the plate, the shell and the plug; expect `PIR FIT OK` (the plug's designed press-fit annulus
-against the plate is the one expected pair).
+the plate's socket with its ring flush with the shell's face, checks the
+dome is where the bezel expects it, and runs Fusion's interference
+analysis against the plate, the shell and the bezel parked in its fitted
+position; expect `PIR FIT OK` (the bezel's lip against the dome, the
+designed preload band of about 1.3 mm³, is the one expected pair).
 
 ## Design notes
 
