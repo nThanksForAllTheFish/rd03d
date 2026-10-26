@@ -56,7 +56,7 @@ The living design is in your Fusion; save it to your own project.
   wide (y ±15.5), full height, with the same 2 mm walls, open to the
   shell's cavity so the wing passes through and the wires run straight
   to the boards. Its top is the shell's flat front face carried on, with
-  a **Ø23.2 hole** at the socket's axis: the lens ring (Ø20.6) and its
+  a **Ø23.3 hole** at the socket's axis: the lens ring (Ø20.6) and its
   latch tabs (Ø22) pass through, the ring's top face sits **flush with
   the face**, the dome stands 11 mm proud, and the bezel ring (next
   item) fills the gap between the hole and the lens. The lid's +X snaps
@@ -72,18 +72,20 @@ The living design is in your Fusion; save it to your own project.
   plug gone; a bayonet bezel clamping the dome was designed and dropped
   the same day for this simpler part.)
 - `rd03d_pir_bezel.stl` — the PIR **bezel ring**: a thin ring dropped
-  into the lens gap from the front. A flat flange (Ø20.9 inside, Ø25
+  into the lens gap from the front. A flat flange (Ø20.8 inside, Ø25
   outside, 0.8 thick) lies on the shell's face round the hole, and two
-  arc **skirts** under it (Ø20.9..23.2, 2 mm tall, the top's thickness)
-  fill the hole down to its underside. Two **notches** 180° apart, 6 mm
-  wide, cut through the skirt and through the flange's inner region (out
-  to r 11.4; the flange's outer 1.1 mm bridges them) so the lens's two
+  arc **skirts** under it (Ø20.8..23.3, 1.25 mm wall, 2 mm tall, the
+  top's thickness) fill the hole down to its underside. Two **notches**
+  180° apart, 6 mm wide, cut through the skirt and through the flange's
+  inner region (out to r 11.45; the flange's outer 1.05 mm bridges them)
+  so the lens's two
   latch tabs (5 mm wide, at 45° and 225° round the lens, reaching the
   face) pass through and are not covered. The skirt's outside is the
   hole's size: an outside wall prints 0.2 under in a true-printing hole,
-  so it is a light push fit (0.1 a side); inside, 0.15 mm off the lens
-  ring and 0.1 off the dome's flank. It closes the gap and holds the lens
-  ring by friction; the snug Ø11.1 socket holds the base. Nothing clamps
+  so it is a light push fit (0.1 a side); inside, its bore (an inside
+  surface, prints true) is 0.10 off the lens ring and 0.05 off the
+  dome's flank, so it just grips the lens. It closes the gap and holds
+  the lens ring by friction; the snug Ø11.1 socket holds the base. Nothing clamps
   the sensor along its axis — on a wall mount the axis is horizontal and
   nothing pulls it out (the user's call). To remove it, lift the flange
   with a fingernail.
@@ -106,10 +108,10 @@ walls so it comes out solid, and do not scale the plate.
 Back plate: print flat (back face down). Shell: print open-side-up.
 Bezel ring: print it **flange-down**, no supports — it is a flat 0.8 mm
 ring with two 2 mm arcs standing on it, 2.8 mm tall in all, nothing
-overhangs. The skirt arcs are 1.15 mm thick: two 0.6 mm lines do not
-quite fit, so on a 0.6 nozzle set the perimeter width to 0.55 (or let
-the slicer do one perimeter plus gap fill); on a 0.4 nozzle it is three
-lines. Slow outer perimeters; the flange's top face is the one you see.
+overhangs. The skirt arcs are 1.25 mm thick: two 0.6 mm lines on a
+0.6 nozzle, three on a 0.4 (a 0.4 nozzle leaves a 0.05 gap or slightly
+fat lines — fine either way). Slow outer perimeters; the flange's top
+face is the one you see.
 Print the **shell at high or solid infill** (≥50 %, ideally 100 % over the
 front wall): the 3.1 mm radome in front of the antennas should be
 homogeneous plastic — sparse infill puts a patchwork of air pockets in the
@@ -342,8 +344,9 @@ side over the part they take; outside walls print 0.2 under.
 The bezel ring: its skirt's outside is `pirHoleR` exactly, and the
 0.1-a-side push fit comes from the print's shrink; if it is loose, take
 `pirHoleR` down 0.05 (both the hole and the ring follow); if it will not
-go in, up 0.05. Its bore is `pirBezelInnerR` (10.45: lens ring 10.3 +
-0.15); the notches are `pirNotchW` = `pirTabW` + 1 (the tabs measured
+go in, up 0.05. Its bore is `pirBezelInnerR` (10.40: lens ring 10.3 +
+0.10, dome flank 10.35 + 0.05; it prints true, so the ring just grips
+the lens); the notches are `pirNotchW` = `pirTabW` + 1 (the tabs measured
 5.0 wide on the STEP). No
 metal or foil in front of the radar, ever.
 The retention clips and the radome step are local constants inside

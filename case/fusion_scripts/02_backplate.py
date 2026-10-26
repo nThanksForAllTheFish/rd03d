@@ -224,7 +224,7 @@ def ensure_params(des):
         ("pirCx", "35.5 mm", "socket / lens axis x. 34.5 would centre it in the box, but the Technic hole at (24.95, 4) would then pass 0.20 mm from the boss's foot in plan; 35.5 gives 1.13 (step 14d asserts >= 0.6). The box in 03_shell.py follows"),
         ("pirBoxHalfY", "13.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less wingGap (13.5 again since Task 9e; 9d's bayonet lugs had it at 15.5)"),
         ("pirBoxHalfX", "13.5 mm", "shell pod box: cavity +X wall at pirCx + this (= 49); the wing ends rimGapX short of it. Separate from pirBoxHalfY since Task 9d"),
-        ("pirHoleR", "11.6 mm", "lens hole radius in the shell's pod box top (Task 9e; 11.5 as pirRecessR in 9c, 12.8 in 9d): the lens ring (r 10.3) and latch tabs (r 11.0) pass, and the bezel ring's skirt (OD = this, an outside wall that prints 0.2 under in a true hole: 0.1 a side) is a light push fit in it"),
+        ("pirHoleR", "11.65 mm", "lens hole radius in the shell's pod box top (Task 9e; 11.5 as pirRecessR in 9c, 12.8 in 9d): the lens ring (r 10.3) and latch tabs (r 11.0) pass, and the bezel ring's skirt (OD = this, an outside wall that prints 0.2 under in a true hole: 0.1 a side) is a light push fit in it. 11.65 so the skirt wall (this - pirBezelInnerR) is 1.25, two 0.6 lines"),
         ("pirTilt", "0 deg", "PIR axis tilt from the plate normal: 0 since 2026-10-25 (the PIR looks where the radar looks, max field overlap). Step 14 refuses anything else: a tilted axis needs the 9b tower, which is gone"),
         ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up. Unused by the geometry while pirTilt is 0; the firmware reads the orientation"),
         ("pirWireDia", "3.0 mm", "wire hole out of the socket's -X side, level, into the pod cavity"),
@@ -241,7 +241,7 @@ def ensure_params(des):
         # wall-mounted, horizontal axis, snug socket). Prints flange-down.
         ("pirBezelFlangeR", "12.5 mm", "bezel flange outer radius: 0.9 of face round the r 11.6 hole, 1.1 of bridge outside the flange notches (to r 11.4)"),
         ("pirBezelFlangeT", "0.8 mm", "bezel flange thickness (z 0..0.8 in the bezel frame, 16..16.8 in the case): the only part above the face"),
-        ("pirBezelInnerR", "10.45 mm", "bezel inner radius (flange and skirt): lens ring r 10.3 + 0.15, dome flank r 10.35 (at the face) + 0.1"),
+        ("pirBezelInnerR", "10.40 mm", "bezel inner radius (flange and skirt): lens ring r 10.3 + 0.10, dome flank r 10.35 (at the face) + 0.05; the bore is an inside surface and prints true, so the ring just grips the lens"),
         ("pirBezelSkirtH", "2.0 mm", "bezel skirt height below the flange: the top's thickness (wall), so the skirt's foot is flush with the top's underside and above the latch hook lips (which hang to case z 13.1 under the tabs, in the notches anyway)"),
         ("pirTabW", "5.0 mm", "lens latch tab tangential width, probed on the STEP 2026-10-25 (chord 5.04 at r 10.5, 5.00 at r 10.8; the tabs are at 45/225 deg in the sensor frame, r to 11.0, sensor z 6.2..8.4)"),
         ("pirNotchW", "pirTabW + 1 mm", "bezel notch tangential width (two, 180 deg apart, through the skirt and the flange's inner region): tab width + 0.5 a side (= 6.0)"),

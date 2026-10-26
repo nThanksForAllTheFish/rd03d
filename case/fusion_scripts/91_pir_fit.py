@@ -188,8 +188,8 @@ def run(_context: str):
                    (shb, True, lensR + 0.02, ang, zTop - skirtH / 2, "hole wall outside the skirt at %.0f" % ang),
                    (bzb, True, (lensR + flangeR) / 2, ang, zTop + flangeT / 2, "bezel flange on the face at %.0f" % ang),
                    (shb, True, (lensR + flangeR) / 2, ang, zTop - 0.01, "shell face under the flange at %.0f" % ang),
-                   (sbody, False, innerR - 0.005, ang, zTop - skirtH / 2, "sensor clear of the skirt's ID at %.0f (z 15)" % ang),
-                   (sbody, False, innerR - 0.005, ang, zTop + flangeT / 2, "sensor clear of the flange's ID at %.0f (z 16.4)" % ang)]
+                   (sbody, False, innerR - 0.003, ang, zTop - skirtH / 2, "sensor clear of the skirt's ID at %.0f (z 15)" % ang),
+                   (sbody, False, innerR - 0.003, ang, zTop + flangeT / 2, "sensor clear of the flange's ID at %.0f (z 16.4)" % ang)]
     for body, want, r, ang, z, label in probes:
         if solid_at(body, r, ang, z) != want:
             raise RuntimeError("bezel fit probe '%s' at (r %.2f, %.0f deg, z %.2f): expected %s"
@@ -214,8 +214,9 @@ def run(_context: str):
     print("bezel fitted: flange on the face, skirt in the hole, tabs at %s deg in the notches; "
           "sensor-to-bezel bore minimum clearance %.3f mm (at %.0f deg, z %.2f)"
           % ("/".join("%.0f" % a for a in TAB), min_clear * 10, where[0], where[1] * 10))
-    if min_clear < 0.005:
-        raise RuntimeError("bezel bore under 0.05 mm from the sensor")
+    # (0.05 designed at the dome flank just above the ring, pirBezelInnerR)
+    if min_clear < 0.003:
+        raise RuntimeError("bezel bore under 0.03 mm from the sensor")
 
     # --- interference: sensor vs plate (the socket), shell (its pod box
     # and lens hole) and the bezel ring in the gap ---
@@ -230,7 +231,7 @@ def run(_context: str):
         ents.add(b)
     print("interference check over", ents.count, "bodies")
     # Task 9e: the bezel ring touches neither the sensor nor the shell in
-    # the model (0.15 to the lens ring, 0.1 to the dome flank, the skirt's
+    # the model (0.10 to the lens ring, 0.05 to the dome flank, the skirt's
     # OD exactly the hole's radius: the print's shrink makes the push
     # fit). Any pair involving the bezel is a failure.
     # Fit allowances (02 ensure_params, calipers 2026-10-25): rimGapY and

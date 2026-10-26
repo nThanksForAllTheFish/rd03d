@@ -546,22 +546,24 @@ def run(_context: str):
     # latch tabs, pressed home; lifted out with a fingernail under the
     # flange. One piece, prints FLANGE-DOWN with no supports.
     #
-    #   flange  flat ring r pirBezelInnerR..pirBezelFlangeR (10.45..12.5),
+    #   flange  flat ring r pirBezelInnerR..pirBezelFlangeR (10.40..12.5),
     #           z 0..pirBezelFlangeT (0.8): sits on the face round the
-    #           hole (0.9 of bearing outside the r 11.6 hole), 0.1 clear of
-    #           the dome's flank (r 10.35 just above the ring).
-    #   skirt   two arcs r pirBezelInnerR..pirHoleR (10.45..11.6), z
-    #           -pirBezelSkirtH..0 (-2.0..0): fill the hole (OD = the
-    #           hole: an outside wall prints 0.2 under in a true-printing
-    #           hole, 0.1 a side of push fit), 0.15 clear of the lens ring
-    #           (r 10.3), foot flush with the top's underside.
+    #           hole (0.85 of bearing outside the r 11.65 hole), 0.05
+    #           clear of the dome's flank (r 10.35 just above the ring).
+    #   skirt   two arcs r pirBezelInnerR..pirHoleR (10.40..11.65, a
+    #           1.25 wall = two 0.6 lines), z -pirBezelSkirtH..0 (-2.0..0):
+    #           fill the hole (OD = the hole: an outside wall prints 0.2
+    #           under in a true-printing hole, 0.1 a side of push fit),
+    #           0.10 clear of the lens ring (r 10.3; the bore prints true,
+    #           so it just grips the lens), foot flush with the top's
+    #           underside.
     #   notches two, 180 deg apart, for the lens's latch tabs (5.0 wide,
     #           r to 11.0, case z 14.2..16, at 45/225 deg in the sensor
     #           frame): tangential width pirNotchW (= pirTabW + 1), cut
     #           through the skirt entirely and through the flange from
-    #           the bore out to r BRIDGE_RI (11.4), so the tab (whose top
+    #           the bore out to r BRIDGE_RI (11.45), so the tab (whose top
     #           is AT the face) is not covered; the flange's outer
-    #           r 11.4..12.5 bridges each notch (1.1 wide on the centre
+    #           r 11.45..12.5 bridges each notch (1.05 wide on the centre
     #           line, 0.7 at the notch's corners, 0.8 thick). The notches
     #           are on the bezel's own +/-X; the occurrence is turned to
     #           the tabs' angle when parked.
@@ -578,11 +580,11 @@ def run(_context: str):
     skirtRo = lensR                              # OD = the hole, push fit by the print's shrink
     TAB_ANGLE = 45.0                             # deg, the sensor's tabs (STEP probe; 91 places it unrotated)
     TAB_R, RING_R, FLANK_R = 11.0 * MM, 10.3 * MM, 10.35 * MM    # STEP probes
-    BRIDGE_RI = skirtRo - 0.02                   # flange notch outer edge, 11.4: tab r 11.0 + 0.4
+    BRIDGE_RI = skirtRo - 0.02                   # flange notch outer edge, 11.45: tab r 11.0 + 0.45
     NOTCH_ANGLES = (0.0, 180.0)                  # bezel frame
     # --- guards ---
-    if innerR < RING_R + 0.015 - 1e-9 or innerR < FLANK_R + 0.01 - 1e-9:
-        raise RuntimeError("bezel inner r %.2f is under 0.15 off the lens ring (10.3) or 0.1 off "
+    if innerR < RING_R + 0.01 - 1e-9 or innerR < FLANK_R + 0.005 - 1e-9:
+        raise RuntimeError("bezel inner r %.2f is under 0.10 off the lens ring (10.3) or 0.05 off "
                            "the dome flank (10.35)" % (innerR * 10))
     if skirtRo - innerR < 0.1:
         raise RuntimeError("bezel skirt wall %.2f is under 1.0 mm" % ((skirtRo - innerR) * 10))

@@ -628,7 +628,7 @@ def check_bezel_fit(shell, plate, des, bezel):
     frame against the sensor). Flange ring r innerR..flangeR x flangeT,
     two skirt arcs r innerR..pirHoleR x skirtH below it, two notches
     pirNotchW wide through the skirt and through the flange out to
-    r 11.4, the flange's r 11.4..flangeR bridging them."""
+    r pirHoleR - 0.2 (11.45), the flange's outer rim bridging them."""
     import math
     def pv(n): return des.userParameters.itemByName(n).value * 10
     intD, wall = pv("intD"), pv("wall")
@@ -639,8 +639,10 @@ def check_bezel_fit(shell, plate, des, bezel):
     skirtRo, bridgeRi = lensR, lensR - 0.2
     zTop = intD + wall
     # parameter-level guards (03 asserts the same at build time)
-    if not (innerR >= 10.3 + 0.15 - 1e-9 and innerR >= 10.35 + 0.1 - 1e-9):
-        FAILURES.append("bezel inner r %.2f is under 0.15 off the lens ring / 0.1 off the dome flank" % innerR)
+    if not (innerR >= 10.3 + 0.10 - 1e-9 and innerR >= 10.35 + 0.05 - 1e-9):
+        FAILURES.append("bezel inner r %.2f is under 0.10 off the lens ring / 0.05 off the dome flank" % innerR)
+    if not (lensR - innerR >= 1.2 - 1e-9):
+        FAILURES.append("bezel skirt wall %.2f is under 1.2 (two 0.6 lines)" % (lensR - innerR))
     if not (notchW >= tabW + 1.0 - 1e-9):
         FAILURES.append("bezel notch %.2f is under the tab width %.2f + 1.0" % (notchW, tabW))
     if not (abs(tabW - 5.0) <= 0.3):
