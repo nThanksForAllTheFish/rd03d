@@ -185,6 +185,23 @@ def ensure_params(des):
         ("capDia", "8.2 mm", "bulk capacitor diameter"),
         ("capLen", "12 mm", "bulk capacitor body length"),
         ("capClear", "0.4 mm", "total capacitor cradle clearance"),
+        # Fit allowances from caliper measurements of the 9c print
+        # (2026-10-25), replacing the single rimGap (0.15 a side, still in
+        # the document, no longer read). Measured: plate outside X 41.53
+        # for 41.7 modelled (0.17 under), plate outside Y 45.43 for 45.7
+        # (0.27 under), shell cavity inside X 41.98 for 42.0 (true),
+        # cavity inside Y 46.34 for 46.0 (0.34 OVER), wing width 26.46
+        # for 26.7 (0.24 under), box cavity width 27.2 for 27.0 (0.2
+        # over). So the gaps came out 0.45 total in X, 0.91 in Y, 0.74
+        # wing-to-box; the target is 0.2 total (0.1 a side, a light push
+        # fit). Rule on this printer: outside walls print 0.17..0.27
+        # under, cavities true in X but 0.2..0.34 over in Y. Each
+        # allowance is the per-side model gap that lands the printed gap
+        # at 0.1 a side: (target total - (cavity over + outside under)) /
+        # 2, and may be NEGATIVE (the model overlaps, the print does not).
+        ("rimGapX", "0.03 mm", "plate half-width = intW/2 - this. X: cavity prints true (41.98 for 42), plate 0.17 under (41.53 for 41.7): (0.2 - 0.17 - 0) / 2 = 0.015 -> 0.03 (rounded up: 0.19 printed gap, light push)"),
+        ("rimGapY", "-0.20 mm", "plate half-length = intH/2 - this. Y: cavity prints 0.34 OVER (46.34 for 46), plate 0.27 under (45.43 for 45.7): (0.2 - 0.27 - 0.34) / 2 = -0.205 -> -0.20: the model's plate is 0.2 a side INTO the shell's +/-Y walls (91 expects that overlap), the print has 0.1 a side. The printed plate edge (23.2 - 0.135 = 23.065) is 0.275 inside the printed cavity wall (23.34)"),
+        ("wingGap", "-0.12 mm", "wing half-width = pirBoxHalfY - this. Box cavity width prints 0.2 over (27.2 for 27.0), wing 0.24 under (26.46 for 26.7): (0.2 - 0.24 - 0.2) / 2 = -0.12; the same shrink is assumed for the 31 mm box of Task 9d. The wing's far end in X uses rimGapX (an outside wall against a cavity face in X)"),
         # PIR socket (step 14), the shell's pod box (03_shell.py step 5c)
         # and the bayonet bezel (03_shell.py step 8), fourth layout
         # (2026-10-25, Task 9d): the sensor's axis is parallel to the
@@ -201,12 +218,12 @@ def ensure_params(des):
         # ring top (sensor z 8.5) narrowing to r 10.21 at sensor z 11.8,
         # and only above that a sphere R 10.89 centred on the axis at the
         # ring top (apex at z 19.29). The dome's largest radius is 10.35.
-        ("pirBoreR", "5.9 mm", "socket bore radius: base/can r 5.5 + 0.4; neck r 5.3..5.0 passes"),
-        ("pirSocketR", "7.7 mm", "socket boss outer radius: 1.8 mm wall round the bore; the flange (r 9.4) seats on its top rim and the latch hook lips (r 9.6..10.7) hang outside it"),
+        ("pirBoreR", "5.55 mm", "socket bore radius (Ø11.1): the sensor's metal base measured Ø10.8 with calipers (the STEP says 11.0) and the printed Ø11.8 bore measured 11.8 (holes print true), i.e. 0.5 mm of radial play; 5.55 is 0.15 a side on the measured base. Was 5.9. The neck (r 5.3..5.0) passes"),
+        ("pirSocketR", "7.7 mm", "socket boss outer radius: 2.15 mm wall round the r 5.55 bore; the flange (r 9.4) seats on its top rim and the latch hook lips (r 9.6..10.7) hang outside it"),
         ("pirSeatZ", "intD + wall - 2.0 mm", "socket boss top = the flange's underside (sensor z 6.4), 2.0 under the shell's face so the lens ring's top (sensor z 8.4) is flush with it (= 14.0)"),
         ("pirCx", "35.5 mm", "socket / lens axis x. 34.5 would centre it in the box, but the Technic hole at (24.95, 4) would then pass 0.20 mm from the boss's foot in plan; 35.5 gives 1.13 (step 14d asserts >= 0.6). The box in 03_shell.py follows"),
-        ("pirBoxHalfY", "15.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less rimGap. 15.5 since Task 9d (was 13.5): room for the bezel's lugs (to r 14.3 at 90 deg) under the top"),
-        ("pirBoxHalfX", "13.5 mm", "shell pod box: cavity +X wall at pirCx + this (= 49, the 9c value: the box's x 21..49 is unchanged by 9d, only its width grew); the wing ends rimGap short of it. Was tied to pirBoxHalfY while the cavity was square"),
+        ("pirBoxHalfY", "15.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less wingGap. 15.5 since Task 9d (was 13.5): room for the bezel's lugs (to r 14.3 at 90 deg) under the top"),
+        ("pirBoxHalfX", "13.5 mm", "shell pod box: cavity +X wall at pirCx + this (= 49, the 9c value: the box's x 21..49 is unchanged by 9d, only its width grew); the wing ends rimGapX short of it. Was tied to pirBoxHalfY while the cavity was square"),
         ("pirHoleR", "12.8 mm", "lens hole radius in the shell's pod box top (Task 9d, was pirRecessR 11.5): the bezel's skirt (r 12.6) passes with 0.2; the lens ring (r 10.3) and latch tabs (r 11.1) pass with room"),
         ("pirNotchW", "4.6 mm", "bayonet notch tangential width through the box top, at 60/180/300 deg from +X: lug width 4.0 + 0.3 a side"),
         ("pirNotchR", "14.6 mm", "bayonet notch outer radius (radial extent pirHoleR..this): lug reach 14.3 + 0.3"),
@@ -301,7 +318,10 @@ def run(_context: str):
     comp.name = "BackPlate"
 
     intW, intH = p(des, "intW"), p(des, "intH")
-    backT, rimGap = p(des, "backT"), p(des, "rimGap")
+    backT = p(des, "backT")
+    # fit allowances (see ensure_params): per-side model gaps, X and Y
+    # differ and may be negative; rimGap itself is no longer read
+    rimGapX, rimGapY, wingGap = p(des, "rimGapX"), p(des, "rimGapY"), p(des, "wingGap")
     rW, rH, rT = p(des, "radarW"), p(des, "radarH"), p(des, "radarT")
     rCx = p(des, "radarCx")
     xW, xH, xCx = p(des, "xiaoW"), p(des, "xiaoH"), p(des, "xiaoCx")
@@ -309,9 +329,12 @@ def run(_context: str):
     intD, wall, winT = p(des, "intD"), p(des, "wall"), p(des, "windowT")
     MM = 0.1
 
-    # 1. plate
+    # 1. plate: intW - 2 rimGapX by intH - 2 rimGapY (41.94 x 46.4: the
+    # +/-Y edges sit 0.2 INTO the shell's walls in the model, which the
+    # measured Y shrink of the print takes back; 91_pir_fit.py expects
+    # that overlap)
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, 0, 0, intW - 2 * rimGap, intH - 2 * rimGap)
+    rect(sk, 0, 0, intW - 2 * rimGapX, intH - 2 * rimGapY)
     plate = extrude(comp, sk.profiles.item(0), -backT, 0,
                     adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
     plate_body = plate.bodies.item(0)
@@ -333,7 +356,7 @@ def run(_context: str):
     # box's inner walls, 03_shell.py step 5d). The plate's +X edge is
     # plain again.
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    edge = -(intW / 2 - rimGap)
+    edge = -(intW / 2 - rimGapX)
     for sy in (-1, 1):
         # rect centered on the edge, 1.2 wide -> cuts 0.6 deep into plate
         rect(sk, edge, sy * 12 * MM, 0.12, 6.2 * MM)
@@ -447,7 +470,7 @@ def run(_context: str):
     # fence ±Y bars as drawn overhang the 41.7 x 45.7 plate; the shell's
     # interior walls occupy that space, so intersect with the plate footprint)
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, 0, 0, intW - 2 * rimGap, intH - 2 * rimGap)
+    rect(sk, 0, 0, intW - 2 * rimGapX, intH - 2 * rimGapY)
     extrude(comp, sk.profiles.item(0), -backT, 11 * MM,
             adsk.fusion.FeatureOperations.IntersectFeatureOperation,
             participants=[plate_body])
@@ -1019,11 +1042,13 @@ def run(_context: str):
     #
     # Shape (case frame; the plate's occurrence is at identity):
     #   wing    z -8..-2 (6 mm, coplanar with the plate's back), from the
-    #           plate's +X edge (x 20.85, fused to it) out to the box
-    #           cavity's +X wall less rimGap (x 48.85), y +/-(pirBoxHalfY -
-    #           rimGap) = +/-15.35, so it sits in the shell's box like the
-    #           plate sits in the shell. Blind snap pockets in its +/-Y
-    #           faces (14a') take the box's bumps.
+    #           plate's +X edge (x 20.97, fused to it) out to the box
+    #           cavity's +X wall less rimGapX (x 48.97), y +/-(pirBoxHalfY
+    #           - wingGap) = +/-15.62, so it sits in the shell's box like
+    #           the plate sits in the shell (the fit allowances are
+    #           measured, see ensure_params; the wing is 0.12 a side into
+    #           the box walls in the model). Blind snap pockets in its
+    #           +/-Y faces (14a') take the box's bumps.
     #   boss    a straight cylinder r pirSocketR (7.7) at (pirCx, 0),
     #           standing on the wing from z -2 up to pirSeatZ (14.0): the
     #           sensor drops in from the FRONT, neck and can into the bore,
@@ -1058,10 +1083,10 @@ def run(_context: str):
         raise RuntimeError("pirTilt is %.3f, not 0: the straight socket (step 14) has no "
                            "tilt; set it to 0 deg (the 9b tilted tower is gone)"
                            % p(des, "pirTilt"))
-    xEdge = intW / 2 - rimGap                    # plate's +X edge, 20.85
+    xEdge = intW / 2 - rimGapX                   # plate's +X edge, 20.97
     xBoxIn = pirCx + p(des, "pirBoxHalfX")       # box cavity's +X wall, 49
-    xWing1 = xBoxIn - rimGap                     # wing's far end, 48.85
-    wingHalfY = boxHalfY - rimGap                # 15.35
+    xWing1 = xBoxIn - rimGapX                    # wing's far end, 48.97
+    wingHalfY = boxHalfY - wingGap               # 15.62 (0.12 INTO the box walls, see wingGap)
     WING_T = 6.0 * MM
     zTop, zBack = intD + wall, -backT            # 16, -8
     zWing = zBack + WING_T                       # -2: wing top = the bore floor
@@ -1099,8 +1124,8 @@ def run(_context: str):
 
     # 14a. wing, overlapping 0.5 mm into the plate so the Join merges by
     # volume; the plate is solid there (the -X snap pockets are at the far
-    # edge; the jack is at y < -17 and the wing reaches +/-15.35 at the
-    # plate's edge, where the jack slot's +X wall at x 18.265 is 2.6 mm
+    # edge; the jack is at y < -17 and the wing reaches +/-15.62 at the
+    # plate's edge, where the jack slot's +X wall at x 18.265 is 2.7 mm
     # inboard).
     sk = comp.sketches.add(comp.xYConstructionPlane)
     box(sk, xEdge - 0.5 * MM, xWing1, -wingHalfY, wingHalfY)
@@ -1124,8 +1149,9 @@ def run(_context: str):
              zWing * 10, seatZ * 10))
 
     # 14a'. WING SNAP POCKETS (Task 9d): the same section as the plate's
-    # -X pockets (step 3) - 0.6 deep, 6.2 long, 1.4 tall, blind at both z
-    # ends - cut into the wing's +/-Y faces, centred on (wingSnapX,
+    # -X pockets (step 3) - 6.2 long, 1.4 tall, blind at both z ends, and
+    # deep enough to clear the bump (see POCKET_D below; 0.72 with the
+    # measured allowances) - cut into the wing's +/-Y faces, centred on (wingSnapX,
     # wingSnapZ), for the bumps on the pod box's inner +/-Y walls
     # (03_shell.py step 5d: 0.5 proud, 6 long, 1.0 tall). The lid comes
     # down over the wing from the front, the box walls ride over the
@@ -1133,7 +1159,19 @@ def run(_context: str):
     # span with 1 mm to the plate edge and clear of the corner fillets,
     # >= 1 mm of wing above and below it, and its floor outside the boss's
     # foot fillet toe and the Technic counterbores.
-    POCKET_D, POCKET_HL, POCKET_HZ = 0.6 * MM, 3.1 * MM, 0.6 * MM
+    # Depth: with the measured wingGap NEGATIVE (the wing is 0.12 a side
+    # into the box walls in the model) a 0.6 pocket like the plate's
+    # would put its floor (15.02) 0.02 INSIDE the bump's tip (15.0), so
+    # the depth is derived: the bump's proud amount, plus 0.1 of floor
+    # clearance, plus whatever the wing overlaps the wall by (0.72 here).
+    # Printed, the wing's face shrinks 0.12 to 15.5 and the cavity grows
+    # 0.1, so the bump overlaps the face line by about 0.4 (the
+    # retention) and the floor stays clear.
+    POCKET_D = snap + 0.01 + max(-wingGap, 0.0)
+    POCKET_HL, POCKET_HZ = 3.1 * MM, 0.6 * MM
+    if boxHalfY - snap < wingHalfY - POCKET_D + 0.01 - 1e-9:
+        raise RuntimeError("wing bump tip (y %.2f) is under 0.1 off the pocket floor (y %.2f)"
+                           % ((boxHalfY - snap) * 10, (wingHalfY - POCKET_D) * 10))
     corner = p(des, "cornerFillet")
     if not (xEdge + 0.1 <= snapX - POCKET_HL and snapX + POCKET_HL <= xWing1 - corner - 0.05):
         raise RuntimeError("wing snap pocket x %.2f..%.2f is not inside the wing's straight "

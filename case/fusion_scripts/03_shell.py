@@ -428,9 +428,9 @@ def run(_context: str):
     snapX, snapZ = p02(des, "wingSnapX"), p02(des, "wingSnapZ")
     corner = p(des, "cornerFillet")
     zWing = z_back + 6.0 * MM                    # wing top, -2
-    rimGap = p(des, "rimGap")
-    xWing1 = xBoxIn - rimGap
-    if not (intW / 2 - rimGap + 0.1 <= snapX - 0.31 and snapX + 0.31 <= xWing1 - corner - 0.05):
+    rimGapX = p02(des, "rimGapX")                # the plate/wing X allowance (02 owns it)
+    xWing1 = xBoxIn - rimGapX
+    if not (intW / 2 - rimGapX + 0.1 <= snapX - 0.31 and snapX + 0.31 <= xWing1 - corner - 0.05):
         raise RuntimeError("wing snap bump x %.1f..%.1f is not inside the wing's straight "
                            "+/-Y faces" % ((snapX - 0.3) * 10, (snapX + 0.3) * 10))
     if not (z_back + 0.1 <= snapZ - 0.06 and snapZ + 0.06 <= zWing - 0.1):

@@ -7,10 +7,13 @@ exactly as 02_backplate.py step 14 defines it (axis at (pirCx, 0) along +Z,
 lens ring top flush with the shell's face at z 16), snapshots the placement
 and runs Fusion's interference analysis between the sensor, the plate, the
 shell (its pod box) and the bezel parked on the face in its fitted (turned)
-position. Expected (Task 9d): the bezel's lip against the dome is the ONLY
-pair - the designed pirBezelPreload interference ring - bounded by the
-band volume; anything else (sensor against plate or shell, plate against
-shell, bezel against plate or shell) is a failure. If it is not clean, fix
+position. Expected (Task 9d): the bezel's lip against the dome - the
+designed pirBezelPreload interference ring, bounded by the band volume -
+and, since the measured fit allowances (rimGapY, wingGap negative), the
+plate against the shell: the model's plate and wing sit into the shell's
+long walls by what the print shrinks, bounded by those slabs. Anything
+else (sensor against plate or shell, bezel against plate or shell) is a
+failure. If it is not clean, fix
 the SOCKET in 02_backplate.py or the BOX / BEZEL in 03_shell.py, never the
 sensor.
 """
@@ -231,6 +234,27 @@ def run(_context: str):
     # smaller; it is printed.) Any other pair is a failure.
     preload = p(des, "pirBezelPreload")
     band_max = 2 * math.pi * lipR * preload * 2 * math.sqrt(2 * domeR * preload)
+    # Fit allowances (02 ensure_params, calipers 2026-10-25): rimGapY and
+    # wingGap are NEGATIVE, so in the MODEL the plate's +/-Y edges sit
+    # 0.2 a side into the shell's long walls and the wing 0.12 a side
+    # into the box walls (the print's measured shrink takes it back to
+    # 0.1 a side of gap). That plate/shell pair is therefore expected
+    # too, bounded by those slabs: the plate (z -8..0) and the two radar
+    # fence walls that reach the outline (1.5 thick, z 0..11) along both
+    # +/-Y edges, and the wing (z -8..-2) along both its faces; +5% for
+    # the probe's own tolerance. Anything bigger means the parts meet
+    # somewhere they should not.
+    intW, intH, backT = p(des, "intW"), p(des, "intH"), p(des, "backT")
+    gX, gY, gW = p(des, "rimGapX"), p(des, "rimGapY"), p(des, "wingGap")
+    boxHalfX = p(des, "pirBoxHalfX")
+    fit_max = 0.0
+    if gY < 0:
+        fit_max += 2 * (-gY) * ((intW - 2 * gX) * backT + 2 * 0.15 * 1.1)
+    if gW < 0:
+        fit_max += 2 * (-gW) * ((pirCx + boxHalfX - gX) - (intW / 2 - gX)) * 0.6
+    if gX < 0:
+        fit_max += 2 * (-gX) * (intH - 2 * gY) * backT
+    fit_max *= 1.05
     inp = des.createInterferenceInput(ents)
     res = des.analyzeInterference(inp)
     total = 0.0
@@ -245,6 +269,12 @@ def run(_context: str):
         names = {c1, c2}
         lip = (any(n.startswith("PirBezel") for n in names)
                and any(n.startswith(SENSOR_PREFIXES) for n in names))
+        fit = (any(n.startswith("BackPlate") for n in names)
+               and any(n.startswith("FrontShell") for n in names))
+        if fit and 0 <= vol <= fit_max:
+            print("fit allowance: %.2f mm^3 between %s and %s (designed plate/wing overlap "
+                  "into the shell's walls, bound %.1f mm^3), expected" % (vol * 1000, c1, c2, fit_max * 1000))
+            continue
         if lip and 0 <= vol <= band_max:
             line = ("lip preload: %.3f mm^3 between %s and %s (band bound %.1f mm^3), expected"
                     % (vol * 1000, c1, c2, band_max * 1000))

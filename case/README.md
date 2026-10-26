@@ -19,9 +19,10 @@ The living design is in your Fusion; save it to your own project.
   Since 2026-10-25 the plate also carries the **PIR socket**, on a
   **wing**: a 6 mm tab (z −8..−2, the same back face as the plate) growing
   out of the plate's +X edge (the end that hangs down) to x 48.85, 30.7 mm
-  wide, sized to sit inside the shell's pod box (next item) with the usual
-  0.15 mm gap. On it stands a plain cylindrical **socket boss**, Ø15.4
-  outside with a Ø11.8 bore straight along the case's Z axis, centred at
+  wide, sized to sit inside the shell's pod box (next item) with the
+  measured fit allowance (see Fit, under Tweaking fit). On it stands a
+  plain cylindrical **socket boss**, Ø15.4
+  outside with a Ø11.1 bore straight along the case's Z axis, centred at
   x 35.5 (`pirCx`), rising to z 14.0 — 2 mm under the shell's face. It is
   for a Panasonic EKMC1603111 PaPIRs with the long-distance lens. The
   sensor drops in from the **front**, dome out: its neck and Ø11 base go
@@ -39,8 +40,8 @@ The living design is in your Fusion; save it to your own project.
   boss wall into the pod cavity; the three wires then run over the wing
   straight into the XIAO bay, with no wall in the way. The lid's +X snap
   pair engages the **wing**: a blind pocket in each of the wing's ±Y
-  faces (6.2 × 1.4 mm, 0.6 deep, centred x 40, z −5) takes a bump on the
-  box's inner wall; the plate's own +X edge is plain. Two more Technic
+  faces (6.2 × 1.4 mm, 0.72 deep, centred x 40, z −5) takes a bump on
+  the box's inner wall; the plate's own +X edge is plain. Two more Technic
   holes, at (24.95, ±4) on the same 8 mm grid, go **through** the wing
   from the back with the same counterbore (a pin stands 2 mm proud into
   the empty pod cavity); with the original six that is eight mount
@@ -105,7 +106,7 @@ The one small horizontal hole in the plate, the Ø3 wire hole out of the
 boss's side, prints on its side and may close up a little; run a 3 mm
 drill through it if the wires are snug. The two wing Technic holes go
 right through the 6 mm wing, nothing to bridge. The socket boss is a
-16 mm tall Ø15.4 post with a Ø11.8 bore, so its wall is 1.8 mm — three
+16 mm tall Ø15.4 post with a Ø11.1 bore, so its wall is 2.15 mm — three
 perimeters on a 0.6 mm nozzle; print the plate with at least three
 walls so it comes out solid, and do not scale the plate.
 Back plate: print flat (back face down). Shell: print open-side-up.
@@ -318,14 +319,39 @@ at y ±4. The six centres are (0.95, ±12), (0.95, ±4) and (8.95, ±4).)
 ## Tweaking fit
 
 Open the design in Fusion → Modify → Change Parameters. `boardClear`,
-`rimGap`, and `snapBump` are the fit-critical ones (`wingSnapX` 40 and
+the three fit allowances below, and `snapBump` are the fit-critical ones
+(`wingSnapX` 40 and
 `wingSnapZ` −5 place the +X snap pair on the wing: keep the 6 mm bump
 between the plate's edge and the wing's corner fillets, and the pocket
 with a millimetre of wing above and below it); `legoHole` is the
 Technic pin hole diameter (tune ±0.1 mm if pins are too tight/loose after
-a test print). Calibration from the 2026-10-25 test print on this
-printer: holes print true to size (the Ø11.8 bore measured 11.8) and
-outside walls print 0.2 mm under (a Ø11.7 plug measured 11.5). The bezel:
+a test print).
+
+**Fit.** Calipers on the 9c print (2026-10-25), model → measured: plate
+outside X 41.7 → 41.53 (0.17 under); plate outside Y 45.7 → 45.43 (0.27
+under); shell cavity inside X 42.0 → 41.98 (true); cavity inside Y 46.0
+→ 46.34 (0.34 over); wing width 26.7 → 26.46 (0.24 under); box cavity
+width 27.0 → 27.2 (0.2 over). So on this printer outside walls print
+0.17..0.27 under, and cavities print true in X but 0.2..0.34 over in Y
+(the long walls bow out). The printed gaps were 0.45 total in X, 0.91 in
+Y and 0.74 wing-to-box; the target is 0.2 total, 0.1 a side, a light
+push fit. The old single `rimGap` (0.15 a side) is superseded by three
+allowances, each the per-side model gap that lands the print at 0.1 a
+side, (0.2 − outside shrink − cavity growth) / 2: `rimGapX` 0.03 (plate
+half-width = `intW`/2 − `rimGapX`), `rimGapY` −0.20 (plate half-length =
+`intH`/2 − `rimGapY`: negative, the model's plate sits 0.2 a side into
+the shell's long walls and the print takes it back), `wingGap` −0.12
+(wing half-width = `pirBoxHalfY` − `wingGap`; the 9d box is 31 wide
+instead of 27 and the same shrink is assumed). The printed plate edge
+stays 0.275 mm inside the printed cavity wall. `91_pir_fit.py` expects
+the model's plate/shell overlap (about 190 mm³) as a designed pair. If
+your printer behaves differently, measure the same six things and set
+the three allowances from the formula. The sensor's socket follows the
+same rule: the sensor's metal base measured Ø10.8 with calipers (the
+STEP says 11.0) and the printed Ø11.8 bore measured 11.8 (holes print
+true), 0.5 mm of play; `pirBoreR` is now 5.55 (Ø11.1), 0.15 a side on
+the measured base. Holes print true to size, so size holes 0.1..0.2 a
+side over the part they take; outside walls print 0.2 under. The bezel:
 `pirBezelPreload` (0.2) is how far the lip's edge is built into the
 dome, measured along the axis; `pirBezelLipH` is an expression that
 places the edge from `pirDomeR` and `pirBezelLipR`, so change the
@@ -363,7 +389,7 @@ point-probing Panasonic's STEP of the sensor (base r 5.5, flange r 9.4,
 hook lips r 9.6..10.7, latch tabs r 11.1), not from its datasheet
 drawing, with 0.3–0.4 mm of clearance on each.
 `fusion_scripts/90_verify.py` is a read-only probe harness that asserts the
-jack, cradle, notches, clips, the shell's pod box, lens hole and bayonet
+fit allowances, the jack, cradle, notches, clips, the shell's pod box, lens hole and bayonet
 notches, both snap pairs, the PIR socket (wing, boss, blind bore, wire
 hole, the two wing Technic holes) and the bezel's own geometry with
 `pointContainment`; run it after any change and expect `VERIFY OK`.
@@ -372,8 +398,10 @@ download under `case/models/`, not in the repo), drops it upright into
 the plate's socket with its ring flush with the shell's face, checks the
 dome is where the bezel expects it, and runs Fusion's interference
 analysis against the plate, the shell and the bezel parked in its fitted
-position; expect `PIR FIT OK` (the bezel's lip against the dome, the
-designed preload band of about 1.3 mm³, is the one expected pair).
+position; expect `PIR FIT OK` (two expected pairs: the bezel's lip
+against the dome, the designed preload band of about 1.3 mm³, and the
+plate against the shell, the designed fit-allowance overlap of about
+190 mm³ that the print's shrink takes back).
 
 ## Design notes
 

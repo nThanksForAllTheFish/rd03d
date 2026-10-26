@@ -61,21 +61,58 @@ def check_baseline(plate, shell):
     void(shell, 0, 0, 7.0, "shell interior cavity")
 
 
+def check_fit_allowances(plate, shell, des):
+    """Measured fit allowances (02 ensure_params, 2026-10-25 calipers):
+    plate half-width intW/2 - rimGapX (20.97), half-length intH/2 -
+    rimGapY (23.2: 0.2 INTO the shell's +/-Y walls in the model, which the
+    print's Y shrink takes back to a 0.1 gap a side), wing half-width
+    pirBoxHalfY - wingGap (15.62, likewise 0.12 into the box walls). The
+    printed plate edge (23.2 - 0.135) stays 0.275 inside the printed
+    cavity wall (23.34). Probes: the plate is solid just inside each
+    modelled edge and void just outside; the shell's walls are where they
+    always were (so the overlap is the plate's, by design)."""
+    def pv(n): return des.userParameters.itemByName(n).value * 10
+    intW, intH, hy = pv("intW"), pv("intH"), pv("pirBoxHalfY")
+    gx, gy, gw = pv("rimGapX"), pv("rimGapY"), pv("wingGap")
+    cx = pv("pirCx")
+    ex, ey, wy = intW / 2 - gx, intH / 2 - gy, hy - gw
+    for sx in (1, -1):
+        # (probed at y 20: the wing is fused to the +X edge over |y| < 15.62)
+        solid(plate, sx * (ex - 0.05), 20.0, -4.0, "plate solid 0.05 inside its %sX edge (x %.2f)" % ("+" if sx > 0 else "-", sx * ex))
+        void(plate, sx * (ex + 0.05), 20.0, -4.0, "nothing 0.05 past the plate's %sX edge (outside the wing)" % ("+" if sx > 0 else "-"))
+    for sy in (1, -1):
+        solid(plate, 0.0, sy * (ey - 0.05), -4.0, "plate solid 0.05 inside its %sY edge (y %.2f)" % ("+" if sy > 0 else "-", sy * ey))
+        void(plate, 0.0, sy * (ey + 0.05), -4.0, "nothing 0.05 past the plate's %sY edge" % ("+" if sy > 0 else "-"))
+        solid(shell, 0.0, sy * (intH / 2 + 0.05), -4.0, "shell %sY wall still starts at y %.1f (the overlap is the plate's)" % ("+" if sy > 0 else "-", sy * intH / 2))
+        solid(plate, cx, sy * (wy - 0.05), -5.0, "wing solid 0.05 inside its %sY face (y %.2f)" % ("+" if sy > 0 else "-", sy * wy))
+        void(plate, cx, sy * (wy + 0.05), -5.0, "nothing 0.05 past the wing's %sY face" % ("+" if sy > 0 else "-"))
+        solid(shell, cx, sy * (hy + 0.05), -5.0, "box %sY wall still starts at y %.1f" % ("+" if sy > 0 else "-", sy * hy))
+    if not (gy < 0 and gw < 0 and gx >= 0):
+        FAILURES.append("fit allowances changed sign (rimGapX %.2f, rimGapY %.2f, wingGap %.2f): "
+                        "re-derive the probes and 91's expected overlap" % (gx, gy, gw))
+    if not (ey - 0.135 <= intH / 2 + 0.34 - 0.2):
+        FAILURES.append("printed plate edge (%.3f) is under 0.2 inside the printed cavity wall (%.2f)"
+                        % (ey - 0.135, intH / 2 + 0.34))
+
+
 def check_snaps(plate, shell, des):
     """Snap pairs since Task 9d (2026-10-25): the -X pair at y +/-12 as
     always (bumps 6 long, 0.5 proud of the inner wall, z -1.6..-0.4;
-    pockets 6.2 long, 0.6 into the plate edge, z -1.7..-0.3, blind both
-    ends), and the lid's +X end snapped into the WING: bumps on the pod
+    pockets 6.2 long, 0.6 into the plate edge (x -20.97..-20.37 with the
+    measured rimGapX; the bump tip at -20.5 clears the floor by 0.13),
+    z -1.7..-0.3, blind both ends), and the lid's +X end snapped into the WING: bumps on the pod
     box's inner +/-Y walls (y +/-pirBoxHalfY, 0.5 proud, x wingSnapX +/-3,
     z wingSnapZ +/-0.5) into blind pockets in the wing's +/-Y faces
-    (y +/-(pirBoxHalfY - rimGap), 0.6 deep, +/-3.1 long, +/-0.6 tall).
+    (y +/-(pirBoxHalfY - wingGap), snapBump + 0.1 - wingGap = 0.72 deep,
+    +/-3.1 long, +/-0.6 tall).
     The old +X pair at y +/-snapYpx (19) on the shell's +X wall stubs and
     the plate's +X edge is gone: those places are plain wall and plain
     edge now."""
     def pv(n): return des.userParameters.itemByName(n).value * 10
-    hy, rimGap = pv("pirBoxHalfY"), pv("rimGap")
+    hy, wingGap = pv("pirBoxHalfY"), pv("wingGap")
     sx, sz, bump = pv("wingSnapX"), pv("wingSnapZ"), pv("snapBump")
-    wy = hy - rimGap                                             # 15.35
+    wy = hy - wingGap                                            # 15.62 (wingGap is negative)
+    pd = bump + 0.1 + max(-wingGap, 0.0)                         # pocket depth, as 02 derives it (0.72)
     for sy in (-1, 1):
         # -X side unchanged at +/-12
         solid(shell, -20.75, sy * 12, -1.0, "-X bump at y %+.0f" % (sy * 12))
@@ -105,16 +142,21 @@ def check_snaps(plate, shell, des):
         void(plate, sx - 2.9, sy * (wy - 0.3), sz, "wing pocket reaches x %.1f, %s" % (sx - 2.9, tag))
         solid(plate, sx + 3.5, sy * (wy - 0.3), sz, "wing face solid past the pocket (+X), %s" % tag)
         solid(plate, sx - 3.5, sy * (wy - 0.3), sz, "wing face solid past the pocket (-X), %s" % tag)
-        solid(plate, sx, sy * (wy - 0.9), sz, "wing solid behind the pocket floor (0.6 deep), %s" % tag)
+        void(plate, sx, sy * (wy - pd + 0.05), sz, "wing pocket open to its floor (%.2f deep), %s" % (pd, tag))
+        solid(plate, sx, sy * (wy - pd - 0.1), sz, "wing solid 0.1 behind the pocket floor, %s" % tag)
         solid(plate, sx, sy * (wy - 0.3), sz + 0.9, "wing solid above the pocket (blind), %s" % tag)
         solid(plate, sx, sy * (wy - 0.3), sz - 0.9, "wing solid below the pocket (blind), %s" % tag)
-        # the bump's inner face (y hy - 0.5) sits 0.25 proud of the pocket
-        # floor (wy - 0.6 = hy - 0.75) and inside the wing's face line
-        if not (hy - bump > wy - 0.6 + 0.2):
-            FAILURES.append("wing bump face (y %.2f) is under 0.2 mm off the pocket floor (y %.2f)"
-                            % (hy - bump, wy - 0.6))
+        # the bump's tip (y hy - 0.5 = 15.0) must clear the pocket floor
+        # (wy - pd = 14.9) by 0.1 and lie inside the wing's face line
+        # (15.62: with the measured negative wingGap the wing is 0.12 into
+        # the box wall in the model; printed, the face shrinks to 15.5 and
+        # the cavity grows to 15.6, so the bump overlaps the face line by
+        # about 0.4 and the floor stays clear)
+        if not (hy - bump >= wy - pd + 0.1 - 1e-9):
+            FAILURES.append("wing bump tip (y %.2f) is under 0.1 off the pocket floor (y %.2f)"
+                            % (hy - bump, wy - pd))
         if not (hy - bump < wy - 1e-9):
-            FAILURES.append("wing bump face (y %.2f) does not reach inside the wing's face (y %.2f)"
+            FAILURES.append("wing bump tip (y %.2f) does not reach inside the wing's face (y %.2f)"
                             % (hy - bump, wy))
 
 
@@ -467,15 +509,16 @@ def check_pir_socket(plate, shell, des):
     fused to the plate and softened like the shell."""
     import math
     def pv(n): return des.userParameters.itemByName(n).value * 10
-    wall, intW, intD, backT, rimGap = pv("wall"), pv("intW"), pv("intD"), pv("backT"), pv("rimGap")
+    wall, intW, intD, backT = pv("wall"), pv("intW"), pv("intD"), pv("backT")
+    rimGapX, wingGap = pv("rimGapX"), pv("wingGap")  # measured allowances (02 ensure_params)
     cx, boreR, socketR = pv("pirCx"), pv("pirBoreR"), pv("pirSocketR")
     seatZ, hy, hx = pv("pirSeatZ"), pv("pirBoxHalfY"), pv("pirBoxHalfX")
     wireZ, wireR = pv("pirWireZ"), pv("pirWireDia") / 2
-    xEdge = intW / 2 - rimGap                        # 20.85
+    xEdge = intW / 2 - rimGapX                       # 20.97
     if abs(des.userParameters.itemByName("pirTilt").value) > 1e-9:
         FAILURES.append("pirTilt is not 0: the straight socket is only right upright")
-    xWing1 = cx + hx - rimGap                        # 48.85
-    wy = hy - rimGap                                 # 15.35
+    xWing1 = cx + hx - rimGapX                       # 48.97
+    wy = hy - wingGap                                # 15.62
     zTop, zBack, zWing = intD + wall, -backT, -backT + 6.0
     ringR = (boreR + socketR) / 2                    # 6.8: mid-wall of the boss
     # parameter-level guards (02 asserts the same at build time; repeated
@@ -484,6 +527,10 @@ def check_pir_socket(plate, shell, des):
         FAILURES.append("pirSocketR %.2f is not 0.3 mm inside the latch hook lips (r 9.6)" % socketR)
     if not (socketR - boreR >= 1.5 - 1e-9):
         FAILURES.append("socket boss wall %.2f mm is under 1.5" % (socketR - boreR))
+    # bore sized on the measured base (Ø10.8 with calipers, 2026-10-25;
+    # holes print true): 0.1..0.2 a side
+    if not (5.4 + 0.1 - 1e-9 <= boreR <= 5.4 + 0.2 + 1e-9):
+        FAILURES.append("pirBoreR %.2f is not 0.1..0.2 over the measured base radius 5.4" % boreR)
     # the cap on the sensor's pins (to case z -0.9, 02 step 14) must hang
     # >= 1 mm above the bore floor (the wing top)
     if not (-0.9 - zWing >= 1.0 - 1e-9):
@@ -693,6 +740,7 @@ def run(_context: str):
           % (plate.volume, shell.volume, bezel.volume))
 
     check_baseline(plate, shell)
+    check_fit_allowances(plate, shell, des)
     check_snaps(plate, shell, des)
     check_xiao_clips(plate)
     check_no_interior_counterbores(plate)
