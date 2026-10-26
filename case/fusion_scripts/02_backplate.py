@@ -203,55 +203,48 @@ def ensure_params(des):
         ("rimGapY", "-0.20 mm", "plate half-length = intH/2 - this. Y: cavity prints 0.34 OVER (46.34 for 46), plate 0.27 under (45.43 for 45.7): (0.2 - 0.27 - 0.34) / 2 = -0.205 -> -0.20: the model's plate is 0.2 a side INTO the shell's +/-Y walls (91 expects that overlap), the print has 0.1 a side. The printed plate edge (23.2 - 0.135 = 23.065) is 0.275 inside the printed cavity wall (23.34)"),
         ("wingGap", "-0.12 mm", "wing half-width = pirBoxHalfY - this. Box cavity width prints 0.2 over (27.2 for 27.0), wing 0.24 under (26.46 for 26.7): (0.2 - 0.24 - 0.2) / 2 = -0.12; the same shrink is assumed for the 31 mm box of Task 9d. The wing's far end in X uses rimGapX (an outside wall against a cavity face in X)"),
         # PIR socket (step 14), the shell's pod box (03_shell.py step 5c)
-        # and the bayonet bezel (03_shell.py step 8), fourth layout
-        # (2026-10-25, Task 9d): the sensor's axis is parallel to the
-        # radar's (pirTilt 0), the plate carries only a straight socket on
-        # its wing, the shell's box covers it, and a bezel dropped on from
-        # the FRONT holds the sensor down (no plug, no keeper pin any more).
-        # Radii measured on Panasonic's STEP by point probing (2026-10-11):
-        # base/can r 5.5, neck r 5.3 -> 5.0, flange r 9.4 with its
-        # underside at sensor z 6.4, lens ring r 10.3 (top at z 8.4), TWO
-        # lens latch tabs at 45/225 deg reaching r 11.1 over z 6.6..8.4
-        # whose hook lips (r 9.6..10.7) hang down to z 5.5, and the dome
-        # (re-probed 2026-10-25 for the bezel): its flank is NOT a sphere
-        # down to the ring - it is a 2 deg taper, r 10.35 just above the
-        # ring top (sensor z 8.5) narrowing to r 10.21 at sensor z 11.8,
-        # and only above that a sphere R 10.89 centred on the axis at the
-        # ring top (apex at z 19.29). The dome's largest radius is 10.35.
+        # and the bezel ring (03_shell.py step 8), fifth layout (Task 9e,
+        # 2026-10-25): the sensor's axis is parallel to the radar's
+        # (pirTilt 0), the plate carries only a straight, snug socket on
+        # its wing, the shell's box covers it, and a thin ring dropped into
+        # the lens gap from the front, clocked to the lens's latch tabs,
+        # closes the gap and holds the lens ring by friction (no plug, no
+        # keeper pin, no bayonet). Radii measured on Panasonic's STEP by
+        # point probing (2026-10-11, re-probed 2026-10-25): base/can r 5.5
+        # (calipers on the real part: 5.4), neck r 5.3 -> 5.0, flange
+        # r 9.4 with its underside at sensor z 6.4, lens ring r 10.3 (top
+        # at z 8.4), TWO lens latch tabs centred at 45/225 deg, 5.0 wide,
+        # reaching r 11.0 over sensor z 6.2..8.4 (case 14.2..16), whose
+        # hook lips (r 9.6..10.7) hang down to z 5.5; the dome's flank
+        # just above the ring is r 10.35 (a 2 deg taper, then the R 10.89
+        # cap above case z 19.8).
         ("pirBoreR", "5.55 mm", "socket bore radius (Ø11.1): the sensor's metal base measured Ø10.8 with calipers (the STEP says 11.0) and the printed Ø11.8 bore measured 11.8 (holes print true), i.e. 0.5 mm of radial play; 5.55 is 0.15 a side on the measured base. Was 5.9. The neck (r 5.3..5.0) passes"),
         ("pirSocketR", "7.7 mm", "socket boss outer radius: 2.15 mm wall round the r 5.55 bore; the flange (r 9.4) seats on its top rim and the latch hook lips (r 9.6..10.7) hang outside it"),
         ("pirSeatZ", "intD + wall - 2.0 mm", "socket boss top = the flange's underside (sensor z 6.4), 2.0 under the shell's face so the lens ring's top (sensor z 8.4) is flush with it (= 14.0)"),
         ("pirCx", "35.5 mm", "socket / lens axis x. 34.5 would centre it in the box, but the Technic hole at (24.95, 4) would then pass 0.20 mm from the boss's foot in plan; 35.5 gives 1.13 (step 14d asserts >= 0.6). The box in 03_shell.py follows"),
-        ("pirBoxHalfY", "15.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less wingGap. 15.5 since Task 9d (was 13.5): room for the bezel's lugs (to r 14.3 at 90 deg) under the top"),
-        ("pirBoxHalfX", "13.5 mm", "shell pod box: cavity +X wall at pirCx + this (= 49, the 9c value: the box's x 21..49 is unchanged by 9d, only its width grew); the wing ends rimGapX short of it. Was tied to pirBoxHalfY while the cavity was square"),
-        ("pirHoleR", "12.8 mm", "lens hole radius in the shell's pod box top (Task 9d, was pirRecessR 11.5): the bezel's skirt (r 12.6) passes with 0.2; the lens ring (r 10.3) and latch tabs (r 11.1) pass with room"),
-        ("pirNotchW", "4.6 mm", "bayonet notch tangential width through the box top, at 60/180/300 deg from +X: lug width 4.0 + 0.3 a side"),
-        ("pirNotchR", "14.6 mm", "bayonet notch outer radius (radial extent pirHoleR..this): lug reach 14.3 + 0.3"),
+        ("pirBoxHalfY", "13.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less wingGap (13.5 again since Task 9e; 9d's bayonet lugs had it at 15.5)"),
+        ("pirBoxHalfX", "13.5 mm", "shell pod box: cavity +X wall at pirCx + this (= 49); the wing ends rimGapX short of it. Separate from pirBoxHalfY since Task 9d"),
+        ("pirHoleR", "11.6 mm", "lens hole radius in the shell's pod box top (Task 9e; 11.5 as pirRecessR in 9c, 12.8 in 9d): the lens ring (r 10.3) and latch tabs (r 11.0) pass, and the bezel ring's skirt (OD = this, an outside wall that prints 0.2 under in a true hole: 0.1 a side) is a light push fit in it"),
         ("pirTilt", "0 deg", "PIR axis tilt from the plate normal: 0 since 2026-10-25 (the PIR looks where the radar looks, max field overlap). Step 14 refuses anything else: a tilted axis needs the 9b tower, which is gone"),
         ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up. Unused by the geometry while pirTilt is 0; the firmware reads the orientation"),
         ("pirWireDia", "3.0 mm", "wire hole out of the socket's -X side, level, into the pod cavity"),
         ("pirWireZ", "4.0 mm", "wire hole centre z: pin-tip level (sensor pins end at z 2.1; the cap standing on them reaches down to z -0.9), so the wires leave the pins radially through the hole"),
-        # Bezel (03_shell.py step 8; its own frame: flange underside on
-        # z 0 = the shell's face, axis +Z). Flange ring on the face, a lip
-        # above it whose upper inner edge bears on the dome's flank with
-        # pirBezelPreload of designed interference, a skirt below it
-        # through the lens hole, three lugs at the skirt's foot that drop
-        # through the top's notches and turn 30 deg under the top.
-        ("pirDomeR", "10.89 mm", "lens dome sphere radius, centred on the axis at the shell's face (sensor z 8.4), valid for the cap ABOVE case z 19.8 (r < 10.21); below it the flank is a 2 deg taper r 10.35 (z 16.1) -> 10.21 (z 19.8), not the sphere (probed on the STEP 2026-10-25). The bezel's lip height is computed from it, so pirBezelLipR must be on the cap"),
-        ("pirBezelFlangeR", "15.3 mm", "bezel flange outer radius: covers the notches (to r 14.6) by 0.7"),
-        ("pirBezelFlangeT", "1.2 mm", "bezel flange thickness (z 0..1.2 in the bezel frame, 16..17.2 in the case)"),
-        ("pirBezelInnerR", "11.6 mm", "bezel flange inner radius = the lip's inner base radius"),
-        ("pirBezelLipR", "10.0 mm", "bezel lip upper inner edge radius: the ring that bears on the dome's spherical cap. The plan said 10.5, but the dome's largest radius is 10.35 (probe, see pirDomeR) so a 10.5 lip touches nothing; 10.0 is on the cap (dome z 20.31 there, surface normal 67 deg from the axis), the largest round value with the lip's inner cone clear of the taper flank except in the designed band"),
-        ("pirBezelPreload", "0.2 mm", "designed interference of the lip's upper inner edge into the dome, measured along the axis"),
-        ("pirBezelLipH", "sqrt(pirDomeR ^ 2 - pirBezelLipR ^ 2) - pirBezelFlangeT - pirBezelPreload",
-         "lip height above the flange, COMPUTED so the lip's upper inner edge (r pirBezelLipR) sits pirBezelPreload under the dome's surface there: dome z at that r = sqrt(R^2 - r^2) above the face (= 2.888), less the flange, less the preload (= 1.488)"),
-        ("pirBezelSkirtRi", "11.5 mm", "bezel skirt inner radius: latch tabs r 11.1 + 0.4"),
-        ("pirBezelSkirtRo", "12.6 mm", "bezel skirt outer radius (= the lip's outer base radius, so the lip wall is pirBezelSkirtRo - pirBezelInnerR = 1.0 wide): lens hole r 12.8 - 0.2"),
-        ("pirLugT", "1.5 mm", "bayonet lug thickness (along the axis)"),
-        ("pirLugW", "4.0 mm", "bayonet lug tangential width"),
-        ("pirLugRo", "14.3 mm", "bayonet lug outer radius (radial extent pirBezelSkirtRo..this)"),
-        ("pirBezelSkirtH", "wall + 0.3 mm + pirLugT",
-         "bezel skirt height below the flange, COMPUTED: through the top (wall), 0.3 of clearance under its underside, then the lug (the lugs sit at the skirt's foot, their tops 0.3 under the top's underside) (= 3.8)"),
+        # Bezel ring (03_shell.py step 8, Task 9e; its own frame: flange
+        # underside on z 0 = the shell's face, axis +Z). A flat flange on
+        # the face round the lens, two arc skirts below it filling the
+        # lens hole, two notches 180 deg apart (through the skirt, and
+        # through the flange's inner region leaving its outer rim as a
+        # bridge) that the lens's two latch tabs pass through. Inserted
+        # from the front clocked to the tabs; a light push fit in the hole
+        # and round the lens ring; holds the lens ring by friction and
+        # closes the gap. Nothing clamps along the axis (user's decision:
+        # wall-mounted, horizontal axis, snug socket). Prints flange-down.
+        ("pirBezelFlangeR", "12.5 mm", "bezel flange outer radius: 0.9 of face round the r 11.6 hole, 1.1 of bridge outside the flange notches (to r 11.4)"),
+        ("pirBezelFlangeT", "0.8 mm", "bezel flange thickness (z 0..0.8 in the bezel frame, 16..16.8 in the case): the only part above the face"),
+        ("pirBezelInnerR", "10.45 mm", "bezel inner radius (flange and skirt): lens ring r 10.3 + 0.15, dome flank r 10.35 (at the face) + 0.1"),
+        ("pirBezelSkirtH", "2.0 mm", "bezel skirt height below the flange: the top's thickness (wall), so the skirt's foot is flush with the top's underside and above the latch hook lips (which hang to case z 13.1 under the tabs, in the notches anyway)"),
+        ("pirTabW", "5.0 mm", "lens latch tab tangential width, probed on the STEP 2026-10-25 (chord 5.04 at r 10.5, 5.00 at r 10.8; the tabs are at 45/225 deg in the sensor frame, r to 11.0, sensor z 6.2..8.4)"),
+        ("pirNotchW", "pirTabW + 1 mm", "bezel notch tangential width (two, 180 deg apart, through the skirt and the flange's inner region): tab width + 0.5 a side (= 6.0)"),
         # Wing snap pair (Task 9d): the shell's +X-wall bumps and the
         # plate's +X-edge pockets (snapYpx, retired) are replaced by bumps
         # on the pod box's inner +/-Y walls (03_shell.py step 5d) into
@@ -278,13 +271,19 @@ def run(_context: str):
     # hook groove, pod wall, sloped wire hole, shell notch top and the
     # along-the-axis pin depth; and (Task 9d, the bezel) the 9c plug,
     # keeper pin, +X snap pair position and the old lens hole radius
-    # (pirRecessR -> pirHoleR). Nothing reads them any more; delete them so
-    # Change Parameters shows only live values. Dependents first: pirPinZ
-    # is an expression on pirSeatD / pirPlugL / pirPinDia.
+    # (pirRecessR -> pirHoleR); and (Task 9e, the plain ring) the 9d
+    # bayonet bezel's lugs, lip, skirt radii and dome radius. Nothing
+    # reads them any more; delete them so Change Parameters shows only
+    # live values. Dependents first: pirPinZ is an expression on pirSeatD
+    # / pirPlugL / pirPinDia, pirBezelLipH on pirDomeR / pirBezelLipR /
+    # pirBezelPreload.
     for name in ("pirRecessD", "pirFlangeR", "pirHookD", "pirPodWall", "pirWireD",
                  "pirWireExitZ", "pirNotchTop", "pirPinD",
                  "pirPinZ", "pirPinDia", "pirPlugSlotW", "pirPlugL", "pirPlugID",
-                 "pirPlugOD", "pirSeatD", "snapYpx", "pirRecessR"):
+                 "pirPlugOD", "pirSeatD", "snapYpx", "pirRecessR",
+                 "pirBezelLipH", "pirBezelLipR", "pirBezelPreload", "pirDomeR",
+                 "pirNotchR", "pirLugT", "pirLugW", "pirLugRo",
+                 "pirBezelSkirtRi", "pirBezelSkirtRo"):
         old = des.userParameters.itemByName(name)
         if old is not None:
             try:
@@ -1035,16 +1034,18 @@ def run(_context: str):
     # HOLDS the sensor while the shell carries the housing (its pod box,
     # 03_shell.py step 5c, replaces the +X wall over the pod's width).
     # After 9c's print the user wanted the gap round the lens closed and a
-    # part fitted from the FRONT to hold the sensor down: the bayonet
-    # bezel (03_shell.py step 8) does that, so 9c's back-side retaining
-    # plug (PirPlug) and its filament keeper pin are gone, the bore is
-    # BLIND at the wing top, and the +X snap pair moved into the wing.
+    # part fitted from the FRONT instead of the back-side plug: 9d tried
+    # a bayonet bezel clamping the dome, 9e (same day) settled on a thin
+    # ring in the lens gap clocked to the lens tabs (03_shell.py step 8),
+    # so 9c's retaining plug (PirPlug) and its filament keeper pin are
+    # gone, the bore is BLIND at the wing top and snug on the base, and
+    # the +X snap pair moved into the wing.
     #
     # Shape (case frame; the plate's occurrence is at identity):
     #   wing    z -8..-2 (6 mm, coplanar with the plate's back), from the
     #           plate's +X edge (x 20.97, fused to it) out to the box
     #           cavity's +X wall less rimGapX (x 48.97), y +/-(pirBoxHalfY
-    #           - wingGap) = +/-15.62, so it sits in the shell's box like
+    #           - wingGap) = +/-13.62, so it sits in the shell's box like
     #           the plate sits in the shell (the fit allowances are
     #           measured, see ensure_params; the wing is 0.12 a side into
     #           the box walls in the model). Blind snap pockets in its
@@ -1056,7 +1057,7 @@ def run(_context: str):
     #           rim; the lens's latch hook lips (r 9.6..10.7, down to
     #           z 13.1) hang outside the boss. The lens ring and tabs are
     #           in the shell's lens hole above, the ring's top flush with
-    #           the shell's face, and the bezel's lip bears on the dome.
+    #           the shell's face, with the bezel ring in the gap round it.
     #   cuts    bore r pirBoreR along Z from above the boss top down to the
     #           WING TOP (z -2) only: the pins (to case z 2.1) and the
     #           decoupling cap standing on them (to about z -0.9) hang in
@@ -1124,7 +1125,7 @@ def run(_context: str):
 
     # 14a. wing, overlapping 0.5 mm into the plate so the Join merges by
     # volume; the plate is solid there (the -X snap pockets are at the far
-    # edge; the jack is at y < -17 and the wing reaches +/-15.62 at the
+    # edge; the jack is at y < -17 and the wing reaches +/-13.62 at the
     # plate's edge, where the jack slot's +X wall at x 18.265 is 2.7 mm
     # inboard).
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -1169,7 +1170,7 @@ def run(_context: str):
     # retention) and the floor stays clear.
     POCKET_D = snap + 0.01 + max(-wingGap, 0.0)
     POCKET_HL, POCKET_HZ = 3.1 * MM, 0.6 * MM
-    if boxHalfY - snap < wingHalfY - POCKET_D + 0.01 - 1e-9:
+    if boxHalfY - snap < wingHalfY - POCKET_D + 0.01 - 1e-6:
         raise RuntimeError("wing bump tip (y %.2f) is under 0.1 off the pocket floor (y %.2f)"
                            % ((boxHalfY - snap) * 10, (wingHalfY - POCKET_D) * 10))
     corner = p(des, "cornerFillet")
@@ -1441,7 +1442,7 @@ def run(_context: str):
 
     # 14e. (deleted, Task 9d) the PirPlug component: a slotted tube pressed
     # into the bore from the back to hold the sensor's base down, backed
-    # by a filament keeper pin. The bezel on the shell (03_shell.py step
-    # 8) holds the sensor from the front instead; the bore is blind.
+    # by a filament keeper pin. The snug bore and the bezel ring on the
+    # shell (03_shell.py step 8) hold the sensor instead; the bore is blind.
 
     print("BackPlate bodies:", comp.bRepBodies.count)

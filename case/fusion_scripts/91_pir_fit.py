@@ -6,14 +6,12 @@ Imports Panasonic's STEP of the sensor, drops it upright into the socket
 exactly as 02_backplate.py step 14 defines it (axis at (pirCx, 0) along +Z,
 lens ring top flush with the shell's face at z 16), snapshots the placement
 and runs Fusion's interference analysis between the sensor, the plate, the
-shell (its pod box) and the bezel parked on the face in its fitted (turned)
-position. Expected (Task 9d): the bezel's lip against the dome - the
-designed pirBezelPreload interference ring, bounded by the band volume -
-and, since the measured fit allowances (rimGapY, wingGap negative), the
-plate against the shell: the model's plate and wing sit into the shell's
-long walls by what the print shrinks, bounded by those slabs. Anything
-else (sensor against plate or shell, bezel against plate or shell) is a
-failure. If it is not clean, fix
+shell (its pod box) and the bezel ring parked in the lens gap clocked to
+the lens tabs. Expected (Task 9e): ONE pair, the plate against the shell,
+because the measured fit allowances (rimGapY, wingGap) are negative: the
+model's plate and wing sit into the shell's long walls by what the print
+shrinks, bounded by those slabs. Anything else (sensor against anything,
+bezel against anything) is a failure. If it is not clean, fix
 the SOCKET in 02_backplate.py or the BOX / BEZEL in 03_shell.py, never the
 sensor.
 """
@@ -154,24 +152,12 @@ def run(_context: str):
                                "would stand on the floor, not seat on the rim" % (floorZ * 10, r * 10))
     print("bore floor at z %.1f clear of the sensor ok" % (floorZ * 10))
 
-    # --- the dome where the bezel's lip meets it: the sphere R pirDomeR
-    # centred on the axis at the face must be the STEP's dome. Probe 0.1
-    # inside and outside the sphere at the lip radius, at four azimuths.
-    domeR, lipR = p(des, "pirDomeR"), p(des, "pirBezelLipR")
-    domeZ = zTop + math.sqrt(domeR * domeR - lipR * lipR)       # 18.888
-    for ang in (0.0, 90.0, 180.0, 270.0):
-        if not sensor_solid(domeZ - 0.01, lipR, ang):
-            raise RuntimeError("no dome 0.1 mm under the sphere at r %.1f, %.0f deg (z %.3f): "
-                               "pirDomeR is wrong" % (lipR * 10, ang, (domeZ - 0.01) * 10))
-        if sensor_solid(domeZ + 0.01, lipR, ang):
-            raise RuntimeError("dome 0.1 mm above the sphere at r %.1f, %.0f deg: pirDomeR is wrong"
-                               % (lipR * 10, ang))
-    print("dome surface at r %.1f is z %.3f (sphere R %.2f at the face) ok" % (lipR * 10, domeZ * 10, domeR * 10))
-
-    # --- bezel fitted state (parked by 03_shell.py step 8 at (pirCx, 0,
-    # zTop), lugs at the rest angles): flange on the face, lugs 0.3 under
-    # the top's underside and clear of the box walls, probed in the case
-    # frame through the occurrence's body proxies
+    # --- bezel ring fitted state (parked by 03_shell.py step 8 at (pirCx,
+    # 0, zTop) turned to the lens tabs): flange on the face, skirt in the
+    # hole round the lens ring, the tabs in its notches, probed in the
+    # case frame through the occurrence's body proxies; then the ring's
+    # clearance to the lens ring / dome flank by bisection at eight
+    # azimuths away from the tabs
     plate = find_occ(root, ("BackPlate",))
     shell = find_occ(root, ("FrontShell",))
     bezel = find_occ(root, ("PirBezel",))
@@ -185,35 +171,54 @@ def run(_context: str):
             pirCx + r * math.cos(a), r * math.sin(a), z)) == IN
 
     intD = p(des, "intD")
-    lugRo, skirtRo = p(des, "pirLugRo"), p(des, "pirBezelSkirtRo")
-    lugT, skirtH = p(des, "pirLugT"), p(des, "pirBezelSkirtH")
-    lugTop = zTop - skirtH + lugT                             # 13.7
-    lugMid = zTop - skirtH + lugT / 2                         # 12.95
-    rLug = (skirtRo + lugRo) / 2                              # 13.45
-    REST = (90.0, 210.0, 330.0)
+    flangeR, flangeT = p(des, "pirBezelFlangeR"), p(des, "pirBezelFlangeT")
+    innerR, skirtH, lensR = p(des, "pirBezelInnerR"), p(des, "pirBezelSkirtH"), p(des, "pirHoleR")
+    TAB = (45.0, 225.0)                                        # the tabs (STEP probe; sensor unrotated)
+    AWAY = (0.0, 90.0, 135.0, 180.0, 270.0, 315.0)
+    rs = (innerR + lensR) / 2
     probes = []
-    for ang in REST:
-        probes += [(bzb, True, rLug, ang, lugMid, "bezel lug at the rest angle %.0f" % ang),
-                   (bzb, False, rLug, ang, lugTop + 0.015, "nothing of the bezel 0.15 above its lug top at %.0f" % ang),
-                   (shb, False, rLug, ang, intD - 0.015, "shell void 0.15 under its top at the lug's rest position %.0f" % ang),
-                   (shb, False, rLug, ang, lugMid, "shell void at the lug's rest position %.0f" % ang),
-                   (shb, True, rLug, ang, intD + 0.02, "shell top solid over the parked lug at %.0f" % ang),
-                   (shb, False, lugRo + 0.02, ang, lugMid, "box cavity open 0.2 past the lug's reach at %.0f" % ang)]
-        probes += [(bzb, False, rLug, ang - 30.0, lugMid, "no bezel lug at the notch angle %.0f (turned away)" % (ang - 30.0))]
-    probes += [(shb, True, 1.4, 0.0, zTop - 0.01, "shell face solid under the bezel flange (r 14)"),
-               (bzb, True, 1.4, 0.0, zTop + 0.06, "bezel flange on the face (r 14, 0.6 up)"),
-               (bzb, False, 1.4, 0.0, zTop - 0.01, "nothing of the bezel below the face at r 14"),
-               (bzb, True, 1.2, 0.0, intD + 0.1, "bezel skirt inside the lens hole (r 12, z 15)"),
-               (shb, False, 1.2, 0.0, intD + 0.1, "lens hole open round the skirt (r 12, z 15)")]
+    for ang in TAB:
+        probes += [(sbody, True, 1.08, ang, zTop - 0.1, "lens tab at %.0f deg (r 10.8, z 15.9)" % ang),
+                   (bzb, False, rs, ang, zTop - skirtH / 2, "bezel skirt notch over the tab at %.0f" % ang),
+                   (bzb, False, rs, ang, zTop + flangeT / 2, "bezel flange notch over the tab at %.0f" % ang),
+                   (bzb, True, (lensR - 0.02 + flangeR) / 2, ang, zTop + flangeT / 2, "bezel flange bridge over the notch at %.0f" % ang)]
+    for ang in AWAY:
+        probes += [(bzb, True, rs, ang, zTop - skirtH / 2, "bezel skirt in the hole at %.0f" % ang),
+                   (shb, False, rs, ang, zTop - skirtH / 2, "hole open round the skirt at %.0f" % ang),
+                   (shb, True, lensR + 0.02, ang, zTop - skirtH / 2, "hole wall outside the skirt at %.0f" % ang),
+                   (bzb, True, (lensR + flangeR) / 2, ang, zTop + flangeT / 2, "bezel flange on the face at %.0f" % ang),
+                   (shb, True, (lensR + flangeR) / 2, ang, zTop - 0.01, "shell face under the flange at %.0f" % ang),
+                   (sbody, False, innerR - 0.005, ang, zTop - skirtH / 2, "sensor clear of the skirt's ID at %.0f (z 15)" % ang),
+                   (sbody, False, innerR - 0.005, ang, zTop + flangeT / 2, "sensor clear of the flange's ID at %.0f (z 16.4)" % ang)]
     for body, want, r, ang, z, label in probes:
         if solid_at(body, r, ang, z) != want:
             raise RuntimeError("bezel fit probe '%s' at (r %.2f, %.0f deg, z %.2f): expected %s"
                                % (label, r * 10, ang, z * 10, "solid" if want else "void"))
-    print("bezel fitted: flange on the face, lugs at %s deg %.2f under the top, clear of the "
-          "box walls ok" % ("/".join("%.0f" % a for a in REST), (intD - lugTop) * 10))
+    # minimum radial clearance between the sensor (lens ring, dome flank)
+    # and the bezel's bore, by bisection of the sensor's outer radius
+    min_clear, where = 9.9, None
+    for ang in AWAY:
+        for z in (zTop - skirtH + 0.05, zTop - skirtH / 2, zTop - 0.05, zTop + 0.05, zTop + flangeT / 2, zTop + flangeT - 0.05):
+            lo, hi = 0.9, innerR + 0.1
+            if not sensor_solid(z, lo, ang):
+                raise RuntimeError("no sensor at r 9 at %.0f deg z %.2f" % (ang, z * 10))
+            for _ in range(24):
+                mid = (lo + hi) / 2
+                if sensor_solid(z, mid, ang):
+                    lo = mid
+                else:
+                    hi = mid
+            c = innerR - lo
+            if c < min_clear:
+                min_clear, where = c, (ang, z)
+    print("bezel fitted: flange on the face, skirt in the hole, tabs at %s deg in the notches; "
+          "sensor-to-bezel bore minimum clearance %.3f mm (at %.0f deg, z %.2f)"
+          % ("/".join("%.0f" % a for a in TAB), min_clear * 10, where[0], where[1] * 10))
+    if min_clear < 0.005:
+        raise RuntimeError("bezel bore under 0.05 mm from the sensor")
 
-    # --- interference: sensor vs plate (the socket), shell (its pod box,
-    # lens hole and notches) and the bezel parked on the face ---
+    # --- interference: sensor vs plate (the socket), shell (its pod box
+    # and lens hole) and the bezel ring in the gap ---
     ents = adsk.core.ObjectCollection.create()
     for b in all_bodies(sensor):
         ents.add(b)
@@ -224,16 +229,10 @@ def run(_context: str):
     for b in all_bodies(bezel):
         ents.add(b)
     print("interference check over", ents.count, "bodies")
-    # Task 9d: the bezel's lip is built pirBezelPreload (0.2) into the dome
-    # on purpose (03_shell.py step 8), so ONE pair is expected: bezel
-    # against sensor, and only as big as that band can be. Bound: the
-    # radial interference 0.2 on a ring of radius pirBezelLipR over a
-    # contact height of about 2 sqrt(2 R d) (the chord of a sphere R at
-    # depth d): 2 pi 10.5 x 0.2 x 4.2 = 55 mm^3. (The real lip is a cone
-    # meeting the sphere at an angle, so the measured value is far
-    # smaller; it is printed.) Any other pair is a failure.
-    preload = p(des, "pirBezelPreload")
-    band_max = 2 * math.pi * lipR * preload * 2 * math.sqrt(2 * domeR * preload)
+    # Task 9e: the bezel ring touches neither the sensor nor the shell in
+    # the model (0.15 to the lens ring, 0.1 to the dome flank, the skirt's
+    # OD exactly the hole's radius: the print's shrink makes the push
+    # fit). Any pair involving the bezel is a failure.
     # Fit allowances (02 ensure_params, calipers 2026-10-25): rimGapY and
     # wingGap are NEGATIVE, so in the MODEL the plate's +/-Y edges sit
     # 0.2 a side into the shell's long walls and the wing 0.12 a side
@@ -267,23 +266,11 @@ def run(_context: str):
         vol = body.volume if body else -1.0
         total += max(vol, 0.0)
         names = {c1, c2}
-        lip = (any(n.startswith("PirBezel") for n in names)
-               and any(n.startswith(SENSOR_PREFIXES) for n in names))
         fit = (any(n.startswith("BackPlate") for n in names)
                and any(n.startswith("FrontShell") for n in names))
         if fit and 0 <= vol <= fit_max:
             print("fit allowance: %.2f mm^3 between %s and %s (designed plate/wing overlap "
                   "into the shell's walls, bound %.1f mm^3), expected" % (vol * 1000, c1, c2, fit_max * 1000))
-            continue
-        if lip and 0 <= vol <= band_max:
-            line = ("lip preload: %.3f mm^3 between %s and %s (band bound %.1f mm^3), expected"
-                    % (vol * 1000, c1, c2, band_max * 1000))
-            if body:
-                ib = body.boundingBox
-                line += ("; z %.3f..%.3f, r to %.3f mm"
-                         % (ib.minPoint.z * 10, ib.maxPoint.z * 10,
-                            max(abs(ib.minPoint.x - pirCx), abs(ib.maxPoint.x - pirCx)) * 10))
-            print(line)
             continue
         bad += 1
         line = "INTERFERENCE: %.4f mm^3 between %s and %s" % (vol * 1000, c1, c2)

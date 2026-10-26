@@ -275,12 +275,12 @@ def run(_context: str):
           "z %.2f..%.2f)" % (BOSS_W * 10, BOSS_W * 10, BOSS_CX * 10,
                              BOSS_CY * 10, BOSS_Z0 * 10, intD * 10))
 
-    # 5c. POD BOX (2026-10-25, third PIR layout; widened and given the
-    # bayonet notches by the fourth, Task 9d, the same day). The PIR sensor
-    # sits in a straight socket on the back plate's wing (02_backplate.py
-    # step 14); the shell covers it with a hollow box that REPLACES its +X
-    # wall over the pod's width, and the bezel (step 8) holds the sensor
-    # down through the box's top. Done BEFORE step 6 so the edge-softening
+    # 5c. POD BOX (2026-10-25, third PIR layout; 9d widened it for a
+    # bayonet bezel, 9e the same day put it back). The PIR sensor sits in
+    # a straight socket on the back plate's wing (02_backplate.py step
+    # 14); the shell covers it with a hollow box that REPLACES its +X wall
+    # over the pod's width, and the bezel ring (step 8) fills the lens
+    # gap in the box's top. Done BEFORE step 6 so the edge-softening
     # selectors see the final outline and fillet/chamfer the box with the
     # rest.
     #
@@ -292,69 +292,40 @@ def run(_context: str):
     #              2 mm top (z 14..16) stays: it is the shell's flat front
     #              face, which continues over the box.
     #   box        outer x 21..(pirCx + pirBoxHalfX + wall) = 21..51,
-    #              y +/-(pirBoxHalfY + wall) = +/-17.5, z -8..16, joined
-    #              (it overlaps the wall stubs at |y| 15.5..17.5, which
+    #              y +/-(pirBoxHalfY + wall) = +/-15.5, z -8..16, joined
+    #              (it overlaps the wall stubs at |y| 13.5..15.5, which
     #              become the box's +/-Y walls' first 2 mm); its cavity
-    #              x 21..(pirCx + pirBoxHalfX) = 21..49, y +/-15.5,
+    #              x 21..(pirCx + pirBoxHalfX) = 21..49, y +/-13.5,
     #              z -8..14 is cut out again. Walls 2 mm, same as the
-    #              shell's; the wing sits in it with rimGap all round like
-    #              the plate in the shell. (9c: y +/-13.5 inside; 9d
-    #              widened it for the bezel's lugs, which reach r 14.3.)
-    #   lens hole  r pirHoleR (12.8) through the top at (pirCx, 0): the
-    #              lens ring (r 10.3) and its two latch tabs (r 11.1) pass,
+    #              shell's; the wing sits in it with the measured fit
+    #              allowance like the plate in the shell.
+    #   lens hole  r pirHoleR (11.6) through the top at (pirCx, 0): the
+    #              lens ring (r 10.3) and its two latch tabs (r 11.0) pass,
     #              the ring's top face is flush with the shell's face, the
-    #              dome stands 11 mm proud, and the bezel's skirt (r 12.6)
-    #              drops through round the lens with 0.2 to spare. Its rim
-    #              stays sharp (the front chamfer in 6b skips it).
-    #   notches    three, through the top skin (z 14..16) at 60, 180 and
-    #              300 deg from +X: radial pirHoleR..pirNotchR (12.8..14.6),
-    #              tangential width pirNotchW (4.6). The bezel's lugs
-    #              (r 12.6..14.3, 4.0 wide) drop through them; a 30 deg turn
-    #              then parks the lugs under the solid top at 90/210/330
-    #              (step 8 checks the lug sweep against the cavity walls).
-    #              They are hidden under the bezel's flange (r 15.3) once
-    #              it is on.
-    # Print: face-down the box is walls plus a flat top with a hole and
-    # three small cut-outs, no overhang anywhere.
+    #              dome stands 11 mm proud, and the bezel ring (step 8,
+    #              skirt OD = pirHoleR, prints 0.1 a side under in the
+    #              true-printing hole) fills the gap round the lens. Its
+    #              rim stays sharp (the front chamfer in 6b skips it).
+    #              (9d had r 12.8 with three bayonet notches; gone.)
+    # Print: face-down the box is walls plus a flat top with a hole, no
+    # overhang anywhere.
     pirCx = p02(des, "pirCx")
-    boxHalfY = p02(des, "pirBoxHalfY")                       # 15.5 mm
-    boxOutY = boxHalfY + wall                                # 17.5 mm
+    boxHalfY = p02(des, "pirBoxHalfY")                       # 13.5 mm
+    boxOutY = boxHalfY + wall                                # 15.5 mm
     lensR = p02(des, "pirHoleR")
-    notchW, notchR = p02(des, "pirNotchW"), p02(des, "pirNotchR")
     boxHalfX = p02(des, "pirBoxHalfX")
     xIn = intW / 2                               # 21: the old wall's inner line
     xBoxIn = pirCx + boxHalfX                    # 49
     xBoxOut = xBoxIn + wall                      # 51
     z_top, z_back = intD + wall, -backT          # 16, -8
-    NOTCH_ANGLES = (60.0, 180.0, 300.0)          # deg from +X; rest = +30
     if lensR + 0.1 >= boxHalfY:
         raise RuntimeError("lens hole r %.1f leaves under 1 mm of top to the box cavity "
                            "wall (y %.1f)" % (lensR * 10, boxHalfY * 10))
     if pirCx - lensR < xIn + 0.1:
         raise RuntimeError("lens hole reaches x %.2f, under 1 mm from the old wall line"
                            % ((pirCx - lensR) * 10))
-    # (9d: the r 12.8 hole at x 35.5 ends 0.7 from the cavity's +X wall at
-    # 49, where the top runs on over the 2 mm wall, so 2.7 mm of material
-    # to the outside; 9c asked 1 mm here, 0.5 is the rule now)
-    if xBoxIn - (pirCx + lensR) < 0.05:
-        raise RuntimeError("lens hole leaves under 0.5 mm of top before the box's +X wall")
-    # the notches must stay over open ceiling: inside the box's +/-Y
-    # cavity walls and its +X wall by 0.5 (the lug then has a solid top to
-    # turn under), and at 180 deg they may run past the old wall line
-    # (x 21) onto the main cavity's ceiling, which is the same z 14, but
-    # not as far as the XIAO hold-down boss (x 2.5..9.5)
-    notch_corners = []
-    for a in NOTCH_ANGLES:
-        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
-        for rr in (lensR, notchR):
-            for t in (-notchW / 2, notchW / 2):
-                notch_corners.append((pirCx + rr * ca - t * sa, rr * sa + t * ca))
-    for x, y in notch_corners:
-        if abs(y) > boxHalfY - 0.05 or x > xBoxIn - 0.05 or x < 1.5:
-            raise RuntimeError("bayonet notch corner (%.2f, %.2f) is not over open ceiling "
-                               "(|y| < %.2f, %.1f < x < %.2f)"
-                               % (x * 10, y * 10, (boxHalfY - 0.05) * 10, 15.0,
-                                  (xBoxIn - 0.05) * 10))
+    if xBoxIn - (pirCx + lensR) < 0.1:
+        raise RuntimeError("lens hole leaves under 1 mm of top before the box's +X wall")
     # (a) remove the old +X wall over the box's width, back rim to z 14
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, (xIn + intW / 2 + wall) / 2, 0, wall + 0.2 * MM, 2 * boxHalfY)
@@ -384,37 +355,15 @@ def run(_context: str):
     extrude(comp, sk.profiles.item(0), intD - 0.1 * MM, z_top + 0.1 * MM,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[shell_body])
-    # (e) the three bayonet notches: each a box in plan, radial from
-    # 0.3 inside the hole (so no sliver of top survives at the hole's rim)
-    # out to notchR, tangential +/-notchW/2, rotated to its angle about the
-    # hole's axis; one sketch, three profiles, one cut through the top
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    lines = sk.sketchCurves.sketchLines
-    for a in NOTCH_ANGLES:
-        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
-        pts = []
-        for rr, t in ((lensR - 0.03, -notchW / 2), (notchR, -notchW / 2),
-                      (notchR, notchW / 2), (lensR - 0.03, notchW / 2)):
-            pts.append(adsk.core.Point3D.create(pirCx + rr * ca - t * sa,
-                                                rr * sa + t * ca, 0))
-        for i in range(4):
-            lines.addByTwoPoints(pts[i], pts[(i + 1) % 4])
-    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
-    if profs.count != 3:
-        raise RuntimeError("expected 3 bayonet notch profiles, found %d" % profs.count)
-    extrude(comp, profs, intD - 0.1 * MM, z_top + 0.1 * MM,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[shell_body])
     if comp.bRepBodies.count != 1:
-        raise RuntimeError("pod box cavity / lens hole / notches split the shell: %d bodies"
+        raise RuntimeError("pod box cavity / lens hole split the shell: %d bodies"
                            % comp.bRepBodies.count)
     print("pod box ok: +X wall removed over y +/-%.1f (z %.0f..%.0f); box x %.0f..%.0f, "
           "y +/-%.1f, z %.0f..%.0f, cavity to x %.0f; lens hole r %.1f at (%.1f, 0) "
-          "through the top; bayonet notches r %.1f..%.1f, %.1f wide, at %s deg"
+          "through the top (no notches)"
           % (boxHalfY * 10, z_back * 10, intD * 10, xIn * 10, xBoxOut * 10,
              boxOutY * 10, z_back * 10, z_top * 10, xBoxIn * 10, lensR * 10,
-             pirCx * 10, lensR * 10, notchR * 10, notchW * 10,
-             "/".join("%.0f" % a for a in NOTCH_ANGLES)))
+             pirCx * 10))
 
     # 5d. WING SNAP BUMPS (Task 9d): the lid's +X snap pair, on the box's
     # inner +/-Y walls, snapBump (0.5) proud into the cavity, 6 long along
@@ -460,15 +409,14 @@ def run(_context: str):
     # Order matters: vertical corner fillets FIRST (they change the corner
     # topology the later perimeter selections rely on).
     # Outline since 2026-10-25 (pod box, step 5c): the shell rectangle with
-    # the box grown off its +X side over |y| <= boxOutY (17.5 since Task
-    # 9d, 15.5 before), so the outer boundary at any z level is 8
-    # straights (-X; +/-Y; the two +X stubs at |y| 17.5..22.5; the box's
-    # +/-Y sides; the box's +X end) and, after 6a, 6 corner arcs (the
-    # shell's 4 and the box's 2) = 14 edges. The two concave T-junction
-    # corners at (23, +/-17.5) are vertices, not edges, and stay sharp.
-    # The lens hole and the three bayonet notches lie inside the front
-    # face, away from its perimeter, so the counts did not change with 9d
-    # (checked on the 2026-10-25 build: 6 / 14 / 14).
+    # the box grown off its +X side over |y| <= boxOutY (15.5), so the
+    # outer boundary at any z level is 8 straights (-X; +/-Y; the two +X
+    # stubs at |y| 15.5..22.5; the box's +/-Y sides; the box's +X end)
+    # and, after 6a, 6 corner arcs (the shell's 4 and the box's 2) = 14
+    # edges. The two concave T-junction corners at (23, +/-15.5) are
+    # vertices, not edges, and stay sharp. The lens hole lies inside the
+    # front face, away from its perimeter (6 / 14 / 14 on every build
+    # since the box, 2026-10-25).
     corner = p(des, "cornerFillet")
     cham = p(des, "frontChamfer")
     soft = p(des, "softFillet")
@@ -522,10 +470,8 @@ def run(_context: str):
     # Outer-perimeter edge selector at a z level: straight edges lying on the
     # outer faces (|x|=ox, |y|=oy, the box's |y|=boxOutY beyond x ox, or
     # the box's x=xBoxOut) plus the six corner-fillet arcs. The lens hole's
-    # circle (r pirHoleR, cut into arcs by the notches), the notches'
-    # short lines (at x 20.9..23.7 / y +/-2.3 for the 180 deg one, nowhere
-    # near |x| = 23 or |y| = 17.5 on a z-level face) and the cavity
-    # outlines are other radii / other coordinates and are never picked.
+    # circle (r pirHoleR) and the cavity outlines are other radii / other
+    # coordinates and are never picked.
     # At both z_top and z_back the boundary is one closed loop of 8
     # straights + 6 arcs = 14 edges (8 before the pod box, 2026-10-25).
     def perimeter_edges(zlev):
@@ -589,250 +535,169 @@ def run(_context: str):
 
     print("FrontShell bodies:", comp.bRepBodies.count)
 
-    # 8. PIR BEZEL (Task 9d, 2026-10-25). A separate component, built in
-    # its OWN frame (axis +Z, the flange's underside on z 0 = the shell's
-    # face when fitted; r is distance from the axis), exported as its own
-    # STL. It retains the sensor from the front: a bayonet ring that drops
-    # on over the dome, its lugs through the top's notches, and turns
-    # 30 deg so the lugs sit under the top; its lip then bears on the
-    # dome's flank with a designed preload, clamping the sensor's flange
-    # onto the socket boss's rim (the sensor still turns freely before the
-    # bezel goes on). One revolved profile plus three lugs = one body.
+    # 8. PIR BEZEL RING (Task 9e, 2026-10-25; replaces 9d's bayonet bezel
+    # of the same day). A separate component, built in its OWN frame
+    # (axis +Z, the flange's underside on z 0 = the shell's face when
+    # fitted; r is distance from the axis), exported as its own STL. It
+    # fills the gap between the lens hole and the lens ring and holds the
+    # lens ring by friction; the snug socket holds the base. Nothing
+    # clamps along the axis (the user's decision: wall-mounted, the axis
+    # horizontal). Inserted from the front, clocked to the lens's two
+    # latch tabs, pressed home; lifted out with a fingernail under the
+    # flange. One piece, prints FLANGE-DOWN with no supports.
     #
-    #   flange  ring r pirBezelInnerR..pirBezelFlangeR (11.6..15.3), z 0..
-    #           pirBezelFlangeT (1.2): sits on the face, hides the hole
-    #           and the notches.
-    #   lip     above the flange: inner surface a cone from (r 11.6, z 1.2)
-    #           up and in to (r pirBezelLipR 10.0, z 1.2 + pirBezelLipH),
-    #           outer surface the parallel cone 1.0 further out (from
-    #           r pirBezelSkirtRo 12.6 to 11.0), flat top 1 mm wide. The
-    #           upper inner edge is the bearing ring on the dome's
-    #           spherical cap (sphere R pirDomeR centred on the axis at
-    #           the face, valid above case z 19.8): the dome's surface at
-    #           r 10.0 is sqrt(R^2 - r^2) = 4.311 above the face, and
-    #           pirBezelLipH is COMPUTED (02's ensure_params) so that edge
-    #           sits pirBezelPreload (0.2) below it (= 2.912). Below the
-    #           cap the dome's flank is a 2 deg taper (r 10.35 at z 16.1
-    #           to 10.21 at z 19.8, probed on the STEP); the cone comes
-    #           in at 29 deg so it clears that flank except in the last
-    #           ~0.4 mm under the edge, where it wedges into the dome by
-    #           at most ~0.08 radially: that is the preload band, and the
-    #           guard below keeps it under 1 mm tall.
-    #   skirt   below the flange: tube r pirBezelSkirtRi..pirBezelSkirtRo
-    #           (11.5..12.6) from z 0 down to -pirBezelSkirtH (-3.8,
-    #           computed: through the 2 mm top, 0.3 of clearance, then the
-    #           lug): passes the r 12.8 hole with 0.2 and the lens's latch
-    #           tabs (r 11.1) with 0.4.
-    #   lugs    three, at the skirt's foot: z -3.8..-2.3 (pirLugT 1.5),
-    #           radial from inside the skirt wall out to pirLugRo (14.3),
-    #           tangential pirLugW (4.0), centred at 60/180/300 deg: they
-    #           drop through the notches (14.6 / 4.6) and, after a 30 deg
-    #           turn, sit at 90/210/330 under the top with their tops 0.3
-    #           below its underside (case z 13.7 vs 14.0). At 330 the
-    #           leading corner comes within about 0.1 mm of the box
-    #           cavity's +X wall (x 49) and meets it about 1.3 deg further
-    #           on: that wall is the turn's stop (the pattern is symmetric
-    #           about X, so turning the other way stops the same way at
-    #           30/150/270). The sweep is checked below.
-    # The occurrence is parked in the case at (pirCx, 0, zTop), turned to
-    # the REST angles, so 91_pir_fit.py tests the fitted state; the STL
-    # comes out in the local frame (05_export.py exports the component).
+    #   flange  flat ring r pirBezelInnerR..pirBezelFlangeR (10.45..12.5),
+    #           z 0..pirBezelFlangeT (0.8): sits on the face round the
+    #           hole (0.9 of bearing outside the r 11.6 hole), 0.1 clear of
+    #           the dome's flank (r 10.35 just above the ring).
+    #   skirt   two arcs r pirBezelInnerR..pirHoleR (10.45..11.6), z
+    #           -pirBezelSkirtH..0 (-2.0..0): fill the hole (OD = the
+    #           hole: an outside wall prints 0.2 under in a true-printing
+    #           hole, 0.1 a side of push fit), 0.15 clear of the lens ring
+    #           (r 10.3), foot flush with the top's underside.
+    #   notches two, 180 deg apart, for the lens's latch tabs (5.0 wide,
+    #           r to 11.0, case z 14.2..16, at 45/225 deg in the sensor
+    #           frame): tangential width pirNotchW (= pirTabW + 1), cut
+    #           through the skirt entirely and through the flange from
+    #           the bore out to r BRIDGE_RI (11.4), so the tab (whose top
+    #           is AT the face) is not covered; the flange's outer
+    #           r 11.4..12.5 bridges each notch (1.1 wide on the centre
+    #           line, 0.7 at the notch's corners, 0.8 thick). The notches
+    #           are on the bezel's own +/-X; the occurrence is turned to
+    #           the tabs' angle when parked.
+    # 91_pir_fit.py tests the fitted state (no contact with the sensor or
+    # the shell allowed); 05_export.py exports the component in its own
+    # frame.
     for occ in list(root.occurrences):
         if occ.component.name.startswith("PirBezel"):
             occ.component.name = occ.component.name + "_deleted"
             occ.deleteMe()
     flangeR, flangeT = p02(des, "pirBezelFlangeR"), p02(des, "pirBezelFlangeT")
-    innerR, lipR = p02(des, "pirBezelInnerR"), p02(des, "pirBezelLipR")
-    lipH, preload = p02(des, "pirBezelLipH"), p02(des, "pirBezelPreload")
-    skirtRi, skirtRo = p02(des, "pirBezelSkirtRi"), p02(des, "pirBezelSkirtRo")
-    skirtH = p02(des, "pirBezelSkirtH")
-    lugT, lugW, lugRo = p02(des, "pirLugT"), p02(des, "pirLugW"), p02(des, "pirLugRo")
-    domeR = p02(des, "pirDomeR")
-    lipWall = skirtRo - innerR                   # 1.0: the lip wall's horizontal width
-    lipTop = flangeT + lipH                      # 4.112 above the face
-    # the dome's flank below its spherical cap, probed on the STEP in the
-    # case frame (bezel frame = case - z_top): straight taper between
-    DOME_FLANK = ((16.1 * MM - z_top, 10.346 * MM), (19.8 * MM - z_top, 10.21 * MM))
-    REST_TURN = 30.0                             # deg, insertion -> rest
-    TAB_R, HOLE_CLEAR, LUG_CLEAR = 11.1 * MM, 0.02, 0.03
-    # --- guards, all in the bezel frame unless said ---
-    domeZ = math.sqrt(domeR * domeR - lipR * lipR)       # dome surface above the face at r lipR
-    if abs((domeZ - lipTop) - preload) > 1e-6:
-        raise RuntimeError("pirBezelLipH %.4f does not put the lip edge pirBezelPreload under "
-                           "the dome (dome %.4f, edge %.4f): it is an expression, re-create it"
-                           % (lipH * 10, domeZ * 10, lipTop * 10))
-    if lipR >= innerR or lipWall < 0.08:
-        raise RuntimeError("lip profile is not a cone leaning inward with >= 0.8 mm of wall")
-    # the lip edge must be on the spherical cap (above the taper flank)...
-    (zf0, rf0), (zf1, rf1) = DOME_FLANK
-    if lipTop < zf1 or lipR > rf1:
-        raise RuntimeError("lip edge (r %.2f, %.3f above the face) is on the dome's taper flank, "
-                           "not its spherical cap (cap above %.2f, r < %.2f): pirBezelLipR too big"
-                           % (lipR * 10, lipTop * 10, zf1 * 10, rf1 * 10))
-    # ...and the inner cone must clear the flank below the preload band:
-    # where the cone's radius is under the flank's, it is inside the dome;
-    # that may only happen within 1 mm under the edge (the band)
-    def cone_r(z):
-        return innerR - (innerR - lipR) * (z - flangeT) / lipH
-    def flank_r(z):
-        if z <= zf0:
-            return rf0
-        if z >= zf1:
-            return math.sqrt(max(domeR * domeR - z * z, 0.0))
-        return rf0 + (rf1 - rf0) * (z - zf0) / (zf1 - zf0)
-    band_z0 = lipTop
-    z = flangeT
-    while z < lipTop:
-        if cone_r(z) < flank_r(z):
-            band_z0 = min(band_z0, z)
-        z += 0.001
-    if lipTop - band_z0 > 0.1 + 1e-9:
-        raise RuntimeError("the lip's inner cone is inside the dome from %.3f to %.3f above the "
-                           "face (%.2f mm): more than the 1 mm preload band; steepen the cone "
-                           "(pirBezelInnerR) or move the edge" % (band_z0 * 10, lipTop * 10,
-                                                                  (lipTop - band_z0) * 10))
-    if skirtRo + HOLE_CLEAR > lensR + 1e-9:
-        raise RuntimeError("skirt r %.2f does not pass the r %.2f hole with 0.2" % (skirtRo * 10, lensR * 10))
-    if skirtRi < TAB_R + 0.04 - 1e-9:
-        raise RuntimeError("skirt inner r %.2f is under 0.4 mm from the latch tabs (r 11.1)" % (skirtRi * 10))
-    if lugRo + LUG_CLEAR > notchR + 1e-9 or lugW + 2 * LUG_CLEAR > notchW + 1e-9:
-        raise RuntimeError("lugs (r %.1f, %.1f wide) do not pass the notches (r %.1f, %.1f wide) "
-                           "with 0.3" % (lugRo * 10, lugW * 10, notchR * 10, notchW * 10))
-    lugTopCase = z_top - skirtH + lugT                   # 13.7
-    lugClear = intD - lugTopCase                         # 0.3
-    if lugClear < 0.02 - 1e-9:
-        raise RuntimeError("lug tops (case z %.2f) are under 0.2 mm below the top's underside "
-                           "(%.1f)" % (lugTopCase * 10, intD * 10))
-    if z_top - skirtH > intD - 0.05:
-        raise RuntimeError("skirt foot (case z %.2f) does not reach 0.5 under the top" % ((z_top - skirtH) * 10))
-    # lug sweep from the notches to the rest angles (and on to the stop):
-    # every corner of every lug must stay inside the box cavity (x < xBoxIn,
-    # |y| < boxHalfY); the lugs at 180 deg run over the main cavity (x < 21)
-    # where the ceiling is the same z 14, and must stay clear of the XIAO
-    # boss (x 9.5) by far
-    def lug_corners(angle_deg):
-        ca, sa = math.cos(math.radians(angle_deg)), math.sin(math.radians(angle_deg))
-        out = []
-        for rr in (skirtRi, lugRo):
-            for t in (-lugW / 2, lugW / 2):
-                out.append((pirCx + rr * ca - t * sa, rr * sa + t * ca))
-        return out
-    min_clear = 1e9
-    for step in range(0, int(REST_TURN * 10) + 1):
-        turn = step / 10.0
-        for a0 in NOTCH_ANGLES:
-            for x, y in lug_corners(a0 + turn):
-                c = min(xBoxIn - x, boxHalfY - abs(y))
-                min_clear = min(min_clear, c)
-                if c < 0.005 or x < 1.5:
-                    raise RuntimeError("lug corner (%.2f, %.2f) at %.1f deg hits the box cavity "
-                                       "wall (x < %.1f, |y| < %.1f)"
-                                       % (x * 10, y * 10, a0 + turn, xBoxIn * 10, boxHalfY * 10))
-    stop_turn = None
-    for step in range(int(REST_TURN * 10), int(REST_TURN * 10) + 300):
-        turn = step / 10.0
-        hit = any(x > xBoxIn or abs(y) > boxHalfY
-                  for a0 in NOTCH_ANGLES for x, y in lug_corners(a0 + turn))
-        if hit:
-            stop_turn = turn
-            break
-    print("bezel lug sweep ok: %s -> +%.0f deg, min corner clearance to the box cavity "
-          "walls %.2f mm (at rest); the +X wall stops the turn at +%s deg"
-          % ("/".join("%.0f" % a for a in NOTCH_ANGLES), REST_TURN, min_clear * 10,
-             ("%.1f" % stop_turn) if stop_turn is not None else "never"))
-    print("bezel lip: upper inner edge r %.2f at %.3f above the face; dome surface there "
-          "%.3f; designed preload %.2f mm; the inner cone wedges into the dome over the "
-          "last %.2f mm under the edge. Lug tops %.2f under the top's underside (note: "
-          "the preload lifts the bezel by up to %.2f before the lugs touch the top)"
-          % (lipR * 10, lipTop * 10, domeZ * 10, preload * 10, (lipTop - band_z0) * 10,
-             lugClear * 10, lugClear * 10))
+    innerR, skirtH = p02(des, "pirBezelInnerR"), p02(des, "pirBezelSkirtH")
+    tabW, notchW = p02(des, "pirTabW"), p02(des, "pirNotchW")
+    skirtRo = lensR                              # OD = the hole, push fit by the print's shrink
+    TAB_ANGLE = 45.0                             # deg, the sensor's tabs (STEP probe; 91 places it unrotated)
+    TAB_R, RING_R, FLANK_R = 11.0 * MM, 10.3 * MM, 10.35 * MM    # STEP probes
+    BRIDGE_RI = skirtRo - 0.02                   # flange notch outer edge, 11.4: tab r 11.0 + 0.4
+    NOTCH_ANGLES = (0.0, 180.0)                  # bezel frame
+    # --- guards ---
+    if innerR < RING_R + 0.015 - 1e-9 or innerR < FLANK_R + 0.01 - 1e-9:
+        raise RuntimeError("bezel inner r %.2f is under 0.15 off the lens ring (10.3) or 0.1 off "
+                           "the dome flank (10.35)" % (innerR * 10))
+    if skirtRo - innerR < 0.1:
+        raise RuntimeError("bezel skirt wall %.2f is under 1.0 mm" % ((skirtRo - innerR) * 10))
+    if flangeR < skirtRo + 0.08:
+        raise RuntimeError("bezel flange r %.1f bears under 0.8 on the face outside the r %.1f hole"
+                           % (flangeR * 10, skirtRo * 10))
+    if BRIDGE_RI < TAB_R + 0.03:
+        raise RuntimeError("flange notch ends at r %.2f, under 0.3 past the tabs (r 11.0)" % (BRIDGE_RI * 10))
+    if flangeR - BRIDGE_RI < 0.1:
+        raise RuntimeError("flange bridge over the notches is %.2f wide, under 1.0" % ((flangeR - BRIDGE_RI) * 10))
+    if notchW < tabW + 0.1 - 1e-9:
+        raise RuntimeError("bezel notch %.2f is under tab width %.2f + 1.0" % (notchW * 10, tabW * 10))
+    if abs(skirtH - wall) > 0.05 + 1e-9:
+        raise RuntimeError("bezel skirt height %.2f is not the top's thickness %.2f (+/-0.5)"
+                           % (skirtH * 10, wall * 10))
+    corner_r = math.hypot(BRIDGE_RI, notchW / 2)          # the flange notch's outer corners
+    print("bezel ring: flange r %.2f..%.1f x %.1f, skirt r %.2f..%.1f x %.1f, notches %.1f wide "
+          "to r %.1f in the flange (bridge %.1f on the centre line, %.2f at the corners); "
+          "ring clearance %.2f, flank %.2f, tab radial %.2f"
+          % (innerR * 10, flangeR * 10, flangeT * 10, innerR * 10, skirtRo * 10, skirtH * 10,
+             notchW * 10, BRIDGE_RI * 10, (flangeR - BRIDGE_RI) * 10, (flangeR - corner_r) * 10,
+             (innerR - RING_R) * 10, (innerR - FLANK_R) * 10, (BRIDGE_RI - TAB_R) * 10))
 
     bz_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     bz = bz_occ.component
     bz.name = "PirBezel"
-    # (a) the revolved profile: a closed polygon in the plane through the
-    # axis, (r, z) points, drawn with model->sketch mapping so the XZ
-    # plane's sketch axes need no guessing
-    sk = bz.sketches.add(bz.xZConstructionPlane)
-    prof = [(skirtRi, -skirtH), (skirtRo, -skirtH), (skirtRo, 0.0),
-            (flangeR, 0.0), (flangeR, flangeT), (skirtRo, flangeT),
-            (lipR + lipWall, lipTop), (lipR, lipTop), (innerR, flangeT),
-            (innerR, 0.0), (skirtRi, 0.0)]
-    spts = [sk.modelToSketchSpace(adsk.core.Point3D.create(r, 0.0, z)) for r, z in prof]
-    for i in range(len(spts)):
-        sk.sketchCurves.sketchLines.addByTwoPoints(spts[i], spts[(i + 1) % len(spts)])
-    if sk.profiles.count != 1:
-        raise RuntimeError("bezel profile sketch has %d profiles, expected 1" % sk.profiles.count)
-    rev = bz.features.revolveFeatures
-    ri = rev.createInput(sk.profiles.item(0), bz.zConstructionAxis,
-                         adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    ri.setAngleExtent(False, adsk.core.ValueInput.createByReal(2 * math.pi))
-    rev.add(ri)
+
+    def annulus(r_in, r_out):
+        sk = bz.sketches.add(bz.xYConstructionPlane)
+        for r in (r_in, r_out):
+            sk.sketchCurves.sketchCircles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), r)
+        ring = None
+        for i in range(sk.profiles.count):
+            if sk.profiles.item(i).profileLoops.count == 2:
+                ring = sk.profiles.item(i)
+        if ring is None:
+            raise RuntimeError("no annular profile for r %.2f..%.2f" % (r_in * 10, r_out * 10))
+        return ring
+
+    # (a) flange, (b) skirt joined under it
+    fe = extrude(bz, annulus(innerR, flangeR), 0.0, flangeT,
+                 adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    bz_body = fe.bodies.item(0)
+    extrude(bz, annulus(innerR, skirtRo), -skirtH, 0.0,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation, participants=[bz_body])
     if bz.bRepBodies.count != 1:
-        raise RuntimeError("bezel revolve left %d bodies" % bz.bRepBodies.count)
-    bz_body = bz.bRepBodies.item(0)
-    # (b) the lugs: rotated rectangles in plan, from inside the skirt
-    # wall (chord at r skirtRi + 0.3, whose corners stay inside r skirtRo)
-    # out to lugRo, extruded z -skirtH..-skirtH + lugT and joined. Sketched
-    # on the XY plane: extrude()'s start offset is measured from the
-    # sketch plane, so a sketch already at -skirtH would land the lugs at
-    # -2 skirtH, in the air (the first build did exactly that: 4 bodies).
-    sk = bz.sketches.add(bz.xYConstructionPlane)
-    r_in = skirtRi + 0.03
-    if math.hypot(r_in, lugW / 2) >= skirtRo:
-        raise RuntimeError("lug root chord corners fall outside the skirt wall")
-    lines = sk.sketchCurves.sketchLines
-    for a in NOTCH_ANGLES:
-        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
-        pts = []
-        for rr, t in ((r_in, -lugW / 2), (lugRo, -lugW / 2), (lugRo, lugW / 2), (r_in, lugW / 2)):
-            pts.append(adsk.core.Point3D.create(rr * ca - t * sa, rr * sa + t * ca, 0))
-        for i in range(4):
-            lines.addByTwoPoints(pts[i], pts[(i + 1) % 4])
-    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
-    if profs.count != 3:
-        raise RuntimeError("expected 3 lug profiles, found %d" % profs.count)
-    extrude(bz, profs, -skirtH, -skirtH + lugT,
-            adsk.fusion.FeatureOperations.JoinFeatureOperation,
-            participants=[bz_body])
+        raise RuntimeError("bezel skirt did not merge with the flange: %d bodies" % bz.bRepBodies.count)
+
+    def notch_boxes(r_out):
+        sk = bz.sketches.add(bz.xYConstructionPlane)
+        lines = sk.sketchCurves.sketchLines
+        for a in NOTCH_ANGLES:
+            ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
+            pts = []
+            for rr, t in ((innerR - 0.05, -notchW / 2), (r_out, -notchW / 2),
+                          (r_out, notchW / 2), (innerR - 0.05, notchW / 2)):
+                pts.append(adsk.core.Point3D.create(rr * ca - t * sa, rr * sa + t * ca, 0))
+            for i in range(4):
+                lines.addByTwoPoints(pts[i], pts[(i + 1) % 4])
+        profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+        if profs.count != 2:
+            raise RuntimeError("expected 2 notch profiles, found %d" % profs.count)
+        return profs
+
+    # (c) notches: through the whole skirt wall (to past its OD), then
+    # through the flange's inner region only (to BRIDGE_RI)
+    extrude(bz, notch_boxes(skirtRo + 0.05), -skirtH - 0.01, 0.0,
+            adsk.fusion.FeatureOperations.CutFeatureOperation, participants=[bz_body])
+    extrude(bz, notch_boxes(BRIDGE_RI), -0.01, flangeT + 0.01,
+            adsk.fusion.FeatureOperations.CutFeatureOperation, participants=[bz_body])
     if bz.bRepBodies.count != 1:
-        raise RuntimeError("bezel lugs did not merge: %d bodies" % bz.bRepBodies.count)
-    sk.isVisible = False
-    # sanity on the built body, in its own frame (the lip mid-wall probe
-    # sits halfway up the cone, 0.55 of the way across its horizontal
-    # width from the inner surface)
+        raise RuntimeError("bezel notches left %d bodies (the flange bridge must hold it together)"
+                           % bz.bRepBodies.count)
+    # sanity on the built body, in its own frame
     IN = adsk.fusion.PointContainment.PointInsidePointContainment
     def bz_solid(r, ang, z):
         a = math.radians(ang)
         return bz_body.pointContainment(adsk.core.Point3D.create(r * math.cos(a), r * math.sin(a), z)) == IN
-    checks = ((True, (flangeR + innerR) / 2, 0.0, flangeT / 2, "flange"),
-              (True, lipR + lipWall / 2 + 0.55 * (innerR - lipR), 0.0, flangeT + lipH / 2, "lip mid-wall"),
-              (False, lipR - 0.02, 0.0, lipTop - 0.01, "inside the lip edge"),
-              (False, lipR + lipWall / 2, 0.0, lipTop + 0.02, "above the lip top"),
-              (True, (skirtRi + skirtRo) / 2, 0.0, -skirtH / 2, "skirt"),
-              (False, skirtRi - 0.03, 0.0, -skirtH / 2, "inside the skirt"),
-              (True, (skirtRo + lugRo) / 2, NOTCH_ANGLES[0], -skirtH + lugT / 2, "lug at 60"),
-              (True, (skirtRo + lugRo) / 2, NOTCH_ANGLES[1], -skirtH + lugT / 2, "lug at 180"),
-              (True, (skirtRo + lugRo) / 2, NOTCH_ANGLES[2], -skirtH + lugT / 2, "lug at 300"),
-              (False, (skirtRo + lugRo) / 2, NOTCH_ANGLES[0] + 30, -skirtH + lugT / 2, "no lug at 90"),
-              (False, (skirtRo + lugRo) / 2, NOTCH_ANGLES[0], -skirtH + lugT + 0.02, "above the lug at 60"))
+    rs = (innerR + skirtRo) / 2
+    checks = ((True, (innerR + flangeR) / 2, 90, flangeT / 2, "flange"),
+              (True, flangeR - 0.02, 90, flangeT / 2, "flange reaches its rim"),
+              (False, flangeR + 0.02, 90, flangeT / 2, "nothing past the flange rim"),
+              (False, innerR - 0.02, 90, flangeT / 2, "bore open through the flange"),
+              (False, rs, 90, flangeT + 0.02, "nothing above the flange"),
+              (True, rs, 90, -skirtH / 2, "skirt at 90"),
+              (True, rs, 270, -skirtH / 2, "skirt at 270"),
+              (True, rs, 90, -skirtH + 0.01, "skirt reaches its foot"),
+              (False, rs, 90, -skirtH - 0.02, "nothing below the skirt's foot"),
+              (False, skirtRo + 0.02, 90, -skirtH / 2, "nothing outside the skirt"),
+              (False, innerR - 0.02, 90, -skirtH / 2, "bore open through the skirt"),
+              (False, rs, 0, -skirtH / 2, "skirt notch at 0"),
+              (False, rs, 180, -skirtH / 2, "skirt notch at 180"),
+              (False, rs, 0, flangeT / 2, "flange notch at 0 (r %.2f)" % (rs * 10)),
+              (False, BRIDGE_RI - 0.02, 180, flangeT / 2, "flange notch reaches r %.2f at 180" % ((BRIDGE_RI - 0.02) * 10)),
+              (True, (BRIDGE_RI + flangeR) / 2, 0, flangeT / 2, "flange bridge over the notch at 0"),
+              (True, (BRIDGE_RI + flangeR) / 2, 180, flangeT / 2, "flange bridge over the notch at 180"))
     for want, r, ang, z, label in checks:
         if bz_solid(r, ang, z) != want:
             raise RuntimeError("bezel probe %s at (r %.2f, %.0f deg, z %.2f): expected %s"
                                % (label, r * 10, ang, z * 10, "solid" if want else "void"))
-    # (c) park it in the case, turned to the rest angles
+    # notch width, Cartesian at r_s on +X: open to +/-(notchW/2 - 0.3), solid at +/-(notchW/2 + 0.3)
+    for t, want in ((notchW / 2 - 0.03, False), (notchW / 2 + 0.03, True)):
+        for sgn in (1, -1):
+            pt = adsk.core.Point3D.create(rs, sgn * t, -skirtH / 2)
+            if (bz_body.pointContainment(pt) == IN) != want:
+                raise RuntimeError("bezel notch width probe at t %+.2f: expected %s"
+                                   % (sgn * t * 10, "solid" if want else "void"))
+    # (d) park it in the case, turned to the tabs
     m = adsk.core.Matrix3D.create()
-    m.setToRotation(math.radians(REST_TURN), adsk.core.Vector3D.create(0, 0, 1),
+    m.setToRotation(math.radians(TAB_ANGLE), adsk.core.Vector3D.create(0, 0, 1),
                     adsk.core.Point3D.create(0, 0, 0))
     m.translation = adsk.core.Vector3D.create(pirCx, 0.0, z_top)
     bz_occ.transform2 = m
     if des.snapshots.hasPendingSnapshot:
         des.snapshots.add()
-    print("pir bezel ok: flange r %.1f..%.1f x %.1f, lip to %.3f (wall %.1f wide, edge r %.1f), "
-          "skirt r %.1f..%.1f to -%.1f, 3 lugs r ..%.1f x %.1f x %.1f at %s deg; parked at "
-          "(%.1f, 0, %.0f) turned +%.0f (lugs at %s)"
-          % (innerR * 10, flangeR * 10, flangeT * 10, lipTop * 10, lipWall * 10, lipR * 10,
-             skirtRi * 10, skirtRo * 10, skirtH * 10, lugRo * 10, lugW * 10, lugT * 10,
-             "/".join("%.0f" % a for a in NOTCH_ANGLES), pirCx * 10, z_top * 10, REST_TURN,
-             "/".join("%.0f" % (a + REST_TURN) for a in NOTCH_ANGLES)))
+    print("pir bezel ok: one body, parked at (%.1f, 0, %.0f) turned %.0f deg (notches on the "
+          "lens tabs at %.0f/%.0f)" % (pirCx * 10, z_top * 10, TAB_ANGLE, TAB_ANGLE, TAB_ANGLE + 180))
     print("PirBezel bodies:", bz.bRepBodies.count)

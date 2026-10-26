@@ -384,29 +384,31 @@ def check_radar_cable_exit(plate):
 # hold any more, so they are deleted rather than left to fail.
 # RETIRED 2026-10-25 (Task 9d): the plug-seat, keeper-pin and snapYpx
 # probes (in check_pir_socket and check_snaps). The retaining plug and its
-# filament pin are gone (the bezel holds the sensor from the front,
-# check_bezel_fit) and the +X snap pair moved from the plate's edge at
-# y +/-19 into the wing (check_snaps). Where it matters, the old positions
-# are now probed SOLID so a stale build cannot pass.
+# filament pin are gone (the snug socket and the bezel ring hold the
+# sensor, check_bezel_fit) and the +X snap pair moved from the plate's
+# edge at y +/-19 into the wing (check_snaps). Where it matters, the old
+# positions are now probed SOLID so a stale build cannot pass.
+# RETIRED 2026-10-25 (Task 9e): 9d's bayonet probes (notches in the top at
+# 60/180/300, lug rest positions, lip/dome preload). The top is whole
+# again round a r 11.6 hole (check_pod_box probes it at twelve angles).
 
 
 def check_pod_box(shell, plate, des):
-    """The shell's pod box (03_shell.py step 5c, widened for Task 9d): the
-    +X wall is gone over |y| <= pirBoxHalfY (15.5) from the back rim to
-    z 14 and a 2 mm-walled box stands there, x 21..pirCx + pirBoxHalfX +
-    wall (51), y +/-(pirBoxHalfY + wall) (17.5), z -8..16, open to the
-    shell's cavity, with the r pirHoleR (12.8) lens hole through its top
-    at (pirCx, 0) and three bayonet notches (r 12.8..14.6, 4.6 wide) at
-    60/180/300 deg. Its outer edges carry the shell's softening (r 2.5
-    corners, 1 mm front chamfer, 0.8 rim fillet); the lens hole rim, the
-    notches and the two T-junction corners stay sharp."""
+    """The shell's pod box (03_shell.py step 5c): the +X wall is gone over
+    |y| <= pirBoxHalfY (13.5) from the back rim to z 14 and a 2 mm-walled
+    box stands there, x 21..pirCx + pirBoxHalfX + wall (51), y
+    +/-(pirBoxHalfY + wall) (15.5), z -8..16, open to the shell's cavity,
+    with the r pirHoleR (11.6) lens hole through its top at (pirCx, 0)
+    and nothing else cut in the top (9d's bayonet notches are gone). Its
+    outer edges carry the shell's softening (r 2.5 corners, 1 mm front
+    chamfer, 0.8 rim fillet); the lens hole rim and the two T-junction
+    corners stay sharp."""
     import math
     def pv(n): return des.userParameters.itemByName(n).value * 10
     wall, intW, intD = pv("wall"), pv("intW"), pv("intD")
     cx, hy, hx, lensR = pv("pirCx"), pv("pirBoxHalfY"), pv("pirBoxHalfX"), pv("pirHoleR")
-    notchR, notchW = pv("pirNotchR"), pv("pirNotchW")
     xIn, xBoxIn, xBoxOut = intW / 2, cx + hx, cx + hx + wall     # 21, 49, 51
-    by = hy + wall                                               # 17.5
+    by = hy + wall                                               # 15.5
     zTop = intD + wall                                           # 16
     # old +X wall gone over the box's width, present outboard of it
     for z in (-6.0, 5.0, 13.5):
@@ -417,7 +419,7 @@ def check_pod_box(shell, plate, des):
         solid(shell, 22.0, sy * (by + 1.5), 5.0, "+X wall present at y %+.1f" % (sy * (by + 1.5)))
         solid(shell, 22.0, sy * (by + 1.5), -4.0, "+X wall present at y %+.1f down to the rim (no notch)" % (sy * (by + 1.5)))
         solid(shell, 22.0, sy * (by + 1.5), 1.0, "+X wall present at y %+.1f (no wire slot)" % (sy * (by + 1.5)))
-    solid(shell, 22.0, 5.0, 15.0, "front face continues over the old wall line (y 5: the 180 deg notch spans y +/-2.3 there)")
+    solid(shell, 22.0, 0.0, 15.0, "front face continues over the old wall line")
     # box walls solid at three heights; cavity void; cavity open to the shell
     for z in (-6.0, 5.0, 12.0):
         solid(shell, xBoxOut - 1.0, 0.0, z, "box +X wall at z %.0f" % z)
@@ -436,8 +438,7 @@ def check_pod_box(shell, plate, des):
     void(shell, cx, hy - 0.35, -6.5, "box cavity clear of the wing's +Y side")
     solid(plate, xBoxIn - 0.3, 0.0, -5.0, "wing reaches x %.1f inside the box cavity" % (xBoxIn - 0.3))
     void(shell, xBoxIn - 0.3, 0.0, -5.0, "box cavity clear of the wing's far end")
-    # top: 2 mm over the box with the lens hole (probed at 90/270, where
-    # there is no notch)
+    # top: 2 mm over the box with the lens hole
     for sy in (1, -1):
         solid(shell, cx, sy * (lensR + 0.5), 15.0, "top solid 0.5 mm outside the lens hole at y %+.1f" % (sy * (lensR + 0.5)))
         void(shell, cx, sy * (lensR - 0.3), 15.0, "lens hole open at y %+.1f" % (sy * (lensR - 0.3)))
@@ -445,27 +446,18 @@ def check_pod_box(shell, plate, des):
     void(shell, cx, 0.0, 15.0, "lens hole open on the axis")
     void(shell, cx, 0.0, 14.1, "lens hole open at the top's underside")
     void(shell, cx, 0.0, 15.9, "lens hole open at the face")
-    solid(shell, cx + lensR + 0.35, 0.0, 15.0, "top solid 0.35 mm outside the lens hole (+X: 0.7 to the wall)")
+    solid(shell, cx + lensR + 0.5, 0.0, 15.0, "top solid 0.5 mm outside the lens hole (+X)")
+    solid(shell, cx - lensR - 0.5, 0.0, 15.0, "top solid 0.5 mm outside the lens hole (-X)")
     solid(shell, xBoxIn - 0.5, 0.0, 15.0, "top solid over the box's +X wall")
-    # bayonet notches: void through the top at the notch angles (mid
-    # radius, both ends of the width less 0.3), solid at the rest angles
-    # (both turn directions) and solid beyond their radial end and beside
-    # their width; their walls sharp (no chamfer at the face)
-    rN = (lensR + notchR) / 2                                    # 13.7
-    for a in (60.0, 180.0, 300.0):
+    # the top round the hole is whole: solid at r lensR + 0.3 at twelve
+    # angles (RETIRED 9d: three bayonet notches at 60/180/300) and the
+    # hole rim sharp (no chamfer) at four
+    for a in range(0, 360, 30):
         ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
-        for z in (14.1, 15.0, 15.9):
-            void(shell, cx + rN * ca, rN * sa, z, "notch at %.0f deg open at z %.1f" % (a, z))
-        for t in (-(notchW / 2 - 0.3), notchW / 2 - 0.3):
-            void(shell, cx + rN * ca - t * sa, rN * sa + t * ca, 15.0, "notch at %.0f deg open %.1f off its centre line" % (a, t))
-        for t in (-(notchW / 2 + 0.3), notchW / 2 + 0.3):
-            solid(shell, cx + rN * ca - t * sa, rN * sa + t * ca, 15.0, "top solid 0.3 beside the notch at %.0f deg" % a)
-        void(shell, cx + (notchR - 0.3) * ca, (notchR - 0.3) * sa, 15.0, "notch at %.0f deg open to r %.1f" % (a, notchR - 0.3))
-        solid(shell, cx + (notchR + 0.3) * ca, (notchR + 0.3) * sa, 15.0, "top solid 0.3 past the notch's end at %.0f deg" % a)
-        solid(shell, cx + (notchR + 0.2) * ca, (notchR + 0.2) * sa, zTop - 0.2, "notch end wall sharp (not chamfered) at %.0f deg" % a)
-    for a in (90.0, 210.0, 330.0, 30.0, 150.0, 270.0):
+        solid(shell, cx + (lensR + 0.3) * ca, (lensR + 0.3) * sa, 15.0, "top solid 0.3 outside the hole at %d deg (no notch)" % a)
+        void(shell, cx + (lensR - 0.3) * ca, (lensR - 0.3) * sa, 15.0, "hole open 0.3 inside its wall at %d deg" % a)
+    for a in (0.0, 90.0, 180.0, 270.0):
         ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
-        solid(shell, cx + rN * ca, rN * sa, 15.0, "top solid at the rest angle %.0f deg (r %.1f)" % (a, rN))
         solid(shell, cx + (lensR + 0.2) * ca, (lensR + 0.2) * sa, zTop - 0.2, "lens hole rim sharp (not chamfered) at %.0f deg" % a)
     # softening on the box: r cornerFillet on its two outer vertical
     # corners (void where the sharp corner was, solid 0.3 mm inside the
@@ -629,104 +621,86 @@ def check_pir_socket(plate, shell, des):
 
 
 def check_bezel_fit(shell, plate, des, bezel):
-    """The bayonet bezel (03_shell.py step 8, Task 9d) and what it meets.
-    The bezel body is probed in ITS OWN frame (flange underside on z 0,
-    axis +Z, lugs at 60/180/300 deg): `find` returns the component's
-    body, not the parked occurrence (91_pir_fit.py probes the fitted
-    state in the case frame). The shell and plate are probed in the case
-    frame for the things the bezel relies on: the lug rest positions free
-    under the top and clear of the box walls, the bore floor, no keeper
-    hole."""
+    """The bezel ring (03_shell.py step 8, Task 9e) and what it meets. The
+    bezel body is probed in ITS OWN frame (flange underside on z 0, axis
+    +Z, notches on +/-X): `find` returns the component's body, not the
+    parked occurrence (91_pir_fit.py probes the fitted state in the case
+    frame against the sensor). Flange ring r innerR..flangeR x flangeT,
+    two skirt arcs r innerR..pirHoleR x skirtH below it, two notches
+    pirNotchW wide through the skirt and through the flange out to
+    r 11.4, the flange's r 11.4..flangeR bridging them."""
     import math
     def pv(n): return des.userParameters.itemByName(n).value * 10
     intD, wall = pv("intD"), pv("wall")
-    cx, hy, hx = pv("pirCx"), pv("pirBoxHalfY"), pv("pirBoxHalfX")
+    cx, lensR = pv("pirCx"), pv("pirHoleR")
     flangeR, flangeT = pv("pirBezelFlangeR"), pv("pirBezelFlangeT")
-    innerR, lipR, lipH = pv("pirBezelInnerR"), pv("pirBezelLipR"), pv("pirBezelLipH")
-    skirtRi, skirtRo, skirtH = pv("pirBezelSkirtRi"), pv("pirBezelSkirtRo"), pv("pirBezelSkirtH")
-    lugT, lugW, lugRo = pv("pirLugT"), pv("pirLugW"), pv("pirLugRo")
-    domeR, preload = pv("pirDomeR"), pv("pirBezelPreload")
-    lensR, notchR, notchW = pv("pirHoleR"), pv("pirNotchR"), pv("pirNotchW")
+    innerR, skirtH = pv("pirBezelInnerR"), pv("pirBezelSkirtH")
+    tabW, notchW = pv("pirTabW"), pv("pirNotchW")
+    skirtRo, bridgeRi = lensR, lensR - 0.2
     zTop = intD + wall
-    lipTop = flangeT + lipH
-    lipWall = skirtRo - innerR
     # parameter-level guards (03 asserts the same at build time)
-    domeZ = math.sqrt(domeR * domeR - lipR * lipR)
-    if abs((domeZ - lipTop) - preload) > 1e-3:
-        FAILURES.append("pirBezelLipH %.3f: lip edge is %.3f under the dome, not pirBezelPreload %.2f"
-                        % (lipH, domeZ - lipTop, preload))
-    if not (lipR <= 10.21 + 1e-9 and lipTop >= 3.8 - 1e-9):
-        FAILURES.append("lip edge (r %.2f, %.3f up) is not on the dome's spherical cap (r <= 10.21, >= 3.8 up)" % (lipR, lipTop))
-    if not (skirtRo + 0.2 <= lensR + 1e-9):
-        FAILURES.append("skirt r %.2f does not pass the r %.2f hole with 0.2" % (skirtRo, lensR))
-    if not (skirtRi >= 11.1 + 0.4 - 1e-9):
-        FAILURES.append("skirt inner r %.2f is under 0.4 from the latch tabs (r 11.1)" % skirtRi)
-    if not (lugRo + 0.3 <= notchR + 1e-9 and lugW + 0.6 <= notchW + 1e-9):
-        FAILURES.append("lugs (r %.1f, %.1f wide) do not pass the notches (r %.1f, %.1f wide) with 0.3"
-                        % (lugRo, lugW, notchR, notchW))
-    lugTopCase = zTop - skirtH + lugT                            # 13.7
-    if not (0.2 - 1e-9 <= intD - lugTopCase <= 0.5 + 1e-9):
-        FAILURES.append("lug tops (case z %.2f) are not 0.2..0.5 under the top's underside (%.1f)" % (lugTopCase, intD))
+    if not (innerR >= 10.3 + 0.15 - 1e-9 and innerR >= 10.35 + 0.1 - 1e-9):
+        FAILURES.append("bezel inner r %.2f is under 0.15 off the lens ring / 0.1 off the dome flank" % innerR)
+    if not (notchW >= tabW + 1.0 - 1e-9):
+        FAILURES.append("bezel notch %.2f is under the tab width %.2f + 1.0" % (notchW, tabW))
+    if not (abs(tabW - 5.0) <= 0.3):
+        FAILURES.append("pirTabW %.2f is not the probed 5.0 (+/-0.3)" % tabW)
+    if not (bridgeRi >= 11.0 + 0.3 - 1e-9 and flangeR - bridgeRi >= 1.0 - 1e-9):
+        FAILURES.append("flange notch end r %.2f / bridge %.2f: need tab 11.0 + 0.3 and >= 1.0 of bridge" % (bridgeRi, flangeR - bridgeRi))
+    if not (abs(skirtH - wall) <= 0.5 + 1e-9):
+        FAILURES.append("bezel skirt %.2f tall is not the top's thickness %.2f" % (skirtH, wall))
+    if not (flangeR >= skirtRo + 0.8 - 1e-9):
+        FAILURES.append("bezel flange r %.2f bears under 0.8 on the face outside the hole" % flangeR)
     # --- the bezel in its own frame ---
     def B(want, r, ang, z, why):
         a = math.radians(ang)
         (solid if want else void)(bezel, r * math.cos(a), r * math.sin(a), z, "bezel: " + why)
-    B(True, (innerR + flangeR) / 2, 0, flangeT / 2, "flange solid at r %.2f, z %.2f" % ((innerR + flangeR) / 2, flangeT / 2))
-    B(True, flangeR - 0.2, 45, flangeT / 2, "flange reaches r %.1f" % (flangeR - 0.2))
-    B(False, flangeR + 0.2, 45, flangeT / 2, "nothing past the flange's rim")
-    B(False, flangeR - 0.2, 45, flangeT + 0.2, "nothing above the flange outside the lip")
-    B(False, flangeR - 0.2, 45, -0.2, "nothing below the flange outside the skirt")
-    zm = flangeT + lipH / 2
-    rin = innerR - (innerR - lipR) * 0.5                          # inner cone radius halfway up
-    B(True, rin + 0.5 * lipWall, 0, zm, "lip mid-wall solid halfway up (r %.2f, z %.2f)" % (rin + 0.5 * lipWall, zm))
-    B(True, rin + 0.5 * lipWall, 120, zm, "lip mid-wall solid halfway up, 120 deg")
-    B(False, rin - 0.3, 0, zm, "void inside the lip's inner cone (r %.2f, z %.2f)" % (rin - 0.3, zm))
-    B(False, rin + lipWall + 0.3, 0, zm, "void outside the lip's outer cone")
-    B(False, lipR - 0.2, 0, lipTop - 0.1, "void inside the lip edge (r %.1f, z %.2f)" % (lipR - 0.2, lipTop - 0.1))
-    B(True, lipR + 0.5, 0, lipTop - 0.1, "lip top solid 0.5 out from the edge, 0.1 under the top")
-    B(False, lipR + 0.5, 0, lipTop + 0.1, "nothing above the lip top")
-    B(True, (skirtRi + skirtRo) / 2, 0, -1.0, "skirt solid at r %.2f, z -1" % ((skirtRi + skirtRo) / 2))
-    B(True, (skirtRi + skirtRo) / 2, 90, -skirtH + 0.3, "skirt reaches its foot, 90 deg (between lugs)")
-    B(False, (skirtRi + skirtRo) / 2, 0, -skirtH - 0.3, "nothing below the skirt's foot")
-    B(False, skirtRi - 0.3, 0, -2.0, "void inside the skirt")
-    B(False, skirtRo + 0.3, 90, -2.0, "void outside the skirt between lugs (r %.1f, 90 deg)" % (skirtRo + 0.3))
-    B(False, skirtRo + 0.3, 0, -1.0, "void outside the skirt under the flange (0 deg, z -1)")
-    rl = (skirtRo + lugRo) / 2
-    for a in (60, 180, 300):
-        B(True, rl, a, -skirtH + lugT / 2, "lug solid at r %.2f, %d deg" % (rl, a))
-        B(True, lugRo - 0.2, a, -skirtH + lugT / 2, "lug reaches r %.1f at %d deg" % (lugRo - 0.2, a))
-        B(False, lugRo + 0.2, a, -skirtH + lugT / 2, "nothing past the lug's reach at %d deg" % a)
-        B(False, rl, a, -skirtH + lugT + 0.2, "nothing above the lug at %d deg" % a)
-        B(False, rl, a, -skirtH - 0.2, "nothing below the lug at %d deg" % a)
-        B(True, rl, a, -skirtH + 0.1, "lug solid down to its bottom at %d deg" % a)
-        B(True, rl, a, -skirtH + lugT - 0.1, "lug solid up to its top at %d deg" % a)
-    for a in (90, 210, 330, 0, 120, 240):
-        B(False, rl, a, -skirtH + lugT / 2, "no lug at %d deg" % a)
-    # --- the shell and plate in the case frame, at the lugs' rest positions ---
-    for a in (90.0, 210.0, 330.0):
+    rs = (innerR + skirtRo) / 2
+    for a in (90, 270, 45, 135):
+        B(True, (innerR + flangeR) / 2, a, flangeT / 2, "flange solid at %d deg" % a)
+        B(True, flangeR - 0.1, a, flangeT / 2, "flange reaches r %.1f at %d deg" % (flangeR - 0.1, a))
+        B(False, flangeR + 0.1, a, flangeT / 2, "nothing past the flange rim at %d deg" % a)
+        B(False, innerR - 0.1, a, flangeT / 2, "bore open through the flange at %d deg" % a)
+        B(False, (innerR + flangeR) / 2, a, flangeT + 0.1, "nothing above the flange at %d deg" % a)
+        B(False, (innerR + flangeR) / 2, a, -0.1, "flange underside flush: nothing below it outside the skirt at %d deg" % a) if (innerR + flangeR) / 2 > skirtRo else None
+        B(True, rs, a, -skirtH / 2, "skirt solid at %d deg" % a)
+        B(True, rs, a, -skirtH + 0.1, "skirt reaches its foot at %d deg" % a)
+        B(False, rs, a, -skirtH - 0.1, "nothing below the skirt's foot at %d deg" % a)
+        B(False, skirtRo + 0.1, a, -skirtH / 2, "nothing outside the skirt (r %.1f) at %d deg" % (skirtRo + 0.1, a))
+        B(True, skirtRo - 0.1, a, -skirtH / 2, "skirt reaches its OD at %d deg" % a)
+        B(False, innerR - 0.1, a, -skirtH / 2, "bore open through the skirt at %d deg" % a)
+        B(True, innerR + 0.1, a, -skirtH / 2, "skirt starts at its ID at %d deg" % a)
+    B(False, skirtRo + 0.3, 90, -0.1, "nothing below the flange outside the skirt (r %.1f)" % (skirtRo + 0.3))
+    for a in (0, 180):
+        B(False, rs, a, -skirtH / 2, "skirt notch open at %d deg" % a)
+        B(False, rs, a, -skirtH + 0.1, "skirt notch open to the foot at %d deg" % a)
+        B(False, rs, a, flangeT / 2, "flange notch open at %d deg, r %.2f" % (a, rs))
+        B(False, innerR + 0.1, a, flangeT / 2, "flange notch open at its ID at %d deg" % a)
+        B(False, bridgeRi - 0.1, a, flangeT / 2, "flange notch open out to r %.1f at %d deg" % (bridgeRi - 0.1, a))
+        B(True, bridgeRi + 0.1, a, flangeT / 2, "flange bridge starts at r %.1f at %d deg" % (bridgeRi + 0.1, a))
+        B(True, (bridgeRi + flangeR) / 2, a, flangeT / 2, "flange bridge solid at r %.1f over the notch at %d deg" % ((bridgeRi + flangeR) / 2, a))
+        B(True, (bridgeRi + flangeR) / 2, a, 0.1, "flange bridge solid down to its underside at %d deg" % a)
+        B(False, (bridgeRi + flangeR) / 2, a, -0.1, "nothing under the bridge at %d deg" % a)
+    # notch width: open to +/-(notchW/2 - 0.3), solid at +/-(notchW/2 + 0.3), Cartesian on +X at r_s
+    for sgn in (1, -1):
+        void(bezel, rs, sgn * (notchW / 2 - 0.3), -skirtH / 2, "bezel: skirt notch open %.2f off its centre" % (sgn * (notchW / 2 - 0.3)))
+        solid(bezel, rs, sgn * (notchW / 2 + 0.3), -skirtH / 2, "bezel: skirt solid %.2f off the notch centre" % (sgn * (notchW / 2 + 0.3)))
+        void(bezel, rs, sgn * (notchW / 2 - 0.3), flangeT / 2, "bezel: flange notch open %.2f off its centre" % (sgn * (notchW / 2 - 0.3)))
+        solid(bezel, rs, sgn * (notchW / 2 + 0.3), flangeT / 2, "bezel: flange solid %.2f off the notch centre" % (sgn * (notchW / 2 + 0.3)))
+    # --- the shell where the bezel lands (case frame): face solid under
+    # the flange all round, hole open round the skirt, hole wall at r lensR
+    for a in range(0, 360, 45):
         ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
-        void(shell, cx + 13.5 * ca, 13.5 * sa, lugTopCase + 0.15, "shell void 0.15 above the lug top at the rest angle %.0f" % a)
-        void(shell, cx + 13.5 * ca, 13.5 * sa, lugTopCase - lugT / 2, "shell void at the lug's rest position %.0f" % a)
-        solid(shell, cx + 13.5 * ca, 13.5 * sa, intD + 0.2, "shell top solid over the parked lug at %.0f" % a)
-        void(shell, cx + 14.5 * ca, 14.5 * sa, lugTopCase - lugT / 2, "box cavity open at r 14.5, %.0f deg (lugs clear of the walls)" % a)
-    void(shell, cx + 13.5, 0.0, 13.0, "box cavity open at r 13.5, 0 deg (lugs pass under the top on the way round)")
+        solid(shell, cx + (flangeR - 0.1) * ca, (flangeR - 0.1) * sa, zTop - 0.1, "shell face solid under the flange rim at %d deg" % a)
+        solid(shell, cx + (skirtRo + 0.1) * ca, (skirtRo + 0.1) * sa, zTop - 0.1, "shell face solid just outside the hole at %d deg" % a)
+        void(shell, cx + (skirtRo - 0.1) * ca, (skirtRo - 0.1) * sa, zTop - 1.0, "hole open where the skirt sits at %d deg" % a)
+        void(shell, cx + (skirtRo - 0.1) * ca, (skirtRo - 0.1) * sa, zTop - skirtH + 0.1, "hole open down to the skirt's foot at %d deg" % a)
+        void(shell, cx + rs * ca, rs * sa, zTop - skirtH - 0.1, "cavity open under the skirt's foot at %d deg" % a)
     # bore floor and no keeper hole (check_pir_socket probes these in
-    # detail; the two that matter to the bezel's job repeated here)
+    # detail; the two that matter to the retention repeated here)
     solid(plate, cx, 0.0, -2.2, "bore floor: wing solid 0.2 under the wing top")
     void(plate, cx, 0.0, -1.8, "bore open 0.2 above the wing top")
     solid(plate, cx, 0.0, -4.75, "no keeper pin hole (retired with the plug)")
-    # the flange on the face: shell solid under it, the hole and notches
-    # inside its rim. On the +X side the flange's rim (x 50.8) overhangs
-    # the box's 1 mm front chamfer (from x 50) by 0.8 mm - a consequence
-    # of pirCx 35.5 with a r 15.3 flange, cosmetic only (the face still
-    # carries the flange from r 11.6 to 14.5 there); probed just inboard
-    # of the chamfer.
-    solid(shell, cx + 14.3, 0.0, zTop - 0.1, "shell face solid under the flange, +X, inboard of the box's chamfer")
-    void(shell, cx + flangeR - 0.2, 0.0, zTop - 0.1, "the flange's +X rim is over the box's front chamfer (recorded, cosmetic)")
-    solid(shell, cx, -(flangeR - 0.2), zTop - 0.1, "shell face solid under the flange's rim (-Y)")
-    solid(shell, cx - (flangeR - 0.2), 0.0, zTop - 0.1, "shell face solid under the flange's rim (-X)")
-    if not (notchR + 0.5 <= flangeR + 1e-9):
-        FAILURES.append("flange r %.1f does not cover the notches (to r %.1f) by 0.5" % (flangeR, notchR))
 
 
 def run(_context: str):
