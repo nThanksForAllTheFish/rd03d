@@ -572,7 +572,7 @@ Append to this plan file:
 - 02 step prints: <paste the end-bar, 4b, window, pin and clip lines>.
 - 90: VERIFY OK after Tasks 2, 3, 4. 91: <pairs and volumes>.
 - STL sizes: <back / shell / bezel bytes>.
-- Print the back plate; the shell is optional (old shell fits). Measure after printing: pin diameter (model 2.2), board drop-on by hand over both pins, the connector clearance to the -Y bar.
+- Print the back plate and the shell (the old shell's boss would hit the rotated USB; see As built). Measure after printing: pin diameter (model 2.2), board drop-on by hand over both pins, the connector clearance to the -Y bar.
 ```
 
 Fill in the angle-bracket items from the actual run output; no brackets may remain.
