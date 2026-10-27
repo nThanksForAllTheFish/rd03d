@@ -634,7 +634,7 @@ def run(_context: str):
     # harmless but the ordering keeps that selection on virgin topology).
     #
     # Measurement provenance (probed on the live vendor solids, not derived):
-    #   RD-03D  PCB rear face z = 10.46 (rests on the crossbars); PCB FRONT
+    #   RD-03D  PCB rear face z = 10.46 (rests on the end bars); PCB FRONT
     #           face - the antenna/patch plane - z = 11.70, flat across both
     #           board edges over the whole clip range; board x -19.05..-3.95,
     #           y +/-22.01. Its 45-degree IC protrudes to 12.95, but only over
@@ -676,7 +676,7 @@ def run(_context: str):
     # Bonus effect of dropping the +X clip's inboard slot: the 1.7 x 1.25
     # x 3 mm nick it used to take out of the XIAO's +Y fence bar (recorded
     # as cosmetic on 2026-09-08) is gone, and the +X wall is continuous
-    # from the step-4b notch edge (y=9.4) to the plate outline.
+    # from the step-4b opening's edge (y=9.4) to the plate outline.
     #
     # (2026-09-10: the XIAO clips in 8b are now slot-free too, but for the
     # opposite reason - see 8b. Here the wall is long enough to flex; there
@@ -719,9 +719,10 @@ def run(_context: str):
     # z=postH) because the XIAO board (x -3.23..19.23) crosses the wall's
     # x -3.7..-2.2 footprint. So the two +X clips take
     # the two full-height stretches of that wall, one under each radome
-    # zone, each placed to sit CLEAR of a crossbar - a crossbar runs the
-    # full bay width (x -19.3..-3.7) and butts into both walls, so a lip
-    # band on top of one would be locally braced and would not flex.
+    # zone, each placed to sit CLEAR of an end bar - a bar runs the full
+    # bay width and butts into both walls, so a lip band over one would be
+    # locally braced and would not flex (crossbars, same rule, until
+    # 2026-10-27).
     #
     # B - +X wall under the TX radome. The -Y end bar occupies y -22.0..-20.8
     # (2026-10-27), so the band starts at -20.0 (0.8 mm clear, same rule as
@@ -734,8 +735,9 @@ def run(_context: str):
          label="radar B +X")
 
     # C - +X wall under the RX radome, in the free stretch between the
-    # step-4b notch edge (y=9.4) and crossbar B (y +17.7..+19.8):
-    # y +10.0..+17.0 leaves 0.60 mm to the notch and 0.70 mm to the bar.
+    # step-4b opening's edge (y=9.4) and the +Y end bar (y +20.0..+22.0):
+    # y +10.0..+17.0 leaves 0.60 mm to the opening and 3.0 mm to the bar
+    # (it was 0.70 to crossbar B until 2026-10-27; the span is unchanged).
     clip(comp, plate_body, "x", RE_OUT, RE_IN,
          10.0 * MM, 17.0 * MM,
          NO_SLOTS,
@@ -1042,8 +1044,9 @@ def run(_context: str):
     # rework (8b) removed the isolating slots, so the finger's stiffness now
     # comes from being continuous with the wall either side of it, and a
     # notch 3 mm past the finger's end at x 11.5 is a discontinuity in
-    # exactly that load path. The radar cable crosses above the board via
-    # the step-4b notch and never needed these either.
+    # exactly that load path. The radar cable reaches the XIAO through the
+    # step-5a floor window (over the top via the 4b notch before 2026-10-27)
+    # and never needed these either.
 
     # 12/13. (deleted 2026-10-27) the corner cable exit and the crossbar A
     # cable slot: crossbar A is gone (step 4) and the cable leaves at floor
