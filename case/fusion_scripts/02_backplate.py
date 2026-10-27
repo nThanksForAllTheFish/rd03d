@@ -381,10 +381,10 @@ def run(_context: str):
     # 4. radar bay: two +/-X side walls + end bars. (Thin-wall fix
     # 2026-09-07: the old full perimeter fence ring left 0.6 mm +/-Y wall
     # segments after the plate-outline trim - unprintable on a 0.6 mm
-    # nozzle. The +/-Y restraint is now two retention ribs inside the
-    # FrontShell (03_shell.py); the plate keeps only the 1.5 mm-thick
-    # +/-X walls, spanning the full old ring extent in Y and still
-    # trimmed by the plate outline in step 6.)
+    # nozzle. The +/-Y restraint was two retention ribs inside the
+    # FrontShell until 2026-10-27; the corner pins (6b) do it now. The
+    # plate keeps only the 1.5 mm-thick +/-X walls, spanning the full old
+    # ring extent in Y and still trimmed by the plate outline in step 6.)
     # bay width from radarClear (0.10 a side, measured print 2026-10-26);
     # the bay's length keeps boardClear (it only sets the walls' Y extent,
     # which the plate outline trims anyway). Everything below that is
@@ -520,7 +520,16 @@ def run(_context: str):
     PIN_R = 1.1 * MM
     PIN_TOP = 12.4 * MM
     PIN_FLAT_Y = 22.0 * MM
-    PINS = ((-18.25 * MM, -21.40 * MM), (-4.75 * MM, 21.30 * MM))
+    # the notch centres are symmetric about the board: 0.8 in from each
+    # side edge, i.e. radarCx -/+ 6.75; keyed off rCx like the walls
+    PIN_DX = 6.75 * MM
+    PINS = ((rCx - PIN_DX, -21.40 * MM), (rCx + PIN_DX, 21.30 * MM))
+    # each pin must merge into its bay wall (0.2 nominal at radarClear
+    # 0.10); below 0.05 the pin would stand alone and flex
+    pin_wall_overlap = (RW_IN - (PINS[0][0] - PIN_R))
+    if pin_wall_overlap < 0.05 * MM - 1e-9:
+        raise RuntimeError("locating pins overlap the bay walls by only %.2f mm: "
+                           "radarClear too big" % (pin_wall_overlap * 10))
     for cx, cy in PINS:
         sy = 1 if cy > 0 else -1
         sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -531,12 +540,15 @@ def run(_context: str):
             adsk.core.Point3D.create(cx - 1.5 * MM, sy * PIN_FLAT_Y, 0),
             adsk.core.Point3D.create(cx + 1.5 * MM, sy * PIN_FLAT_Y, 0))
         # keep the inboard (larger) profile: its centroid lies toward y=0
-        best = None
+        if sk.profiles.count != 2:
+            raise RuntimeError("pin at (%.2f, %.2f): the flat should split the circle "
+                               "into 2 profiles, got %d" % (cx * 10, cy * 10, sk.profiles.count))
+        best, best_area = None, 0.0
         for i in range(sk.profiles.count):
             pr = sk.profiles.item(i)
-            c = pr.areaProperties().centroid
-            if abs(c.y) < PIN_FLAT_Y and (best is None or pr.areaProperties().area > best.areaProperties().area):
-                best = pr
+            ap = pr.areaProperties()
+            if abs(ap.centroid.y) < PIN_FLAT_Y and ap.area > best_area:
+                best, best_area = pr, ap.area
         if best is None:
             raise RuntimeError("pin at (%.2f, %.2f): no inboard profile" % (cx * 10, cy * 10))
         extrude(comp, best, 0, PIN_TOP,
@@ -631,7 +643,9 @@ def run(_context: str):
     # MUST come after step 6 (the plate-outline Intersect is limited to
     # z <= 11 mm and would decapitate anything taller) and after step 7 (the
     # LEGO bore chamfer selects edges by circle radius; extra clip edges are
-    # harmless but the ordering keeps that selection on virgin topology).
+    # harmless but the ordering keeps that selection simple. The pins of
+    # 6b, built before step 7, only add Arc3D edges of r 1.1, which the
+    # step-7 Circle3D/r 2.45 filter cannot match).
     #
     # Measurement provenance (probed on the live vendor solids, not derived):
     #   RD-03D  PCB rear face z = 10.46 (rests on the end bars); PCB FRONT
