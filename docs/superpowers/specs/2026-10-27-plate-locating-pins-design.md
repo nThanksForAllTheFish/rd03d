@@ -99,9 +99,13 @@ fences and the XIAO clips are unchanged.
 No +X end wall is added (user's call, 2026-10-27): the XIAO keeps its −X stop
 only, as today, and the antenna end faces the open pod box.
 
-### Shell (03 step 4b/4c)
+### Shell (03 steps 4b/4c and 5b)
 
-The radar retention ribs and their lead-in chamfers are deleted. The current
+The radar retention ribs and their lead-in chamfers are deleted. The XIAO
+hold-down boss (step 5b) moves from x 2.5..9.5 to x 6.5..13.5 so it still
+lands on the shield can after the rotation; at its old position it would
+have hit the rotated USB shell (x −3.2..4.1, z 3.3..7.5) by 11.6 mm³. Found
+by the boards script's interference check on 2026-10-27; the spec missed it. The current
 printed shell still fits: the pins are cut at |y| 22.0 and the bars end at 22.0,
 both inside the old ribs' 22.26 faces.
 
