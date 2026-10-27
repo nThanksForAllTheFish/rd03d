@@ -598,3 +598,14 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Verification list in the spec: Task 1 and Task 3 step 1 probes; 91 in Task 5.
 - Docs: Task 6.
 - No TBD/TODO placeholders; the only angle brackets are in the as-built template that Task 6 fills.
+
+## As built (2026-10-27)
+
+- Probe numbers behind the design (read-only, placed vendor body, case mm): notch centres (-18.25, -21.40) and (-4.75, +21.30), arc radius 1.14 confirmed from the centre in both inboard directions (1.14/1.12 and 1.14/1.16); the other two corners solid at r 1.8 roundings. Bare PCB rear at 10.46 over y -22.0..-20.7 and +19.8..+22.0 full width; connector from y -20.7, lowest z 6.64, x -15.3..-9.3; passives to z 9.0..9.3 mid-board.
+- 02 step prints: `radar bay ok (X walls + end bars bearing on the PCB ends; Y-location is the corner pins' job), bar top z(mm)= 10.46`; `radar fence +X wall opened floor to top over |y| < 9.4`; `wire window ok (XIAO fence -X wall, |y| < 3.5, z 0..5)`; `locating pins ok (O2.2 at [(-18.25, -21.4), (-4.75, 21.3)], top z 12.4, flat at |y| 22.0, 0.4 chamfer)`; clips A -3.50..3.50 top 12.50, B -20.00..-13.00 top 12.30, C 10.00..17.00 top 12.30, lips 11.80 +0.85.
+- Probe corrections during the build: the Task 1 "void above the end bar" stations were inside the pin footprints (moved 3 mm in from the walls); the z 1.0 probes at (-3.10, ±8) sat inside the XIAO's -X corner posts, which were always there (moved to |y| 4.5). Not geometry changes.
+- Shell: ribs deleted; the XIAO hold-down boss moved from x 2.5..9.5 to x 6.5..13.5 because the rotated USB shell (x -3.2..4.1, z 3.3..7.5) would have hit the old boss by 11.6 mm^3 (found by the boards script's interference check; the spec missed it).
+- 04: XIAO placed bbox x -3.23..19.23, y ±8.89, z 3.00..7.46; USB shell at x -3.23..4.07; ceramic antenna at x 17.1..19.1. The plan's probe point (-2.5, 0, 6.5) is inside the hollow USB shell and reads void; z 4.5 or 7.2 there read solid.
+- 90: VERIFY OK after Tasks 2, 3, 4 and the boss move (plate 22.723 cm3, shell 16.752 cm3, bezel 0.371 cm3). 04 interference after the boss move: only the two expected case pairs (plate/shell 69.3 mm^3, shell/bezel 18.5 mm^3) plus the XIAO vendor model's own internal sub-body overlaps; no shell/XIAO and no plate/radar pair. 91: 2 pairs, 0 unexpected, 87.7 mm^3, PIR FIT OK.
+- STL sizes: back 334,684 B, shell 158,684 B, bezel 158,284 B (bezel unchanged).
+- Print the back plate and the shell. The old shell no longer fits: its hold-down boss at x 2.5..9.5 would hit the rotated XIAO's USB shell, so the shell must be reprinted with the boss at x 6.5..13.5. The bezel is unchanged. Measure after printing: pin diameter (model 2.2), board drop-on by hand over both pins, the connector clearance to the -Y bar.

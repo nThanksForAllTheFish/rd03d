@@ -27,6 +27,8 @@ join.
 | 5V | 5V |
 | GND | GND |
 
+In the case the XIAO sits with its USB end toward the radar bay (rotated 180° since the 2026-10-27 plate); the radar cable passes through the window at the foot of the XIAO fence, the PIR leads arrive at the wing end.
+
 Radar UART: 256000 baud, 8N1.
 
 ## Build & flash
