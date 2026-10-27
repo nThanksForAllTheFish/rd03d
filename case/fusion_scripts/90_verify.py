@@ -438,10 +438,13 @@ def check_radar_wire_window(plate, des):
     |y| < 3.5, z 0..5."""
     wo, wi, ei, eo, rCx = radar_walls(des)
     wx = (ei + eo) / 2                       # +X bay wall centre line, -3.10
+    # at floor level the XIAO's -X corner posts (x -3.25..-0.25, |y|
+    # 5.9..8.9, z 0..3, step 5) overlap the old wall footprint, so the
+    # z 1.0 probes sit at |y| 4.5, between the wire window and the posts
     for z in (1.0, 4.0, 8.0):
         void(plate, wx, 0.0, z, "+X bay wall open at y 0 z %.1f" % z)
-        void(plate, wx, 8.0, z, "+X bay wall open at y 8 z %.1f" % z)
-        void(plate, wx, -8.0, z, "+X bay wall open at y -8 z %.1f" % z)
+        for y in ((4.5, -4.5) if z < 3.0 else (8.0, -8.0)):
+            void(plate, wx, y, z, "+X bay wall open at y %+.1f z %.1f" % (y, z))
     solid(plate, wx, 15.0, 5.0, "+X bay wall intact beyond |y| 9.4 (+Y)")
     solid(plate, wx, -15.0, 5.0, "+X bay wall intact beyond |y| 9.4 (-Y)")
     # XIAO fence -X wall: kept at |y| 3.5..10.65, windowed at |y| < 3.5
