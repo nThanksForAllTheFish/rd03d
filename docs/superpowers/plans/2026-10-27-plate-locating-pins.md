@@ -18,7 +18,7 @@
 - Scripts work in centimetres; multiply millimetre values by `MM`. Every boolean passes `participants=[...]`. Read parameters before `baseFeatures.startEdit()` (the existing scripts already do; keep the pattern).
 - `90_verify.py` prints `VERIFY OK` or raises with every `FAIL:` line listed. Treat it like a test run: read the failures, do not loosen a probe to make it pass unless the spec says the geometry changed.
 - `02_backplate.py` prints one line per step. If a step raises, the whole rebuild fails; read the traceback from `run_fusion.py`'s output.
-- Commit after each task with the no-reply author: `git -c user.name=nThanksForAllTheFish -c user.email=nThanksForAllTheFish@users.noreply.github.com commit ...`. Every commit message ends with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Before committing, `git grep -l kevinarthurgomez -- case docs` must print nothing.
+- Commit after each task with the no-reply author: `git -c user.name=nThanksForAllTheFish -c user.email=nThanksForAllTheFish@users.noreply.github.com commit ...`. Every commit message ends with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Before committing, a `git grep` of `case` and `docs` for the maintainer's real name or home path must print nothing.
 - Coordinates below are in the case frame (mm): X across the plate (radar bay at negative X, wing at positive X), Y along the radar's long axis, Z up from the plate's top face (floor of the cavity). The radar PCB's rear face is at z 10.46, its front at 11.76.
 
 ## File map
