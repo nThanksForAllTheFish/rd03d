@@ -69,6 +69,12 @@ def check_baseline(plate, shell, des):
     void(plate, 8.0, -9.9, 6.5, "above the XIAO clip top (5.6)")
     solid(shell, 0, 0, 15.0, "shell front wall above the 14 mm ceiling")
     void(shell, 0, 0, 7.0, "shell interior cavity")
+    # the radar retention ribs are gone (2026-10-27): the corner pins on the
+    # plate locate the board. Rib footprint was x -19.0..-4.0, y 22.26..23,
+    # z 6..14.
+    for sy in (-1, 1):
+        void(shell, rCx, sy * 22.6, 10.0, "no retention rib at y %+.1f" % (sy * 22.6))
+        solid(shell, rCx, sy * 24.0, 10.0, "shell +/-Y wall still there outside the old rib")
 
 
 def check_fit_allowances(plate, shell, des):
