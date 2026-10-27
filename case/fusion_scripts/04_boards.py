@@ -116,7 +116,7 @@ def run(_context: str):
     intD, rT = p(des, "intD"), p(des, "radarT")
     rCx, xCx, postH = p(des, "radarCx"), p(des, "xiaoCx"), p(des, "postH")
 
-    # Radar: back face on crossbars at z = intD - 1mm - radarT (= 6.65 mm)
+    # Radar: back face on end bars at z = intD - 1mm - radarT (= 6.65 mm)
     place(radar_occ, rot_matrix(RADAR_XROT_DEG, RADAR_FLIP180),
           rCx, 0.0, intD - 0.1 - rT)
     # XIAO: bottom on posts at z = postH (= 3 mm), USB end toward the radar

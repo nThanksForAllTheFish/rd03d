@@ -17,8 +17,7 @@ layout is otherwise final:
    the bay through an opening at the foot of the +X wall, not over the top of it.
 3. Turn the XIAO 180°. Its USB port is blocked in every layout since the base
    jack, so point the ceramic antenna at the plastic PIR wing instead of at the
-   radar's ground plane, and put the radar-side pads (5V, GND, D6, D7) next to
-   the radar.
+   radar's ground plane.
 
 Nothing else on the plate moves: Technic grid, jack, capacitor cradle, wing,
 socket boss, bezel, −X wall and its snap pockets, the three radar clips (one
@@ -40,16 +39,16 @@ shifts 0.5 mm) and the two XIAO clips all stay.
 
 ## Design
 
-### Locating pins (new, 02 step 4c)
+### Locating pins (new, 02 step 6b)
 
 Two pins, modelled Ø2.2 (thin pillars print about 0.2 under, giving roughly
 0.15 mm of radial play in the Ø2.28 notch; diameter chosen by the agent, 2026-10-27), centred on the notch centres above,
 from the plate floor (z 0) to z 12.4, with a 0.4 × 45° chamfer on the top edge
 as lead-in. 12.4 keeps 0.5 under the shell's 12.9 radome step.
 
-Each pin is cut flat on its outboard side at |y| = 22.0 (the board's end line)
-so it stays inside the current shell's ribs (inner faces ±22.26). Each pin
-merges into the adjacent ±X bay wall (the −Y pin spans x −19.35..−17.15 and the
+Each pin is cut flat on its outboard side at |y| = 22.0 (the board's end line),
+which keeps it inside the board's footprint and clear of the shell's ±Y wall.
+Each pin merges into the adjacent ±X bay wall (the −Y pin spans x −19.35..−17.15 and the
 −X wall's inner face is −19.15; the +Y pin spans −5.85..−3.65 against the +X
 wall's −3.85) and into its end bar, so its free length above the bar is 2 mm.
 
@@ -66,8 +65,9 @@ Two bars from the floor to PCB_REAR_Z (10.46), full bay width between the walls:
 
 Both tie into both bay walls. Crossbar A, its cable slot (step 13) and the
 corner cable exit (step 12) are deleted; the +Y pin and bar replace crossbar B.
-Clip B moves from y −20.5..−13.5 to y −20.0..−13.0 to keep 0.7 mm between its
-raised span and the −Y bar (the old rule for crossbar A). Clip C (y 10..17) is
+Clip B moves from y −20.5..−13.5 to y −20.0..−13.0, leaving 0.8 mm between its
+raised span and the −Y bar's face at −20.8 (the old rule for crossbar A asked
+for 0.7). Clip C (y 10..17) is
 already 3 mm clear of the +Y bar.
 
 ### Wire opening (replaces the 4b notch)
@@ -82,8 +82,24 @@ one 2.65 mm slab (x −5.0..−2.35). It becomes:
   face at x −3.5. Above z 5 the radar wall is gone over this band too.
 - a wire window through the kept fence wall, |y| < 3.5, z 0..5.
 
-The 4-wire cable then drops from the connector to the floor, runs under the
-board and through the window to the XIAO's −X end, about 10 mm of wire.
+The 4-wire cable drops from the connector to the floor, runs under the radar
+board and through the window. The window exits directly under the rotated
+USB-C receptacle (z 3.3..7.5), and the XIAO stands on 3 mm posts, so the wires
+carry on under the XIAO (below z 3, clear of the four 3 × 3 corner posts at
+x −3.25..−0.25 and 16.25..19.25, |y| 5.9..8.9).
+
+Which pads are at which end: on the XIAO, 5V, GND, 3V3 and D0..D2 sit at the
+USB end and D6/D7 at the antenna end. After the rotation (mirror about xCx =
+8.0 of the pre-rotation record 5V ≈ 14.9, GND ≈ 12.4, D6/D7 ≈ −0.4) that is
+5V ≈ x 1.1, GND ≈ 3.6, D1 ≈ 3.6 and 3V3 ≈ 6.2 at the −X (window) end, and D6
+and D7 ≈ 16.4 at the +X (wing) end. So the radar's 5V and GND come up in the
+two channels beside the receptacle (x −3.5..−1.75, |y| 4.45..5.9), and only the
+two UART wires (OT1→D7, RX←D6) run the length of the board underneath, about
+25 mm, and come up at the fence's open +X end past x 19.25. The board-to-fence
+gap along the ±Y edges is 0.25 mm, so nothing rises there. The PIR's 3V3, GND
+and D1 come over the wing and across the board top to the window end. 3V3 at
+x ≈ 6.2 is inside the clip lips' span (x 4.5..11.5, 0.10 above the board), so
+that joint must stay flat; the other five pads are outside it.
 
 The window is narrower than the USB-C receptacle (8.9 wide) on purpose: the
 receptacle's shoulders are the XIAO's −X stop against the fence face at x −3.5,
@@ -105,9 +121,8 @@ The radar retention ribs and their lead-in chamfers are deleted. The XIAO
 hold-down boss (step 5b) moves from x 2.5..9.5 to x 6.5..13.5 so it still
 lands on the shield can after the rotation; at its old position it would
 have hit the rotated USB shell (x −3.2..4.1, z 3.3..7.5) by 11.6 mm³. Found
-by the boards script's interference check on 2026-10-27; the spec missed it. The current
-printed shell still fits: the pins are cut at |y| 22.0 and the bars end at 22.0,
-both inside the old ribs' 22.26 faces.
+by the boards script's interference check on 2026-10-27; the spec missed it.
+Both the plate and the shell must be reprinted; the bezel is unchanged.
 
 ### Verification (90_verify.py, 91_pir_fit.py)
 

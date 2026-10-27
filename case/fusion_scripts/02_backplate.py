@@ -475,8 +475,11 @@ def run(_context: str):
 
     # 5a. wire window (2026-10-27): the radar's 4-wire cable comes off the
     # connector, drops to the floor, runs under the board and through this
-    # window in the XIAO fence's -X wall to the XIAO's -X end, where the
-    # rotated board's 5V, GND, D6 and D7 pads now are. |y| < 3.5, z 0..5,
+    # window in the XIAO fence's -X wall. The rotated XIAO's 5V, GND, 3V3
+    # and D1 pads are at this -X end (5V/GND come up in the channels
+    # beside the USB receptacle); D6 and D7 are at the +X end, so their
+    # two wires run on under the board (it stands on 3 mm posts) to the
+    # fence's open +X end. |y| < 3.5, z 0..5,
     # through the full 1.5 mm wall. Narrower than the USB-C receptacle
     # (8.9 wide) on purpose: the receptacle's shoulders stay the XIAO's -X
     # stop against the fence face at x -3.5.
@@ -511,8 +514,9 @@ def run(_context: str):
     # O2.2 modelled (thin pillars print ~0.2 under: ~0.15 radial play in
     # the O2.28 notch), floor to z 12.4 (0.5 under the shell's 12.9 radome
     # step), top edge chamfered 0.4 as lead-in. Each pin is a D: cut flat
-    # on the outboard side at |y| 22.0, the board's end line, so it stays
-    # inside the current printed shell's ribs (inner faces 22.26). The
+    # on the outboard side at |y| 22.0, the board's end line, which keeps
+    # it inside the board's footprint and clear of the shell's +/-Y wall
+    # (the shell is reprinted anyway: its boss moved, 03 step 5b). The
     # inboard side merges into the bay wall (x overlap 0.2) and the end
     # bar, so only 2 mm of pin stands free above the bar.
     #

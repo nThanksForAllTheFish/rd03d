@@ -95,7 +95,7 @@ def run(_context: str):
     # thinning it to windowT (1.2 mm) but putting the radome's INNER face at
     # 14.80. Probed on the live model, the RD-03D's PCB FRONT face - the
     # antenna/patch plane - sits at z = 11.70 (its PCB rear rests on the
-    # crossbars at 10.46; the 13.0 figure quoted in earlier notes is the
+    # end bars at 10.46; the 13.0 figure quoted in earlier notes is the
     # board's overall front extent, i.e. the 45-degree IC, not the patches).
     # That left a 3.10 mm AIR gap in front of the patches, which at 24 GHz
     # (lambda = 12.5 mm) is essentially exactly lambda/4 = 3.125 mm - the
@@ -156,9 +156,9 @@ def run(_context: str):
 
     # 4b/4c. (deleted 2026-10-27) the radar retention ribs and their lead-in
     # chamfers: the board is located by two pins in its own PCB corner
-    # notches on the back plate (02_backplate.py step 6b). The plate's pins
-    # and end bars stay inside |y| 22.0, so shells printed with the ribs
-    # (inner faces 22.26) still fit.
+    # notches on the back plate (02_backplate.py step 6b). The shell must
+    # be reprinted regardless: the XIAO hold-down boss moved with the
+    # rotated board (step 5b).
 
     # 5: snap bumps on the inner -X wall, z centered -1mm (rects extend
     # into the wall so the Join reliably merges with the shell body; proud

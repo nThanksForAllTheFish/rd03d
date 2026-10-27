@@ -139,10 +139,11 @@ down means holding an iron over them.
    the radar, two for the XIAO. Each clip's tapered face cams open as the
    board's edge goes past and springs back over it; to remove a board,
    push the clips outward with a fingernail. Seat the RD-03D patch-side
-   out, the XIAO on its posts with its own USB-C connector at the +X end
-   (that port no longer reaches daylight — power comes in through the base
-   jack instead). The radar is still Y-loose until the shell closes;
-   that's normal.
+   out, its two notched corners dropped onto the plate's two locating pins
+   (since 2026-10-27; it should go on by hand and sit without play in Y),
+   and the XIAO on its posts with its own USB-C connector at the −X end,
+   toward the radar bay (that port no longer reaches daylight — power
+   comes in through the base jack instead).
    - **Insertion tip:** don't press a board down flat. Tuck one long edge
      under its clip(s) first, then rock/press the opposite edge down —
      you then only flex the clips on one side at a time, which roughly
@@ -174,10 +175,10 @@ down means holding an iron over them.
      anywhere else. The 7 × 7 mm boss on the inside of the shell's front
      wall, which comes down onto the XIAO's RF shield can, still backs
      them up once the lid is on.
-   The radar lands on two crossbars that bear on the bare PCB, in the two
-   component-free bands across the board's back — its 5-pin connector
-   hangs free in the space between them, so don't force the board down
-   onto anything.
+   The radar lands on two end bars under the ends of the board (y ±20..22,
+   since 2026-10-27; before that, two crossbars between the rear
+   components) that bear on the bare PCB — its 5-pin connector hangs free
+   over the open floor, so don't force the board down onto anything.
 2. PIR sensor, into the plate's socket, **before the shell goes on** so
    you can see the wires land:
    - Drop the sensor into the socket from the front, dome out, at any
@@ -186,10 +187,9 @@ down means holding an iron over them.
      the boss. The pins and the cap soldered on them hang in the blind
      bore, 1 mm above its floor. Nothing holds it yet; it turns freely.
    - Lead the three wires out through the Ø3 hole in the boss's −X side
-     (the only way out of the bore), over the wing, and onto the plate at
-     the XIAO's +X end (the fence bars are 5 mm tall; the wires climb
-     over the −Y one or run across the bay above the board to D1, 3V3
-     and GND).
+     (the only way out of the bore), over the wing, and across the top of
+     the XIAO from its +X end to D1, 3V3 and GND, which since the
+     2026-10-27 rotation sit at the board's −X (window) end.
 3. Drop the shell on over the sensor: the pod box comes down over the
    wing and the socket, the lens passes up through the hole until its
    ring is flush with the face, and both snap pairs click — the −X pair
@@ -255,27 +255,29 @@ It cannot go in from the inside, and it must not be pre-soldered.
 in the +Y band, lead end toward +X. It snaps down past its equator; no lid
 feature holds it.
 
-**RD-03D connector cable (added 2026-09-10).** The connector sits in a pocket
-sealed on three sides by the two bay walls and by crossbar A, the rib that
-carries the board's rear face. Crossbar A has a 4.0 x 3.5 mm notch in its
-TOP, hard against the +X wall, so the cable can get out:
+**RD-03D connector cable (added 2026-09-10, rerouted 2026-10-27).** The
+connector sits between the two bay walls over the open floor; the −Y end bar
+stops 0.1 mm short of it. There is no notch in any bar now: crossbar A and
+its notch, the step-4b notch in the +X wall and the −Y corner exit all went
+with the pin plate. The route:
 
-1. Plug the cable in, then lay the four wires through the notch in the top of
-   crossbar A, hugging the +X wall. They stay at connector height (its
-   underside is z 6.70) rather than diving to the floor, and once the radar
-   board is clipped down they are captured between the notch floor and the
-   board's rear face, so they cannot wander.
-2. Run them +Y along that wall, under the radar board (there is 10.46 mm of
-   headroom), to the step-4b notch at |y| < 9.4.
-3. Cross the wall there. That notch is open from z 3 to the ceiling, i.e.
-   ABOVE the XIAO, whose top face is at 4.20 - so the wires land on top of
-   the board and both long edges are in reach. That matters: D6 is on the +Y
-   edge and D7 on the -Y edge, so a route arriving from one side would
-   strand one of them.
+1. Plug the cable in and lay the four wires straight down to the floor.
+2. Run them +Y along the floor, under the radar board (10.46 mm of headroom),
+   to the wire window at the foot of the XIAO fence's −X wall (|y| < 3.5,
+   open from the floor to z 5).
+3. Through the window. It comes out directly under the XIAO's USB-C
+   receptacle (its shell is at z 3.3..7.5) and the board stands on 3 mm
+   posts, so the wires stay on the floor under the XIAO. 5V and GND come
+   straight up in the two channels beside the receptacle (x −3.5..−1.75,
+   |y| 4.45..5.9) to the pads at that end. The two UART wires (OT1→D7,
+   RX←D6) keep going under the board, about 25 mm, between the four 3 × 3
+   corner posts (x −3.25..−0.25 and 16.25..19.25, |y| 5.9..8.9), come up at
+   the fence's open +X end past the board edge at x 19.25, and fold back
+   onto the top face to D6 and D7 (x ≈ 16.4, one on each long edge).
+   Nothing can rise along the ±Y edges: the board-to-fence gap there is
+   0.25 mm.
 
-Do this before clipping the radar board down. There is also a 2.15 mm notch
-in the -Y corner of the +X wall if you would rather take 5V/GND out to the
--Y band, where the jack and capacitor already are.
+Do this before clipping the radar board down.
 
 **Wire routes.**
 
@@ -287,13 +289,17 @@ in the -Y corner of the +X wall if you would rather take 5V/GND out to the
 - **Solder on the top face only, and mind the clip lips.** The lips overhang
   the board's ±Y edges by 0.34 mm with just 0.10 mm of clearance above it,
   over x 4.5..11.5. A solder joint on an edge pad in that span will foul
-  one. The four pads you need are all outside it — 5V ≈ x 14.9, GND ≈ 12.4,
-  D6 and D7 ≈ −0.4 — but GND clears the finger's end by under a millimetre,
-  so check it before you commit to a fat joint.
+  one. Since the 2026-10-27 rotation the pads sit at 5V ≈ x 1.1, GND ≈ 3.6,
+  D1 ≈ 3.6, 3V3 ≈ 6.2 and D6/D7 ≈ 16.4 (before it: 5V ≈ 14.9, GND ≈ 12.4,
+  D6/D7 ≈ −0.4). 5V, GND, D1, D6 and D7 are all outside the lip span, but
+  **3V3 is inside it**, so keep the PIR's VDD joint there low and flat
+  rather than a fat blob.
 - Capacitor to the 5V rail: **over a fence bar.**
   There is *no* channel round the +X end of the XIAO fence — both ±Y fence
   bars run the full width of the plate, out to the edge at x 20.85. (Only the
-  *board* stops short, at x 19.23; the wall beside it does not.) So take the
+  *board* stops short, at x 19.23; the wall beside it does not. The open
+  strip past the board edge is where the radar's two UART wires surface from
+  under the board, see the cable section above.) So take the
   leads either **over the top of a bar** — they are 5 mm tall in a 14 mm
   cavity, leaving about 9 mm of headroom — or **through the ±Y wire notches
   and across the bay above the XIAO**. Join at the jack pads or at the XIAO
@@ -405,9 +411,12 @@ nothing).
 
 ## Design notes
 
-- All free-standing printed walls are ≥1.5 mm (0.6 mm-nozzle friendly); the shell's radar ribs and snap bumps are thinner but are wall-attached, so they print as local wall thickening. The radar's side
-  (Y) restraint comes from two ribs inside the shell, so the radar sits
-  loose in Y until the lid snaps on — normal.
+- All free-standing printed walls are ≥1.5 mm (0.6 mm-nozzle friendly); the shell's snap bumps are thinner but are wall-attached, so they print as local wall thickening. The radar's side
+  (Y) restraint came from two ribs inside the shell until 2026-10-27, so
+  the radar sat loose in Y until the lid snapped on. Since then it comes
+  from two Ø2.2 pins on the plate that engage the half-notches in the
+  radar PCB's diagonal corners: the board is located as soon as it drops
+  on, and the shell has no ribs.
 - **Antenna gap (corrected 2026-09-08).** The RD-03D's patch plane — the
   front face of its PCB — sits at z = 11.70 mm; the shell's front wall
   runs 14.00–16.00. That left a **3.10 mm air gap** in front of the
@@ -429,11 +438,14 @@ nothing).
   the IC's tip.
 - `windowT` (1.2 mm) is now unused by the antenna zones; it survives as a
   parameter only.
-- There is no wire channel between the bays (the boards sit 0.7 mm apart);
-  route the four jumpers over the notched fence wall between the bays
-  (cut down to 3 mm height there for exactly this).
-- Board seating (fixed 2026-09-07): the radar's two crossbar supports now
-  top out at 10.46 mm, the measured rear face of its bare PCB, and sit in
+- There is no wire channel between the bays at board height (the boards
+  sit 0.7 mm apart). Until 2026-10-27 the four jumpers went over a fence
+  wall notched down to 3 mm; since then they go under the boards, through
+  the window at the foot of the fence wall (see the cable section).
+- Board seating (fixed 2026-09-07; the crossbars were replaced on
+  2026-10-27 by two end bars under the board's ends, y −22.0..−20.8 and
+  +20.0..+22.0, with the same 10.46 top): the radar's two crossbar supports
+  topped out at 10.46 mm, the measured rear face of its bare PCB, and sat in
   the two full-width component-free bands (y −12.8…−11.2 and
   y +17.7…+19.8). Previously both bars were cut to 6.65 mm — the board's
   total thickness including the rear connector — so the +Y bar missed the
@@ -443,7 +455,9 @@ nothing).
   RF geometry is the same.
 - The XIAO is held on its posts by a boss on the shell's inner front
   face, landing 0.2 mm above the RF shield can and clear of the USB-C
-  connector.
+  connector. The boss moved from x 2.5..9.5 to x 6.5..13.5 on 2026-10-27
+  to follow the rotated board; a shell printed before that hits the USB
+  shell and must be reprinted.
 - **Retention clips (2026-09-08, revised 2026-09-09 and 2026-09-10).**
   Each lip's flat
   underside sits 0.10 mm above its board's face (radar 11.80 vs 11.70;

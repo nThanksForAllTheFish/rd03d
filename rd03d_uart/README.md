@@ -27,7 +27,7 @@ join.
 | 5V | 5V |
 | GND | GND |
 
-In the case the XIAO sits with its USB end toward the radar bay (rotated 180° since the 2026-10-27 plate); the radar cable passes through the window at the foot of the XIAO fence, the PIR leads arrive at the wing end.
+In the case the XIAO sits with its USB end toward the radar bay (rotated 180° since the 2026-10-27 plate), so its 5V, GND, 3V3 and D1 pads are at that end and D6/D7 are at the wing end. The radar cable comes through the window at the foot of the XIAO fence: 5V and GND come up beside the USB receptacle, and the two UART wires run under the board from the window to the fence's open +X end for D6/D7. The PIR leads come over the wing and across the board to the window end.
 
 Radar UART: 256000 baud, 8N1.
 
