@@ -43,7 +43,7 @@ shifts 0.5 mm) and the two XIAO clips all stay.
 ### Locating pins (new, 02 step 4c)
 
 Two pins, modelled Ø2.2 (thin pillars print about 0.2 under, giving roughly
-0.15 mm of radial play in the Ø2.28 notch), centred on the notch centres above,
+0.15 mm of radial play in the Ø2.28 notch; diameter chosen by the agent, 2026-10-27), centred on the notch centres above,
 from the plate floor (z 0) to z 12.4, with a 0.4 × 45° chamfer on the top edge
 as lead-in. 12.4 keeps 0.5 under the shell's 12.9 radome step.
 
@@ -96,10 +96,8 @@ in `rot_matrix`), component side still up. USB overhang at x −3.25, board body
 x −1.75..19.25. The bay envelope is symmetric about xCx so the posts, the ±Y
 fences and the XIAO clips are unchanged.
 
-A fourth fence wall closes the +X end: x 19.5..20.97 (trimmed by the plate
-outline), z 0..5, so the board has a +X stop. It sits inside the pod box, not
-against a shell wall. The antenna end faces this 1.5 mm PETG wall and then open
-plastic; no metal within 20 mm.
+No +X end wall is added (user's call, 2026-10-27): the XIAO keeps its −X stop
+only, as today, and the antenna end faces the open pod box.
 
 ### Shell (03 step 4b/4c)
 
@@ -116,7 +114,6 @@ both inside the old ribs' 22.26 faces.
   inboard of each centre at z 11; void at the flat side 1.2 outboard.
 - Wire window: void in the fence wall at (−4.25, 0, 2.5); solid at (−4.25, ±4.5,
   2.5); void in the radar +X wall at (−3.1, 0, 1.0) and (−3.1, ±8, 8).
-- +X end wall: solid at (20.2, 0, 2.5); void at (19.0, 0, 2.5).
 - Clip B lip probes move with it; the cable exit and crossbar A tunnel checks go.
 - 91: the interference run must report no plate/radar pair; the plate/shell
   allowance and bezel/shell press pairs are unchanged.
