@@ -75,6 +75,16 @@ def check_baseline(plate, shell, des):
     for sy in (-1, 1):
         void(shell, rCx, sy * 22.6, 10.0, "no retention rib at y %+.1f" % (sy * 22.6))
         solid(shell, rCx, sy * 24.0, 10.0, "shell +/-Y wall still there outside the old rib")
+    # XIAO hold-down boss (03 step 5b): 7 x 7 at x 6.5..13.5 since the XIAO
+    # turned 180 deg (2026-10-27); it must clear the USB shell (x to 4.07,
+    # z to 7.46) and sit on the shield plateau (x 5.7..14.7)
+    solid(shell, 10.0, 0.0, 8.0, "XIAO hold-down boss at x 10")
+    solid(shell, 7.0, 0.0, 8.0, "boss reaches x 6.5 (solid at 7.0)")
+    solid(shell, 13.0, 0.0, 8.0, "boss reaches x 13.5 (solid at 13.0)")
+    void(shell, 10.0, 0.0, 6.2, "boss foot above the shield (z 6.40)")
+    void(shell, 4.5, 0.0, 8.0, "nothing of the shell over the USB shell at x 4.5")
+    void(shell, 2.5, 0.0, 8.0, "old boss position (x 2.5) is clear")
+    void(shell, 14.5, 0.0, 8.0, "nothing beyond the boss at x 14.5")
 
 
 def check_fit_allowances(plate, shell, des):
