@@ -70,7 +70,7 @@ def run(_context: str):
 
     intW, intH, intD = p(des, "intW"), p(des, "intH"), p(des, "intD")
     wall, backT = p(des, "wall"), p(des, "backT")
-    winT, rCx = p(des, "windowT"), p(des, "radarCx")
+    winT = p(des, "windowT")
     MM = 0.1
 
     # 1+2: outer box then cavity (cavity cut MUST be restricted to the shell
