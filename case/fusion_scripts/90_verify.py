@@ -47,13 +47,22 @@ def void(body, x, y, z, why):
                         % (x, y, z, why))
 
 
-def check_baseline(plate, shell):
+def radar_walls(des):
+    """The radar fence walls' faces (mm) as 02 step 4 builds them: inner
+    faces at radarCx +/- (radarW/2 + radarClear), 1.5 thick outside."""
+    def pv(n): return des.userParameters.itemByName(n).value * 10
+    rCx, half = pv("radarCx"), pv("radarW") / 2 + pv("radarClear")
+    return rCx - half - 1.5, rCx - half, rCx + half, rCx + half + 1.5, rCx
+
+
+def check_baseline(plate, shell, des):
     """Geometry that predates this plan and must survive every change."""
+    wo, wi, ei, eo, rCx = radar_walls(des)
     solid(plate, 0, 0, -4, "plate core")
     void(plate, 0.95, -12, -4, "LEGO through-bore at x0.95 y-12")
-    solid(plate, -11.5, -12.0, 1.0, "radar bay crossbar A (y -12.8..-11.2)")
-    void(plate, -11.5, 0, 1.0, "radar bay is open between the crossbars")
-    solid(plate, -20.0, 0, 6.0, "radar clip A wall at x -20.8..-19.3")
+    solid(plate, rCx, -12.0, 1.0, "radar bay crossbar A (y -12.8..-11.2)")
+    void(plate, rCx, 0, 1.0, "radar bay is open between the crossbars")
+    solid(plate, (wo + wi) / 2, 0, 6.0, "radar clip A wall at x %.2f..%.2f" % (wo, wi))
     solid(plate, 8.0, -9.9, 2.0, "XIAO -Y fence wall")
     solid(plate, 8.0, 9.9, 2.0, "XIAO +Y fence wall")
     void(plate, 8.0, -9.9, 6.5, "above the XIAO clip top (5.6)")
@@ -326,6 +335,34 @@ def check_cap_cradle(plate):
     # check_lego_bores_clear.
 
 
+def check_radar_bay(plate, des):
+    """Radar fence walls at radarCx +/- (radarW/2 + radarClear) (2026-10-26,
+    radarClear 0.10 from the measured print: inner faces -19.15 / -3.85,
+    outer -20.65 / -2.35): void 0.05 inside each inner face, solid 0.05
+    into it, solid 0.05 inside each outer face, void 0.05 past it; the
+    clip lips reach 0.5 past the board's edges (x -19.05 / -3.95)."""
+    wo, wi, ei, eo, rCx = radar_walls(des)
+    def pv(n): return des.userParameters.itemByName(n).value * 10
+    if not (0.05 - 1e-9 <= pv("radarClear") <= 0.25 + 1e-9):
+        FAILURES.append("radarClear %.2f is not 0.05..0.25" % pv("radarClear"))
+    # -X wall at y 5 (clip A's band is y +/-3.5), +X wall at y 15 (clear of
+    # the 4b notch |y| < 9.4, clip C's band 10..17 only raises it above 10.5)
+    void(plate, wi + 0.05, 5.0, 5.0, "radar bay open 0.05 inside the -X wall's inner face (x %.2f)" % wi)
+    solid(plate, wi - 0.05, 5.0, 5.0, "-X fence wall solid 0.05 into its inner face")
+    solid(plate, wo + 0.05, 5.0, 5.0, "-X fence wall solid 0.05 inside its outer face (x %.2f)" % wo)
+    void(plate, wo - 0.05, 5.0, 5.0, "nothing 0.05 outside the -X fence wall")
+    void(plate, ei - 0.05, 15.0, 5.0, "radar bay open 0.05 inside the +X wall's inner face (x %.2f)" % ei)
+    solid(plate, ei + 0.05, 15.0, 5.0, "+X fence wall solid 0.05 into its inner face")
+    solid(plate, eo - 0.05, 15.0, 5.0, "+X fence wall solid 0.05 inside its outer face (x %.2f)" % eo)
+    void(plate, eo + 0.05, 15.0, 5.0, "nothing 0.05 outside the +X fence wall")
+    # the lips: solid 0.5 past the board edge at lip height, void just under
+    # the lip (the board's own space, 0.1 float) for all three clips
+    board_lo, board_hi = rCx - 7.55, rCx + 7.55
+    for x, y, tag in ((board_lo + 0.3, 0.0, "A"), (board_hi - 0.3, -17.0, "B"), (board_hi - 0.3, 13.5, "C")):
+        solid(plate, x, y, 11.95, "radar clip %s lip reaches 0.3 past the board edge (x %.2f)" % (tag, x))
+        void(plate, x, y, 11.65, "radar clip %s lip floats above the board's front face" % tag)
+
+
 def check_fence_walls_continuous(plate):
     """Both XIAO fence walls run unbroken past the clip finger.
 
@@ -343,32 +380,36 @@ def check_fence_walls_continuous(plate):
         solid(plate, 8.0, sy * 9.9, 4.0, "clip finger untouched " + tag)
 
 
-def check_radar_cable_exit(plate):
+def check_radar_cable_exit(plate, des):
     """The +X bay wall is notched at its -Y corner for the radar cable.
 
     The connector pocket is otherwise sealed: bay walls at +/-X, crossbar A
     (full height, y -12.8..-11.2) at +Y, and only 0.84 mm to the plate edge
-    at -Y. This notch is the cable's only route to the XIAO.
+    at -Y. This notch is the cable's only route to the XIAO. Positions
+    derive from the fence walls (radar_walls): the +X wall's centre line
+    wx, its inner face ei; the crossbar A notch runs 4.1 mm into the bay
+    from 0.1 inside that face.
     """
+    wo, wi, ei, eo, rCx = radar_walls(des)
+    wx = (ei + eo) / 2                       # +X wall centre line, -3.10
     for z in (1.0, 5.0, 9.0):
-        void(plate, -2.95, -21.8, z, "cable exit open at z=%.1f" % z)
-    solid(plate, -2.95, -19.5, 5.0, "+X bay wall intact under clip B")
+        void(plate, wx, -21.8, z, "cable exit open at z=%.1f" % z)
+    solid(plate, wx, -19.5, 5.0, "+X bay wall intact under clip B")
     # NB not probed at y=0: step 4b deliberately cuts this wall away above
     # z=postH over |y|<9.4 to clear the XIAO board, leaving only a 3 mm stub
-    solid(plate, -2.95, 0.0, 1.5, "step-4b stub survives at mid-span")
-    solid(plate, -2.95, 15.0, 5.0, "+X bay wall intact beyond the 4b notch")
-    # crossbar A is slotted so the pocket opens into the bay under the board
+    solid(plate, wx, 0.0, 1.5, "step-4b stub survives at mid-span")
+    solid(plate, wx, 15.0, 5.0, "+X bay wall intact beyond the 4b notch")
     # crossbar A is tunnelled (not severed) hard against the +X wall, so the
     # bar still bears on the PCB across its full width
-    void(plate, -5.6, -12.0, 8.0, "crossbar A cable notch open")
-    void(plate, -4.0, -12.0, 9.0, "notch runs right up to the +X wall")
-    solid(plate, -5.6, -12.0, 6.0, "bar solid below the notch (no bridge)")
-    solid(plate, -5.6, -12.0, 1.0, "bar solid to the floor under the notch")
-    solid(plate, -15.0, -12.0, 10.0, "bar still reaches the PCB rear at -X")
-    solid(plate, -15.0, -12.0, 5.0, "crossbar A untouched away from the tunnel")
-    solid(plate, -9.0, -12.0, 1.0, "crossbar A solid -X of the tunnel")
+    void(plate, ei - 2.0, -12.0, 8.0, "crossbar A cable notch open")
+    void(plate, ei - 0.15, -12.0, 9.0, "notch runs right up to the +X wall")
+    solid(plate, ei - 2.0, -12.0, 6.0, "bar solid below the notch (no bridge)")
+    solid(plate, ei - 2.0, -12.0, 1.0, "bar solid to the floor under the notch")
+    solid(plate, wi + 4.0, -12.0, 10.0, "bar still reaches the PCB rear at -X")
+    solid(plate, wi + 4.0, -12.0, 5.0, "crossbar A untouched away from the tunnel")
+    solid(plate, ei - 5.0, -12.0, 1.0, "crossbar A solid -X of the tunnel")
     # step-4b notch is open above the XIAO board so wires reach both edges
-    void(plate, -2.95, 0.0, 6.0, "4b notch open above the XIAO board")
+    void(plate, wx, 0.0, 6.0, "4b notch open above the XIAO board")
     # the lane the cable then runs along, between jack collar and XIAO fence
     void(plate, 3.0, -13.0, 2.0, "cable lane clear of the collar")
     void(plate, 12.0, -13.0, 2.0, "cable lane clear at the collar's +Y face")
@@ -731,7 +772,8 @@ def run(_context: str):
     print("plate volume %.3f cm3   shell volume %.3f cm3   bezel volume %.3f cm3"
           % (plate.volume, shell.volume, bezel.volume))
 
-    check_baseline(plate, shell)
+    check_baseline(plate, shell, des)
+    check_radar_bay(plate, des)
     check_fit_allowances(plate, shell, des)
     check_snaps(plate, shell, des)
     check_xiao_clips(plate)
@@ -740,7 +782,7 @@ def run(_context: str):
     check_usb_jack(plate)
     check_cap_cradle(plate)
     check_fence_walls_continuous(plate)
-    check_radar_cable_exit(plate)
+    check_radar_cable_exit(plate, des)
     check_pod_box(shell, plate, des)
     check_pir_socket(plate, shell, des)
     check_bezel_fit(shell, plate, des, bezel)

@@ -338,8 +338,15 @@ instead of 27 and the same shrink is assumed). The printed plate edge
 stays 0.275 mm inside the printed cavity wall. `91_pir_fit.py` expects
 the model's plate/shell overlap (about 190 mm³) as a designed pair. If
 your printer behaves differently, measure the same six things and set
-the three allowances from the formula. The sensor's socket follows the
-same rule: the sensor's metal base measured Ø10.8 with calipers (the
+the three allowances from the formula. The radar bay follows the same
+rule: its fence walls' inner faces measured 15.68 apart for 15.60
+modelled (`radarW` 15.1 + 2 × `boardClear` 0.25; this cavity printed
++0.08) while the RD-03D PCB is 15.09 wide, so the board had 0.6 mm of
+side play and the clip lips (0.85 mm, printing about 0.65) barely
+caught its edge. The bay now uses its own `radarClear` 0.10 a side
+(15.30 modelled, about 15.38 printed, 0.15 a side on the board, lips
+0.75 over the edge nominal); the XIAO bay keeps `boardClear`. Rule:
+0.1 a side on a measured part. The sensor's socket follows the same rule: the sensor's metal base measured Ø10.8 with calipers (the
 STEP says 11.0) and the printed Ø11.8 bore measured 11.8 (holes print
 true), 0.5 mm of play; `pirBoreR` is now 5.55 (Ø11.1), 0.15 a side on
 the measured base. Holes print true to size, so size holes 0.1..0.2 a

@@ -3,8 +3,10 @@ import math
 import adsk.core
 import adsk.fusion
 
-RADAR = "/Users/me/Downloads/rd-03d-sensor-1/RD-03D.step"
-XIAO = ("/Users/me/Downloads/seeed-studio-xiao-esp32-c6-1/"
+# Local vendor downloads, gitignored (video/models/ is not redistributed);
+# run_fusion.py replaces /path/to/rd03d with this checkout's root.
+RADAR = "/path/to/rd03d/video/models/rd-03d-sensor-1/RD-03D.step"
+XIAO = ("/path/to/rd03d/video/models/seeed-studio-xiao-esp32-c6-1/"
         "Seeed Studio XIAO ESP32-C6.step")
 
 # --- Orientation config (iterated visually; see plan Task 5 Step 2) ---

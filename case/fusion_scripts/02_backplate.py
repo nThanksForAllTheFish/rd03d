@@ -185,6 +185,16 @@ def ensure_params(des):
         ("capDia", "8.2 mm", "bulk capacitor diameter"),
         ("capLen", "12 mm", "bulk capacitor body length"),
         ("capClear", "0.4 mm", "total capacitor cradle clearance"),
+        # Radar bay side clearance (2026-10-26, from the user's print): the
+        # fence walls' inner faces measured 15.68 apart for 15.60 modelled
+        # (radarW 15.1 + 2 x boardClear 0.25; this cavity printed +0.08)
+        # while the RD-03D PCB is 15.09 wide, so the board had 0.6 of side
+        # play and the clip lips (0.85 projecting, printing about 0.65)
+        # barely overlapped its edge. The radar bay uses this instead of
+        # boardClear (the XIAO bay keeps boardClear): 0.10 a side -> 15.30
+        # modelled, about 15.38 printed, 0.15 a side on the 15.09 board,
+        # and the lips overlap the board edge by about 0.75 nominal.
+        ("radarClear", "0.10 mm", "radar bay side clearance per side (X): fence inner faces at radarCx +/- (radarW/2 + this). Print 2026-10-26: 15.68 measured for 15.60 modelled with boardClear 0.25, PCB 15.09 -> 0.6 of play; 0.10 gives 0.15 a side printed. The XIAO bay keeps boardClear"),
         # Fit allowances from caliper measurements of the 9c print
         # (2026-10-25), replacing the single rimGap (0.15 a side, still in
         # the document, no longer read). Measured: plate outside X 41.53
@@ -326,6 +336,7 @@ def run(_context: str):
     rCx = p(des, "radarCx")
     xW, xH, xCx = p(des, "xiaoW"), p(des, "xiaoH"), p(des, "xiaoCx")
     postH, clear = p(des, "postH"), p(des, "boardClear")
+    radarClear = p(des, "radarClear")            # the radar bay's X clearance (see ensure_params)
     intD, wall, winT = p(des, "intD"), p(des, "wall"), p(des, "windowT")
     MM = 0.1
 
@@ -373,8 +384,15 @@ def run(_context: str):
     # FrontShell (03_shell.py); the plate keeps only the 1.5 mm-thick
     # +/-X walls, spanning the full old ring extent in Y and still
     # trimmed by the plate outline in step 6.)
-    bayW, bayH = rW + 2 * clear, rH + 2 * clear
+    # bay width from radarClear (0.10 a side, measured print 2026-10-26);
+    # the bay's length keeps boardClear (it only sets the walls' Y extent,
+    # which the plate outline trims anyway). Everything below that is
+    # built from bayW - the walls, the crossbars, the 4b notch, the three
+    # clips (8a), the cable exit (12), the crossbar A notch (13) - follows.
+    bayW, bayH = rW + 2 * radarClear, rH + 2 * clear
     t = 1.5 * MM
+    RW_OUT, RW_IN = rCx - bayW / 2 - t, rCx - bayW / 2     # -X wall faces, -20.65 / -19.15
+    RE_OUT, RE_IN = rCx + bayW / 2 + t, rCx + bayW / 2     # +X wall faces, -2.35 / -3.85
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, rCx - bayW / 2 - t / 2, 0, t, bayH + 2 * t)   # -X wall
     rect(sk, rCx + bayW / 2 + t / 2, 0, t, bayH + 2 * t)   # +X wall
@@ -425,6 +443,9 @@ def run(_context: str):
           "Y-restraint is the shell's job), crossbar top z(mm)=",
           round(PCB_REAR_Z * 10, 3), "board total thickness radarT(mm)=",
           round(rT * 10, 2))
+    print("radar bay walls: inner faces x %.2f / %.2f (bay %.2f wide = radarW %.1f + 2 x "
+          "radarClear %.2f), outer faces %.2f / %.2f"
+          % (RW_IN * 10, RE_IN * 10, bayW * 10, rW * 10, radarClear * 10, RW_OUT * 10, RE_OUT * 10))
 
     # 4b. notch the radar fence +X wall where the XIAO board crosses it
     # (as-built correction found in Task 5: the bay centers put the radar
@@ -556,9 +577,12 @@ def run(_context: str):
     #           y +/-8.89. Edge castellations bite ~0.24 mm in at a ~2.54 mm
     #           pitch, so a lip reaching 0.34 mm past the edge still lands on
     #           solid board (0.10 mm) even where it crosses a castellation.
-    #   Fence walls as built: radar +/-X walls x -20.8..-19.3 (inner face
-    #           -19.3) and x -3.7..-2.2 (inner face -3.7); XIAO +/-Y walls
-    #           y +/-9.15..+/-10.65 (inner faces +/-9.15), 1.5 thick.
+    #   Fence walls as built: radar +/-X walls x -20.65..-19.15 (inner
+    #           face -19.15) and x -3.85..-2.35 (inner face -3.85) since
+    #           radarClear 0.10 (2026-10-26; -20.8/-19.3 and -3.7/-2.2 with
+    #           boardClear 0.25 before); XIAO +/-Y walls y +/-9.15..+/-10.65
+    #           (inner faces +/-9.15), 1.5 thick. The radar clips below
+    #           take the wall faces from RW_*/RE_* (step 4).
     #
     # Each lip's flat underside sits 0.10 mm above its board's front/top face,
     # so the clips CLEAR the boards at rest (no press, no interference) and
@@ -603,12 +627,22 @@ def run(_context: str):
     # separate prints, so nominal clearance absorbs their stacked tolerance.
     R_TOP_Z_PX = 12.30 * MM
     NO_SLOTS = []
+    # the lip (0.85) reaches past the board's edge (x -19.05 / -3.95,
+    # probed on the vendor solid) by this much nominally; printed lips
+    # come out about 0.2 shorter
+    RADAR_BOARD_HALF = 7.55 * MM
+    lip_overlap = R_LIP - ((rCx - RADAR_BOARD_HALF) - RW_IN)
+    if lip_overlap < 0.05 - 1e-9:
+        raise RuntimeError("radar clip lips overlap the board edge by only %.2f mm (need 0.5): "
+                           "radarClear too big" % (lip_overlap * 10))
+    print("  radar clip lips reach %.2f mm over the board's edges (lip %.2f, wall to board %.2f)"
+          % (lip_overlap * 10, R_LIP * 10, ((rCx - RADAR_BOARD_HALF) - RW_IN) * 10))
 
     # A - LEFT wall, finger centred on y=0. This is the radar IC's y band,
     # which is exactly why it is free: the shell keeps its front inner face
     # at 14.0 over y -4..+4 (the radome step in 03_shell.py skips that band
     # for the IC), so a 12.50 clip top has 1.50 mm of headroom.
-    clip(comp, plate_body, "x", -20.8 * MM, -19.3 * MM,
+    clip(comp, plate_body, "x", RW_OUT, RW_IN,
          -3.5 * MM, 3.5 * MM,
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar A -X")
@@ -624,7 +658,7 @@ def run(_context: str):
     # B - +X wall under the TX radome. Crossbar A occupies y -12.8..-11.2,
     # so the band stops at -13.5 (0.70 mm clear) and runs down to -20.5
     # (1.51 mm inside the board's -22.01 edge).
-    clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
+    clip(comp, plate_body, "x", RE_OUT, RE_IN,
          -20.5 * MM, -13.5 * MM,
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
@@ -633,7 +667,7 @@ def run(_context: str):
     # C - +X wall under the RX radome, in the free stretch between the
     # step-4b notch edge (y=9.4) and crossbar B (y +17.7..+19.8):
     # y +10.0..+17.0 leaves 0.60 mm to the notch and 0.70 mm to the bar.
-    clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
+    clip(comp, plate_body, "x", RE_OUT, RE_IN,
          10.0 * MM, 17.0 * MM,
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
@@ -967,7 +1001,7 @@ def run(_context: str):
     # wall, softening it, and the user's complaint this round was that clips
     # feel too weak.
     CABLE_Y0, CABLE_Y1 = -23.0 * MM, -20.7 * MM
-    cx_in = rCx + bayW / 2                 # +X wall inner face, -3.70
+    cx_in = RE_IN                          # +X wall inner face, -3.85
     sk = comp.sketches.add(comp.xYConstructionPlane)
     box(sk, cx_in - 0.1 * MM, cx_in + 1.6 * MM, CABLE_Y0, CABLE_Y1)
     extrude(comp, sk.profiles.item(0), -0.01 * MM, 11.01 * MM,
