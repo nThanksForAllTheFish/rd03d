@@ -378,7 +378,7 @@ def run(_context: str):
             participants=[plate_body])
     print("snap pockets ok (-X at y +/-12; the +X pair is in the wing, step 14a')")
 
-    # 4. radar bay: two +/-X side walls + crossbars. (Thin-wall fix
+    # 4. radar bay: two +/-X side walls + end bars. (Thin-wall fix
     # 2026-09-07: the old full perimeter fence ring left 0.6 mm +/-Y wall
     # segments after the plate-outline trim - unprintable on a 0.6 mm
     # nozzle. The +/-Y restraint is now two retention ribs inside the
@@ -388,8 +388,8 @@ def run(_context: str):
     # bay width from radarClear (0.10 a side, measured print 2026-10-26);
     # the bay's length keeps boardClear (it only sets the walls' Y extent,
     # which the plate outline trims anyway). Everything below that is
-    # built from bayW - the walls, the crossbars, the 4b notch, the three
-    # clips (8a), the cable exit (12), the crossbar A notch (13) - follows.
+    # built from bayW - the walls, the end bars, the 4b opening, the 5a
+    # window, the three clips (8a) - follows.
     bayW, bayH = rW + 2 * radarClear, rH + 2 * clear
     t = 1.5 * MM
     RW_OUT, RW_IN = rCx - bayW / 2 - t, rCx - bayW / 2     # -X wall faces, -20.65 / -19.15
@@ -401,70 +401,55 @@ def run(_context: str):
     extrude(comp, profs, 0, 11 * MM,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
-    # Board-seating fix 2026-09-07: the crossbars now bear on the RD-03D's
-    # BARE PCB, not on its rear connector.
-    #   Was: two 4 mm-wide bars at y = +/-18 with tops at z = intD - 1 - radarT
-    #   = 6.65 mm (the board's TOTAL thickness incl. the rear connector). That
-    #   was wrong in both places: probing the live vendor model showed the
-    #   board's rear profile is a bare PCB face at z = 10.50 mm, with only the
-    #   5-pin connector reaching back to z = 6.70 over y -20..-13.5. So the
-    #   +18 bar stopped 3.85 mm short of the board (no contact at all) and the
-    #   -18 bar was the sole support, loading the connector - the board could
-    #   rock on it.
-    #   Now: tops at the measured PCB rear face, placed in the two
-    #   full-board-width bands measured clear of every rear component
-    #   (probed at x -18.6, -17, -14, -11.5, -9, -6, -4.4):
-    #       band y -13.0..-11.0  -> crossbar A, y -12.8..-11.2 (1.6 wide)
-    #       band y +17.5..+20.0  -> crossbar B, y +17.7..+19.8 (2.1 wide)
-    #   The connector now hangs free in the open space below the bars.
-    #   The board's resting position is UNCHANGED: PCB rear + the 2.54 mm
-    #   PCB/patch stack = patch face at z = 13.0, i.e. 1 mm behind the shell's
-    #   front inner wall exactly as before, so the RF geometry is unaffected.
-    #   (rT / radarT is now only descriptive of the board's total thickness;
-    #   the support height is the measured PCB rear face, a local constant.)
-    #   Height provenance: the change request quoted a coarse probe reading of
-    #   10.50 mm. Bisecting the vendor solid's underside on a 21 x 9 grid over
-    #   both bar footprints put the rear face uniformly at 10.4600 mm, so a
-    #   10.50 top left a 0.04 mm nominal overlap (2.235 mm^3 = 15.1 x 3.7 x
-    #   0.04, exactly the board-width x total-bar-width slab) and a nonzero
-    #   plate<->radar interference pair. 10.46 restores exact face contact and
-    #   the zero-interference invariant; functionally identical either way,
-    #   since the board simply rests on whatever height the bars are.
     PCB_REAR_Z = 10.46 * MM      # measured bare-PCB rear face of the RD-03D
-    XBARS = ((-12.0 * MM, 1.6 * MM),    # A: y -12.8..-11.2
-             (18.75 * MM, 2.1 * MM))    # B: y +17.7..+19.8
+    # End bars (2026-10-27, user review of the 2026-10-26 print): carry the
+    # board under its ENDS, where the rear side is bare PCB across the full
+    # width (probed read-only on the placed vendor body: y -22.0..-20.7 and
+    # y +19.8..+22.0 bare; the 5-pin connector starts at y -20.7 and reaches
+    # z 6.64 over x -15.3..-9.3). The two crossbars at y -12 and +18.75 that
+    # sat between rear components are gone, and with them the crossbar A
+    # cable slot (old step 13) and the corner cable exit (old step 12): the
+    # connector pocket is now open to the floor and the cable leaves through
+    # the floor opening in the +X wall (step 4b/5a).
+    #   -Y bar y -22.0..-20.8 (1.2 wide): 0.1 clear of the connector.
+    #   +Y bar y +20.0..+22.0 (2.0 wide).
+    # Both run the full bay width between the walls' inner faces and tie
+    # into both walls. The board's ends overhang them by 0.02 (edge 22.02).
+    ENDBARS = ((-21.4 * MM, 1.2 * MM),    # -Y: y -22.0..-20.8
+               (21.0 * MM, 2.0 * MM))     # +Y: y +20.0..+22.0
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    for cy, w in XBARS:
+    for cy, w in ENDBARS:
         rect(sk, rCx, cy, bayW, w)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, 0, PCB_REAR_Z,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
-    print("radar bay ok (X walls + crossbars bearing on the PCB; "
-          "Y-restraint is the shell's job), crossbar top z(mm)=",
+    print("radar bay ok (X walls + end bars bearing on the PCB ends; "
+          "Y-location is the corner pins' job), bar top z(mm)=",
           round(PCB_REAR_Z * 10, 3), "board total thickness radarT(mm)=",
           round(rT * 10, 2))
     print("radar bay walls: inner faces x %.2f / %.2f (bay %.2f wide = radarW %.1f + 2 x "
           "radarClear %.2f), outer faces %.2f / %.2f"
           % (RW_IN * 10, RE_IN * 10, bayW * 10, rW * 10, radarClear * 10, RW_OUT * 10, RE_OUT * 10))
 
-    # 4b. notch the radar fence +X wall where the XIAO board crosses it
-    # (as-built correction found in Task 5: the bay centers put the radar
-    # fence's +X wall at x -3.7..-2.2mm while the XIAO board's -X edge
-    # reaches x -3.23mm, so the full-height wall would pass through the
-    # board. Remove the wall above the post height over the XIAO footprint
-    # +0.5mm clearance; the stub below z=postH stays and is co-planar with
-    # the posts, and the wall segments beyond y=+/-9.4mm still retain the
-    # radar board laterally.)
+    # 4b. open the radar fence +X wall where the XIAO sits (2026-10-27: now
+    # floor to top). The XIAO's USB end faces this wall since the 180 deg
+    # rotation (04_boards.py), so nothing rests on the old 3 mm stub, and
+    # the radar cable leaves the bay at FLOOR level through here instead
+    # of over the top. Over |y| < 9.4 the wall's only remaining job was
+    # that stub; the clip B and C stretches beyond |y| 9.4 are untouched.
+    # The XIAO fence's -X wall (step 5, x -5.0..-3.5, z 0..5) is built
+    # after this cut and keeps the XIAO's -X stop face at x -3.5; step 5a
+    # windows it for the wires.
     nx0 = rCx + bayW / 2 - 0.01
     nx1 = rCx + bayW / 2 + 1.5 * MM + 0.01
     ny = xH / 2 + clear + 0.25 * MM
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, (nx0 + nx1) / 2, 0, nx1 - nx0, 2 * ny)
-    extrude(comp, sk.profiles.item(0), postH, 11 * MM + 0.01,
+    extrude(comp, sk.profiles.item(0), -0.01 * MM, 11 * MM + 0.01,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("radar fence notched for xiao board")
+    print("radar fence +X wall opened floor to top over |y| < %.1f" % (ny * 10))
 
     # 5. xiao bay: 4 posts + 3-sided fence (open toward +X)
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -488,6 +473,23 @@ def run(_context: str):
             participants=[plate_body])
     print("xiao bay ok")
 
+    # 5a. wire window (2026-10-27): the radar's 4-wire cable comes off the
+    # connector, drops to the floor, runs under the board and through this
+    # window in the XIAO fence's -X wall to the XIAO's -X end, where the
+    # rotated board's 5V, GND, D6 and D7 pads now are. |y| < 3.5, z 0..5,
+    # through the full 1.5 mm wall. Narrower than the USB-C receptacle
+    # (8.9 wide) on purpose: the receptacle's shoulders stay the XIAO's -X
+    # stop against the fence face at x -3.5.
+    WIN_HALF_Y = 3.5 * MM
+    fx0 = xCx - fW / 2 - t - 0.01            # fence outer face, -5.0
+    fx1 = rCx + bayW / 2 + 1.5 * MM + 0.01   # through the old wall footprint too
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    box(sk, fx0, fx1, -WIN_HALF_Y, WIN_HALF_Y)
+    extrude(comp, sk.profiles.item(0), -0.01 * MM, 5 * MM + 0.01,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("wire window ok (XIAO fence -X wall, |y| < %.1f, z 0..5)" % (WIN_HALF_Y * 10))
+
     # 6. trim everything to the plate outline (the radar fence and the xiao
     # fence ±Y bars as drawn overhang the 41.7 x 45.7 plate; the shell's
     # interior walls occupy that space, so intersect with the plate footprint)
@@ -497,6 +499,70 @@ def run(_context: str):
             adsk.fusion.FeatureOperations.IntersectFeatureOperation,
             participants=[plate_body])
     print("trimmed to plate outline")
+
+    # 6b. LOCATING PINS (2026-10-27, user review): the RD-03D has two open
+    # half-notches in diagonal corners of its PCB, radius 1.14, probed on
+    # the placed vendor body at (-18.25, -21.40) and (-4.75, +21.30) in the
+    # case frame (the other two corners are r 1.8 roundings, not holes).
+    # A pin in each locates the board in Y and rotation; X is shared with
+    # the bay walls at radarClear. This retires the shell's retention ribs
+    # (03_shell.py 4b/4c, deleted the same day).
+    #
+    # O2.2 modelled (thin pillars print ~0.2 under: ~0.15 radial play in
+    # the O2.28 notch), floor to z 12.4 (0.5 under the shell's 12.9 radome
+    # step), top edge chamfered 0.4 as lead-in. Each pin is a D: cut flat
+    # on the outboard side at |y| 22.0, the board's end line, so it stays
+    # inside the current printed shell's ribs (inner faces 22.26). The
+    # inboard side merges into the bay wall (x overlap 0.2) and the end
+    # bar, so only 2 mm of pin stands free above the bar.
+    #
+    # Built AFTER step 6 because the outline trim only keeps z -backT..11.
+    PIN_R = 1.1 * MM
+    PIN_TOP = 12.4 * MM
+    PIN_FLAT_Y = 22.0 * MM
+    PINS = ((-18.25 * MM, -21.40 * MM), (-4.75 * MM, 21.30 * MM))
+    for cx, cy in PINS:
+        sy = 1 if cy > 0 else -1
+        sk = comp.sketches.add(comp.xYConstructionPlane)
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            adsk.core.Point3D.create(cx, cy, 0), PIN_R)
+        # the flat: a line across the circle at the board's end line
+        sk.sketchCurves.sketchLines.addByTwoPoints(
+            adsk.core.Point3D.create(cx - 1.5 * MM, sy * PIN_FLAT_Y, 0),
+            adsk.core.Point3D.create(cx + 1.5 * MM, sy * PIN_FLAT_Y, 0))
+        # keep the inboard (larger) profile: its centroid lies toward y=0
+        best = None
+        for i in range(sk.profiles.count):
+            pr = sk.profiles.item(i)
+            c = pr.areaProperties().centroid
+            if abs(c.y) < PIN_FLAT_Y and (best is None or pr.areaProperties().area > best.areaProperties().area):
+                best = pr
+        if best is None:
+            raise RuntimeError("pin at (%.2f, %.2f): no inboard profile" % (cx * 10, cy * 10))
+        extrude(comp, best, 0, PIN_TOP,
+                adsk.fusion.FeatureOperations.JoinFeatureOperation,
+                participants=[plate_body])
+    # lead-in chamfer on each pin's top arc (nice-to-have; a square top
+    # still locates). Select arc edges at z = PIN_TOP with radius PIN_R.
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for e in plate_body.edges:
+            g = e.geometry
+            if (isinstance(g, adsk.core.Arc3D)
+                    and abs(g.radius - PIN_R) < 0.005
+                    and abs(g.center.z - PIN_TOP) < 0.005):
+                edges.add(e)
+        if edges.count != 2:
+            raise RuntimeError("expected 2 pin top arcs, found %d" % edges.count)
+        ch = comp.features.chamferFeatures
+        chi = ch.createInput(edges, False)
+        chi.setToEqualDistance(adsk.core.ValueInput.createByReal(0.4 * MM))
+        ch.add(chi)
+        print("locating pins ok (O%.1f at %s, top z %.1f, flat at |y| %.1f, 0.4 chamfer)"
+              % (PIN_R * 20, [(round(x * 10, 2), round(y * 10, 2)) for x, y in PINS],
+                 PIN_TOP * 10, PIN_FLAT_Y * 10))
+    except Exception as exc:
+        print("locating pins ok, PIN CHAMFER SKIPPED:", exc)
 
     # 7. LEGO Technic mounting holes (change request 2026-09-07): six
     # through-holes on the 8mm LEGO pitch — a 1x4 column at x=0.95mm
@@ -648,19 +714,21 @@ def run(_context: str):
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar A -X")
 
-    # The +X wall cannot carry a clip at y=0: step 4b notches it down to
-    # z=postH (3 mm) over y +/-9.4 because the XIAO board (x -3.23..19.23)
-    # crosses the wall's x -3.7..-2.2 footprint. So the two +X clips take
+    # The +X wall cannot carry a clip at y=0: step 4b opens it floor to top
+    # over |y| < 9.4 (since 2026-10-27; before that it was cut down to
+    # z=postH) because the XIAO board (x -3.23..19.23) crosses the wall's
+    # x -3.7..-2.2 footprint. So the two +X clips take
     # the two full-height stretches of that wall, one under each radome
     # zone, each placed to sit CLEAR of a crossbar - a crossbar runs the
     # full bay width (x -19.3..-3.7) and butts into both walls, so a lip
     # band on top of one would be locally braced and would not flex.
     #
-    # B - +X wall under the TX radome. Crossbar A occupies y -12.8..-11.2,
-    # so the band stops at -13.5 (0.70 mm clear) and runs down to -20.5
-    # (1.51 mm inside the board's -22.01 edge).
+    # B - +X wall under the TX radome. The -Y end bar occupies y -22.0..-20.8
+    # (2026-10-27), so the band starts at -20.0 (0.8 mm clear, same rule as
+    # the old 0.7 to crossbar A) and runs to -13.0; crossbar A is gone, so
+    # nothing bounds it on the +Y side before the 4b opening at -9.4.
     clip(comp, plate_body, "x", RE_OUT, RE_IN,
-         -20.5 * MM, -13.5 * MM,
+         -20.0 * MM, -13.0 * MM,
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
          label="radar B +X")
@@ -977,88 +1045,9 @@ def run(_context: str):
     # exactly that load path. The radar cable crosses above the board via
     # the step-4b notch and never needed these either.
 
-    # 12. Radar cable exit (2026-09-10). The user photographed the assembled
-    # plate: the RD-03D's 4-wire connector cable leaves the connector heading
-    # -Y, straight off the end of the board, and had nowhere to go. The
-    # connector pocket is sealed on three sides - the two 1.5 mm bay walls at
-    # +/-X, and CROSSBAR A, which spans the full bay width at y -12.8..-11.2
-    # from the floor up to PCB_REAR_Z where the board rests on it. There is no
-    # gap over the bar, because the board is what sits on it. So the pocket's
-    # only exits were the open -Y end, which runs into the 0.84 mm between the
-    # board edge (y -22.01) and the plate edge (-22.85), and the +X wall.
-    #
-    # Cut the extreme -Y corner out of that wall. It lines up with where the
-    # cable already goes, and it is the ONLY free stretch: clip B occupies
-    # y -20.5..-13.5, crossbar A butts into the wall at -12.8..-11.2, and the
-    # step-4b notch starts at -9.4, leaving only 0.7 mm and 1.8 mm gaps
-    # between them. Ends at y -20.7 so it stops 0.2 mm clear of clip B's
-    # raised span rather than sharing a face with it.
-    #
-    # Structurally free: the board's -Y end is already cantilevered over the
-    # connector pocket with no support nearer than crossbar A, and lateral
-    # retention still comes from ~40 mm of remaining wall plus all three
-    # clips. Deliberately NOT cut as a wider, shorter window under clip B -
-    # that would leave the clip backed by a 7 mm-span beam instead of a solid
-    # wall, softening it, and the user's complaint this round was that clips
-    # feel too weak.
-    CABLE_Y0, CABLE_Y1 = -23.0 * MM, -20.7 * MM
-    cx_in = RE_IN                          # +X wall inner face, -3.85
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    box(sk, cx_in - 0.1 * MM, cx_in + 1.6 * MM, CABLE_Y0, CABLE_Y1)
-    extrude(comp, sk.profiles.item(0), -0.01 * MM, 11.01 * MM,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[plate_body])
-    print("radar cable exit ok (+X bay wall notched y -22.85..%.2f, full "
-          "height, %.2f mm of wall removed)"
-          % (CABLE_Y1 * 10, (-20.7 - -22.85)))
-
-    # 13. Crossbar A cable slot (2026-09-10, user's proposal). Better route
-    # than step 12's corner notch: come up THROUGH the bar that seals the
-    # connector pocket, then use the open space under the radar board.
-    #
-    # Crossbar A spans the full bay width at y -12.8..-11.2 from the floor to
-    # PCB_REAR_Z, so slotting it opens the pocket into the rest of the bay.
-    # From there the wires run +X/+Y under the board (up to 10.46 mm of
-    # headroom) and cross the +X wall through the step-4b notch, which is
-    # open from z=postH to z=14 over |y|<9.4 - i.e. ABOVE the XIAO board,
-    # whose top face is at 4.20. That matters: it lands the wires on top of
-    # the board, where BOTH long edges are reachable. D6 sits on the +Y edge
-    # and D7 on the -Y edge, so any route that arrives from one side only
-    # would strand one of them.
-    #
-    # A 4.0 x 3.5 mm notch in the TOP of the bar, FLUSH AGAINST THE +X WALL.
-    # Three of the user's calls, in order (2026-09-10): it began as a
-    # full-height slot mid-bay, became a 3.5 mm tunnel at the base, then
-    # moved to the top.
-    #
-    # Top-opening is the one that prints with no support at all - nothing
-    # spans the gap, the bar simply stops at CBL_Z0 - whereas a base tunnel
-    # leaves a 4 mm bridge. It also suits the cable better: the connector's
-    # underside is at z 6.70, so wires leaving it stay at that height and run
-    # straight through instead of diving to the floor and climbing back.
-    #
-    # Cost, stated plainly: the notch takes 4.0 mm out of the bar's 15.6 mm
-    # bearing line on the PCB rear, leaving 11.6 mm on the -X side. The board
-    # is still carried at two y stations (this bar and crossbar B) and held
-    # down by all three clips and the lid, so the offset does not let it rock.
-    #
-    # Flush to the wall means the wires emerge already hugging the surface
-    # they run +Y along, to the step-4b notch, where they cross ABOVE the
-    # XIAO board - the only crossing that reaches both its long edges.
-    CBL_X1 = rCx + bayW / 2 + 0.1 * MM     # 0.1 into the wall: no shared face
-    CBL_X0 = CBL_X1 - 4.1 * MM
-    CBL_Z0 = PCB_REAR_Z - 3.5 * MM         # 6.96
-    cbl_y, cbl_w = XBARS[0]
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    box(sk, CBL_X0, CBL_X1,
-        cbl_y - cbl_w / 2 - 0.1 * MM, cbl_y + cbl_w / 2 + 0.1 * MM)
-    extrude(comp, sk.profiles.item(0), CBL_Z0, PCB_REAR_Z + 0.01 * MM,
-            adsk.fusion.FeatureOperations.CutFeatureOperation,
-            participants=[plate_body])
-    print("crossbar A cable notch ok (x %.2f..%.2f, z %.2f..%.2f, open at "
-          "the top - no bridge; %.1f mm of bearing line left)"
-          % (CBL_X0 * 10, CBL_X1 * 10, CBL_Z0 * 10, PCB_REAR_Z * 10,
-             (CBL_X0 - (rCx - bayW / 2)) * 10))
+    # 12/13. (deleted 2026-10-27) the corner cable exit and the crossbar A
+    # cable slot: crossbar A is gone (step 4) and the cable leaves at floor
+    # level through the step-4b opening and the step-5a window.
 
     # 14. PIR SOCKET ON A WING (2026-10-25, fourth layout, Task 9d).
     # History: the pod lived on the front shell's +X wall from 2026-10-11
