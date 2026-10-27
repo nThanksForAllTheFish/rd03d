@@ -27,8 +27,13 @@ RADAR_FLIP180 = True      # True: also rotate 180 about Z (swap stick ends)
 
 # XIAO native frame: X = long axis w/ USB overhang at +X, Y = thickness
 # (components/USB on +Y side), Z = board short axis.  Rotation about X keeps
-# USB pointing +X; +90 puts native +Y (component side) up.
+# USB pointing +X; +90 puts native +Y (component side) up.  The extra 180
+# about Z (2026-10-27, user review) points the USB overhang at -X, into the
+# radar bay's floor opening, and the ceramic antenna at +X toward the
+# plastic PIR wing; the bay envelope is symmetric about xCx so the posts,
+# fences and clips are unchanged.
 XIAO_XROT_DEG = 90
+XIAO_FLIP180 = True
 
 
 def p(des, name):
@@ -114,8 +119,8 @@ def run(_context: str):
     # Radar: back face on crossbars at z = intD - 1mm - radarT (= 6.65 mm)
     place(radar_occ, rot_matrix(RADAR_XROT_DEG, RADAR_FLIP180),
           rCx, 0.0, intD - 0.1 - rT)
-    # XIAO: bottom on posts at z = postH (= 3 mm)
-    place(xiao_occ, rot_matrix(XIAO_XROT_DEG, False), xCx, 0.0, postH)
+    # XIAO: bottom on posts at z = postH (= 3 mm), USB end toward the radar
+    place(xiao_occ, rot_matrix(XIAO_XROT_DEG, XIAO_FLIP180), xCx, 0.0, postH)
 
     # Parametric designs revert occurrence moves unless snapshotted.
     if des.snapshots.hasPendingSnapshot:
