@@ -350,7 +350,7 @@ def check_radar_bay(plate, des):
     if not (0.05 - 1e-9 <= pv("radarClear") <= 0.25 + 1e-9):
         FAILURES.append("radarClear %.2f is not 0.05..0.25" % pv("radarClear"))
     # -X wall at y 5 (clip A's band is y +/-3.5), +X wall at y 15 (clear of
-    # the 4b notch |y| < 9.4, clip C's band 10..17 only raises it above 10.5)
+    # the floor-to-top opening |y| < 9.4, clip C's band 10..17 only raises it above 10.5)
     void(plate, wi + 0.05, 5.0, 5.0, "radar bay open 0.05 inside the -X wall's inner face (x %.2f)" % wi)
     solid(plate, wi - 0.05, 5.0, 5.0, "-X fence wall solid 0.05 into its inner face")
     solid(plate, wo + 0.05, 5.0, 5.0, "-X fence wall solid 0.05 inside its outer face (x %.2f)" % wo)
@@ -366,6 +366,10 @@ def check_radar_bay(plate, des):
     for x, y, tag in ((board_lo + 0.3, 0.0, "A"), (board_hi - 0.3, -17.0, "B"), (board_hi - 0.3, 13.5, "C")):
         solid(plate, x, y, 11.95, "radar clip %s lip reaches 0.3 past the board edge (x %.2f)" % (tag, x))
         void(plate, x, y, 11.65, "radar clip %s lip floats above the board's front face" % tag)
+    # clip B's finger spans y -20.0..-13.0 (2026-10-27): lip present at
+    # -19.8, absent at -20.2
+    solid(plate, board_hi - 0.3, -19.8, 11.95, "radar clip B lip starts by y -19.8")
+    void(plate, board_hi - 0.3, -20.2, 11.95, "radar clip B lip absent at y -20.2")
 
 
 def check_fence_walls_continuous(plate):
@@ -390,8 +394,10 @@ def check_end_bars(plate, des):
     crossbars A and B): -Y bar y -22.0..-20.8, +Y bar y +20.0..+22.0, both
     full bay width from the floor to the PCB rear face (10.46)."""
     wo, wi, ei, eo, rCx = radar_walls(des)
+    # x stations 3 mm in from the walls: 2.1 mm clear of the pin centres
+    # (-18.25 / -4.75), so "void above the bar" is not fooled by a pin
     for y, tag in ((-21.4, "-Y"), (21.0, "+Y")):
-        for x in (wi + 1.0, rCx, ei - 1.0):
+        for x in (wi + 3.0, rCx, ei - 3.0):
             solid(plate, x, y, 5.0, "%s end bar solid at x %.2f z 5" % (tag, x))
             solid(plate, x, y, 10.3, "%s end bar reaches the PCB rear at x %.2f" % (tag, x))
             void(plate, x, y, 10.6, "%s end bar stops at the PCB rear at x %.2f" % (tag, x))
@@ -410,17 +416,19 @@ def check_locating_pins(plate, des):
     end bar."""
     for cx, cy, tag in ((-18.25, -21.40, "-Y"), (-4.75, 21.30, "+Y")):
         sy = 1 if cy > 0 else -1
-        for z in (1.0, 11.0, 12.2):
+        inb = 1 if cx < -10 else -1          # inboard x direction
+        for z in (11.0, 12.2):               # above the bar: pin material only
             solid(plate, cx, cy, z, "%s pin solid at its centre z %.1f" % (tag, z))
         void(plate, cx, cy, 12.6, "%s pin top is below 12.6" % tag)
-        solid(plate, cx + (0.9 if cx < -10 else -0.9), cy, 11.0,
-              "%s pin reaches 0.9 inboard in x (r 1.1)" % tag)
+        solid(plate, cx + inb * 0.9, cy, 11.0, "%s pin reaches 0.9 inboard in x (r 1.1)" % tag)
         solid(plate, cx, cy - sy * 0.9, 11.0, "%s pin reaches 0.9 inboard in y" % tag)
-        void(plate, cx, cy + sy * 1.2, 11.0, "%s pin cut flat at |y| 22.0: void 1.2 outboard" % tag)
-        void(plate, cx, cy + sy * 0.7, 11.0, "%s pin flat: void 0.7 outboard (|y| 22.1)" % tag)
-        # nothing of the pin above the PCB front face beyond r 1.1 + chamfer
-        void(plate, cx + (1.6 if cx < -10 else -1.6), cy, 12.0,
-             "%s pin no wider than r 1.1 above the board" % tag)
+        void(plate, cx + inb * 1.25, cy, 11.0, "%s pin no wider than r 1.1 (void 1.25 inboard)" % tag)
+        # the flat at |y| 22.0: absolute positions, the centres are asymmetric
+        void(plate, cx, sy * 22.1, 11.0, "%s pin cut flat at |y| 22.0: void at |y| 22.1" % tag)
+        void(plate, cx, sy * 22.6, 11.0, "%s pin flat: void at |y| 22.6" % tag)
+    # the -Y pin stands proud of its bar on the inboard side (bar ends at
+    # -20.8, pin reaches -20.3), so this point is pin material only
+    solid(plate, -18.25, -20.5, 5.0, "-Y pin material below the PCB inboard of the bar")
 
 
 def check_radar_wire_window(plate, des):
@@ -444,6 +452,14 @@ def check_radar_wire_window(plate, des):
         void(plate, -4.25, y, 0.5, "wire window open at floor, y %.1f" % y)
         void(plate, -4.25, y, 4.5, "wire window open to z 5, y %.1f" % y)
     void(plate, -4.25, 0.0, 5.5, "nothing above the fence wall at y 0")
+    # the kept fence wall's +X face is the XIAO's -X stop at x -3.5
+    for y in (8.0, -8.0):
+        solid(plate, -3.6, y, 2.5, "fence stop face: solid 0.1 inside x -3.5 at y %.1f" % y)
+        void(plate, -3.4, y, 2.5, "fence stop face: void 0.1 outside x -3.5 at y %.1f" % y)
+    # the +X bay wall's opening ends at |y| 9.4
+    for sy in (-1, 1):
+        void(plate, wx, sy * 9.0, 5.0, "+X bay wall open at y %+.1f" % (sy * 9.0))
+        solid(plate, wx, sy * 9.8, 5.0, "+X bay wall solid at y %+.1f" % (sy * 9.8))
     # the old corner cable exit is gone: wall solid at the -Y corner under clip B
     solid(plate, wx, -21.8, 5.0, "+X bay wall solid at the -Y corner (old exit closed)")
     # the lane from the window to the XIAO's -X end is clear at floor level
