@@ -7,11 +7,14 @@ exactly as 02_backplate.py step 14 defines it (axis at (pirCx, 0) along +Z,
 lens ring top flush with the shell's face at z 16), snapshots the placement
 and runs Fusion's interference analysis between the sensor, the plate, the
 shell (its pod box) and the bezel ring parked in the lens gap clocked to
-the lens tabs. Expected (Task 9e): ONE pair, the plate against the shell,
-because the measured fit allowances (rimGapY, wingGap) are negative: the
-model's plate and wing sit into the shell's long walls by what the print
-shrinks, bounded by those slabs. Anything else (sensor against anything,
-bezel against anything) is a failure. If it is not clean, fix
+the lens tabs. Expected (Task 9e): TWO pairs. The plate against the
+shell, because the measured fit allowances (rimGapY, wingGap) are
+negative: the model's plate and wing sit into the shell's long walls by
+what the print shrinks, bounded by those slabs. And the bezel's skirt
+against the shell's hole wall: the skirt is 0.15 a side over the hole
+(2026-10-26, the first ring printed loose), bounded by that annulus.
+Anything else (sensor against anything, bezel against the sensor or the
+plate) is a failure. If it is not clean, fix
 the SOCKET in 02_backplate.py or the BOX / BEZEL in 03_shell.py, never the
 sensor.
 """
@@ -177,6 +180,7 @@ def run(_context: str):
     TAB = (45.0, 225.0)                                        # the tabs (STEP probe; sensor unrotated)
     AWAY = (0.0, 90.0, 135.0, 180.0, 270.0, 315.0)
     rs = (innerR + lensR) / 2
+    skirtRo_ = p(des, "pirBezelSkirtRo")
     probes = []
     for ang in TAB:
         probes += [(sbody, True, 1.08, ang, zTop - 0.1, "lens tab at %.0f deg (r 10.8, z 15.9)" % ang),
@@ -190,7 +194,9 @@ def run(_context: str):
     for ang in AWAY:
         probes += [(bzb, True, rs, ang, zTop - skirtH / 2, "bezel skirt in the hole at %.0f" % ang),
                    (shb, False, rs, ang, zTop - skirtH / 2, "hole open round the skirt at %.0f" % ang),
-                   (shb, True, lensR + 0.02, ang, zTop - skirtH / 2, "hole wall outside the skirt at %.0f" % ang),
+                   (shb, True, lensR + 0.02, ang, zTop - skirtH / 2, "hole wall outside the hole line at %.0f" % ang),
+                   (bzb, True, skirtRo_ - 0.005, ang, zTop - skirtH / 2, "bezel skirt reaches r %.2f, into the hole wall (press) at %.0f" % ((skirtRo_ - 0.005) * 10, ang)),
+                   (bzb, False, skirtRo_ + 0.005, ang, zTop - skirtH / 2, "nothing of the bezel past its skirt OD at %.0f" % ang),
                    (bzb, True, (lensR + flangeR) / 2, ang, zTop + flangeT / 2, "bezel flange on the face at %.0f" % ang),
                    (shb, True, (lensR + flangeR) / 2, ang, zTop - 0.01, "shell face under the flange at %.0f" % ang),
                    (sbody, False, innerR - 0.003, ang, zTop - skirtH / 2, "sensor clear of the skirt's ID at %.0f (z 15)" % ang),
@@ -235,10 +241,16 @@ def run(_context: str):
     for b in all_bodies(bezel):
         ents.add(b)
     print("interference check over", ents.count, "bodies")
-    # Task 9e: the bezel ring touches neither the sensor nor the shell in
-    # the model (0.10 to the lens ring, 0.05 to the dome flank, the skirt's
-    # OD exactly the hole's radius: the print's shrink makes the push
-    # fit). Any pair involving the bezel is a failure.
+    # Task 9e: the bezel ring touches nothing of the sensor in the model
+    # (0.10 to the lens ring, 0.05 to the dome flank). Since 2026-10-26
+    # its skirt (pirBezelSkirtRo 11.80) is 0.15 a side OVER the hole
+    # (pirHoleR 11.65): the first ring printed 0.5 under on the diameter
+    # and was loose, so the model now overlaps the hole by what the print
+    # loses. That bezel/shell pair is expected, bounded by the full
+    # annulus pi (ro^2 - ri^2) x skirtH (the two notches take about 16%
+    # of it; +5% for the probe); a bezel/sensor pair is a failure.
+    skirtRo = p(des, "pirBezelSkirtRo")
+    press_max = math.pi * max(skirtRo * skirtRo - lensR * lensR, 0.0) * skirtH * 1.05
     # Fit allowances (02 ensure_params, calipers 2026-10-25): rimGapY and
     # wingGap are NEGATIVE, so in the MODEL the plate's +/-Y edges sit
     # 0.2 a side into the shell's long walls and the wing 0.12 a side
@@ -277,6 +289,13 @@ def run(_context: str):
         if fit and 0 <= vol <= fit_max:
             print("fit allowance: %.2f mm^3 between %s and %s (designed plate/wing overlap "
                   "into the shell's walls, bound %.1f mm^3), expected" % (vol * 1000, c1, c2, fit_max * 1000))
+            continue
+        press = (any(n.startswith("PirBezel") for n in names)
+                 and any(n.startswith("FrontShell") for n in names))
+        if press and 0 <= vol <= press_max:
+            print("bezel press fit: %.2f mm^3 between %s and %s (skirt r %.2f in the r %.2f hole, "
+                  "annulus bound %.1f mm^3), expected" % (vol * 1000, c1, c2, skirtRo * 10, lensR * 10,
+                                                          press_max * 1000))
             continue
         bad += 1
         line = "INTERFERENCE: %.4f mm^3 between %s and %s" % (vol * 1000, c1, c2)

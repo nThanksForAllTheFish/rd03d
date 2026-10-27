@@ -75,16 +75,18 @@ The living design is in your Fusion; save it to your own project.
   into the lens gap from the front. A flat flange (Ø20.8 inside, Ø25
   outside, 1.5 thick, its top continuous, with a 0.5 mm chamfer on its
   outer top edge and a 0.3 mm round on the inner one) lies on the
-  shell's face round the hole, and two arc **skirts** under it (Ø20.8..23.3, 1.25 mm
-  wall, 2 mm tall, the top's thickness) fill the hole down to its
-  underside. Two **notches** 180° apart, 6 mm wide, cut through the
+  shell's face round the hole, and two arc **skirts** under it
+  (Ø20.8..23.6, 1.4 mm wall, 2 mm tall, the top's thickness) fill the
+  Ø23.3 hole down to its underside. Two **notches** 180° apart, 6 mm wide, cut through the
   skirt and continue into the flange's underside as blind 0.4 mm relief
   pockets (out to r 11.45, hidden under 1.1 mm of solid flange) so the
   lens's two
   latch tabs (5 mm wide, at 45° and 225° round the lens, reaching the
-  face) sit in them with nothing showing on top. The skirt's outside is the
-  hole's size: an outside wall prints 0.2 under in a true-printing hole,
-  so it is a light push fit (0.1 a side); inside, its bore (an inside
+  face) sit in them with nothing showing on top. The skirt's outside is
+  Ø23.6 for the Ø23.3 hole on purpose: the first ring, made the hole's
+  size, printed Ø22.79 (0.5 under — a thin two-perimeter ring shrinks
+  more than a wall) in a hole that printed Ø23.2, and was loose; Ø23.6
+  should print about 23.1 for a light press fit. Inside, its bore (an inside
   surface, prints true) is 0.10 off the lens ring and 0.05 off the
   dome's flank, so it just grips the lens. It closes the gap and holds
   the lens ring by friction; the snug Ø11.1 socket holds the base. Nothing clamps
@@ -111,10 +113,9 @@ Back plate: print flat (back face down). Shell: print open-side-up.
 Bezel ring: print it **flange-down**, no supports — it is a flat 1.5 mm
 ring with two 2 mm arcs standing on it, 3.5 mm tall in all, nothing
 overhangs; the two 0.4 mm tab pockets are two-layer recesses in the
-bed-side face. The skirt arcs are 1.25 mm thick: two 0.6 mm lines on a
-0.6 nozzle, three on a 0.4 (a 0.4 nozzle leaves a 0.05 gap or slightly
-fat lines — fine either way). Slow outer perimeters; the flange's top
-face is the one you see.
+bed-side face. The skirt arcs are 1.4 mm thick: two 0.6 mm lines plus
+a little gap fill on a 0.6 nozzle, three and a half on a 0.4. Slow
+outer perimeters; the flange's top face is the one you see.
 Print the **shell at high or solid infill** (≥50 %, ideally 100 % over the
 front wall): the 3.1 mm radome in front of the antennas should be
 homogeneous plastic — sparse infill puts a patchwork of air pockets in the
@@ -330,13 +331,17 @@ Y and 0.74 wing-to-box; the target is 0.2 total, 0.1 a side, a light
 push fit. The old single `rimGap` (0.15 a side) is superseded by three
 allowances, each the per-side model gap that lands the print at 0.1 a
 side, (0.2 − outside shrink − cavity growth) / 2: `rimGapX` 0.03 (plate
-half-width = `intW`/2 − `rimGapX`), `rimGapY` −0.20 (plate half-length =
-`intH`/2 − `rimGapY`: negative, the model's plate sits 0.2 a side into
+half-width = `intW`/2 − `rimGapX`), `rimGapY` −0.05 (plate half-length =
+`intH`/2 − `rimGapY`: negative, the model's plate sits 0.05 a side into
 the shell's long walls and the print takes it back), `wingGap` −0.12
-(wing half-width = `pirBoxHalfY` − `wingGap`; the 9d box is 31 wide
-instead of 27 and the same shrink is assumed). The printed plate edge
-stays 0.275 mm inside the printed cavity wall. `91_pir_fit.py` expects
-the model's plate/shell overlap (about 190 mm³) as a designed pair. If
+(wing half-width = `pirBoxHalfY` − `wingGap`). `rimGapY` was −0.20 after
+the first print; the reprint of 2026-10-26 came out 46.10 long for 46.40
+modelled (plate Y prints 0.30 under) against a cavity that measures
+46.00 on this shell (the 46.34 was another shell or spot), 0.1 too long
+and needing force, so the target printed 45.80 → modelled 46.10 →
+−0.05. X and the wing were reported good and stay. `91_pir_fit.py`
+expects the model's plate/shell overlap (about 60 mm³ now) as a designed
+pair, and the bezel skirt's press overlap in the hole as another. If
 your printer behaves differently, measure the same six things and set
 the three allowances from the formula. The radar bay follows the same
 rule: its fence walls' inner faces measured 15.68 apart for 15.60
@@ -351,10 +356,10 @@ STEP says 11.0) and the printed Ø11.8 bore measured 11.8 (holes print
 true), 0.5 mm of play; `pirBoreR` is now 5.55 (Ø11.1), 0.15 a side on
 the measured base. Holes print true to size, so size holes 0.1..0.2 a
 side over the part they take; outside walls print 0.2 under.
-The bezel ring: its skirt's outside is `pirHoleR` exactly, and the
-0.1-a-side push fit comes from the print's shrink; if it is loose, take
-`pirHoleR` down 0.05 (both the hole and the ring follow); if it will not
-go in, up 0.05. Its bore is `pirBezelInnerR` (10.40: lens ring 10.3 +
+The bezel ring: its skirt's outside is `pirBezelSkirtRo` (11.80, 0.15
+a side over the `pirHoleR` 11.65 hole, because the printed ring came
+out 0.5 under on the diameter); if it is still loose, up 0.05; if it
+will not go in, down 0.05. Its bore is `pirBezelInnerR` (10.40: lens ring 10.3 +
 0.10, dome flank 10.35 + 0.05; it prints true, so the ring just grips
 the lens); the notches are `pirNotchW` = `pirTabW` + 1 (the tabs measured
 5.0 wide on the STEP). No

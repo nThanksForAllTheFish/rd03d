@@ -552,13 +552,14 @@ def run(_context: str):
     #           clear of the dome's flank (r 10.35 just above the ring).
     #           Its TOP is continuous (user: no openings visible from
     #           above).
-    #   skirt   two arcs r pirBezelInnerR..pirHoleR (10.40..11.65, a
-    #           1.25 wall = two 0.6 lines), z -pirBezelSkirtH..0 (-2.0..0):
-    #           fill the hole (OD = the hole: an outside wall prints 0.2
-    #           under in a true-printing hole, 0.1 a side of push fit),
-    #           0.10 clear of the lens ring (r 10.3; the bore prints true,
-    #           so it just grips the lens), foot flush with the top's
-    #           underside.
+    #   skirt   two arcs r pirBezelInnerR..pirBezelSkirtRo (10.40..11.80,
+    #           a 1.40 wall), z -pirBezelSkirtH..0 (-2.0..0): fill the
+    #           r 11.65 hole with 0.15 a side of modelled overlap (the
+    #           first ring, OD = the hole, printed 0.5 under on the
+    #           diameter and was loose; 11.80 should print about 23.1 in
+    #           the 23.2 hole: 91 expects the press-fit pair), 0.10 clear
+    #           of the lens ring (r 10.3; the bore prints true, so it just
+    #           grips the lens), foot flush with the top's underside.
     #   notches two, 180 deg apart, for the lens's latch tabs (5.0 wide,
     #           r to 11.0, case z 14.2..16, at 45/225 deg in the sensor
     #           frame): tangential width pirNotchW (= pirTabW + 1), cut
@@ -582,10 +583,10 @@ def run(_context: str):
     innerR, skirtH = p02(des, "pirBezelInnerR"), p02(des, "pirBezelSkirtH")
     tabW, notchW = p02(des, "pirTabW"), p02(des, "pirNotchW")
     relief = p02(des, "pirTabRelief")
-    skirtRo = lensR                              # OD = the hole, push fit by the print's shrink
+    skirtRo = p02(des, "pirBezelSkirtRo")        # 11.80: 0.15 over the hole, press fit after the print's shrink
     TAB_ANGLE = 45.0                             # deg, the sensor's tabs (STEP probe; 91 places it unrotated)
     TAB_R, RING_R, FLANK_R = 11.0 * MM, 10.3 * MM, 10.35 * MM    # STEP probes
-    BRIDGE_RI = skirtRo - 0.02                   # flange notch outer edge, 11.45: tab r 11.0 + 0.45
+    BRIDGE_RI = lensR - 0.02                     # tab pocket outer edge, 11.45: tab r 11.0 + 0.45 (tied to the hole, not the skirt)
     NOTCH_ANGLES = (0.0, 180.0)                  # bezel frame
     # --- guards ---
     if innerR < RING_R + 0.01 - 1e-9 or innerR < FLANK_R + 0.005 - 1e-9:
@@ -593,9 +594,12 @@ def run(_context: str):
                            "the dome flank (10.35)" % (innerR * 10))
     if skirtRo - innerR < 0.1:
         raise RuntimeError("bezel skirt wall %.2f is under 1.0 mm" % ((skirtRo - innerR) * 10))
-    if flangeR < skirtRo + 0.08:
-        raise RuntimeError("bezel flange r %.1f bears under 0.8 on the face outside the r %.1f hole"
-                           % (flangeR * 10, skirtRo * 10))
+    if not (lensR <= skirtRo <= lensR + 0.03 + 1e-9):
+        raise RuntimeError("bezel skirt r %.2f is not 0..0.3 over the r %.2f hole (press fit by the print's "
+                           "shrink)" % (skirtRo * 10, lensR * 10))
+    if flangeR < lensR + 0.08:
+        raise RuntimeError("bezel flange r %.1f bears under 0.8 on the face outside the r %.2f hole"
+                           % (flangeR * 10, lensR * 10))
     if BRIDGE_RI < TAB_R + 0.03:
         raise RuntimeError("flange notch ends at r %.2f, under 0.3 past the tabs (r 11.0)" % (BRIDGE_RI * 10))
     if flangeR - BRIDGE_RI < 0.1:
@@ -609,13 +613,14 @@ def run(_context: str):
         raise RuntimeError("bezel skirt height %.2f is not the top's thickness %.2f (+/-0.5)"
                            % (skirtH * 10, wall * 10))
     corner_r = math.hypot(BRIDGE_RI, notchW / 2)          # the flange notch's outer corners
-    print("bezel ring: flange r %.2f..%.2f x %.2f (top continuous), skirt r %.2f..%.2f x %.1f, "
-          "skirt notches %.1f wide; tab relief pockets %.2f deep in the flange's underside to "
-          "r %.2f (%.2f of solid flange over them; outside the pockets %.2f on the centre line, "
-          "%.2f at the corners); ring clearance %.2f, flank %.2f, tab radial %.2f"
+    print("bezel ring: flange r %.2f..%.2f x %.2f (top continuous), skirt r %.2f..%.2f x %.1f "
+          "(%.2f over the r %.2f hole: press fit), skirt notches %.1f wide; tab relief pockets "
+          "%.2f deep in the flange's underside to r %.2f (%.2f of solid flange over them; outside "
+          "the pockets %.2f on the centre line, %.2f at the corners); ring clearance %.2f, "
+          "flank %.2f, tab radial %.2f"
           % (innerR * 10, flangeR * 10, flangeT * 10, innerR * 10, skirtRo * 10, skirtH * 10,
-             notchW * 10, relief * 10, BRIDGE_RI * 10, (flangeT - relief) * 10,
-             (flangeR - BRIDGE_RI) * 10, (flangeR - corner_r) * 10,
+             (skirtRo - lensR) * 10, lensR * 10, notchW * 10, relief * 10, BRIDGE_RI * 10,
+             (flangeT - relief) * 10, (flangeR - BRIDGE_RI) * 10, (flangeR - corner_r) * 10,
              (innerR - RING_R) * 10, (innerR - FLANK_R) * 10, (BRIDGE_RI - TAB_R) * 10))
 
     bz_occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())

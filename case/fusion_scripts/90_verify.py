@@ -73,11 +73,11 @@ def check_baseline(plate, shell, des):
 def check_fit_allowances(plate, shell, des):
     """Measured fit allowances (02 ensure_params, 2026-10-25 calipers):
     plate half-width intW/2 - rimGapX (20.97), half-length intH/2 -
-    rimGapY (23.2: 0.2 INTO the shell's +/-Y walls in the model, which the
-    print's Y shrink takes back to a 0.1 gap a side), wing half-width
-    pirBoxHalfY - wingGap (15.62, likewise 0.12 into the box walls). The
-    printed plate edge (23.2 - 0.135) stays 0.275 inside the printed
-    cavity wall (23.34). Probes: the plate is solid just inside each
+    rimGapY (23.05: 0.05 INTO the shell's +/-Y walls in the model, which
+    the print's Y shrink, 0.15 a side, takes back to a 0.1 gap a side
+    against the 46.00 cavity of the reprint; was -0.20 after the first
+    print), wing half-width pirBoxHalfY - wingGap (13.62, 0.12 into the
+    box walls). Probes: the plate is solid just inside each
     modelled edge and void just outside; the shell's walls are where they
     always were (so the overlap is the plate's, by design)."""
     def pv(n): return des.userParameters.itemByName(n).value * 10
@@ -99,9 +99,12 @@ def check_fit_allowances(plate, shell, des):
     if not (gy < 0 and gw < 0 and gx >= 0):
         FAILURES.append("fit allowances changed sign (rimGapX %.2f, rimGapY %.2f, wingGap %.2f): "
                         "re-derive the probes and 91's expected overlap" % (gx, gy, gw))
-    if not (ey - 0.135 <= intH / 2 + 0.34 - 0.2):
-        FAILURES.append("printed plate edge (%.3f) is under 0.2 inside the printed cavity wall (%.2f)"
-                        % (ey - 0.135, intH / 2 + 0.34))
+    # reprint 2026-10-26: plate Y prints 0.30 under (0.15 a side), the
+    # cavity 46.00 (true) on this shell; the printed edge must stay
+    # >= 0.05 a side inside the printed cavity wall
+    if not (ey - 0.15 <= intH / 2 - 0.05 + 1e-9):
+        FAILURES.append("printed plate edge (%.3f) is under 0.05 inside the printed cavity wall (%.2f)"
+                        % (ey - 0.15, intH / 2))
 
 
 def check_snaps(plate, shell, des):
@@ -679,7 +682,9 @@ def check_bezel_fit(shell, plate, des, bezel):
     innerR, skirtH = pv("pirBezelInnerR"), pv("pirBezelSkirtH")
     tabW, notchW = pv("pirTabW"), pv("pirNotchW")
     relief = pv("pirTabRelief")
-    skirtRo, bridgeRi = lensR, lensR - 0.2
+    skirtRo, bridgeRi = pv("pirBezelSkirtRo"), lensR - 0.2
+    if not (lensR <= skirtRo <= lensR + 0.3 + 1e-9):
+        FAILURES.append("bezel skirt r %.2f is not 0..0.3 over the r %.2f hole" % (skirtRo, lensR))
     if not (0.2 - 1e-9 <= relief and flangeT - relief >= 1.0 - 1e-9):
         FAILURES.append("tab relief %.2f / flange %.2f: need >= 0.2 of relief and >= 1.0 of solid flange over it"
                         % (relief, flangeT))
@@ -697,7 +702,7 @@ def check_bezel_fit(shell, plate, des, bezel):
         FAILURES.append("flange notch end r %.2f / bridge %.2f: need tab 11.0 + 0.3 and >= 1.0 of bridge" % (bridgeRi, flangeR - bridgeRi))
     if not (abs(skirtH - wall) <= 0.5 + 1e-9):
         FAILURES.append("bezel skirt %.2f tall is not the top's thickness %.2f" % (skirtH, wall))
-    if not (flangeR >= skirtRo + 0.8 - 1e-9):
+    if not (flangeR >= lensR + 0.8 - 1e-9):
         FAILURES.append("bezel flange r %.2f bears under 0.8 on the face outside the hole" % flangeR)
     # --- the bezel in its own frame ---
     def B(want, r, ang, z, why):
@@ -714,8 +719,8 @@ def check_bezel_fit(shell, plate, des, bezel):
         B(True, rs, a, -skirtH / 2, "skirt solid at %d deg" % a)
         B(True, rs, a, -skirtH + 0.1, "skirt reaches its foot at %d deg" % a)
         B(False, rs, a, -skirtH - 0.1, "nothing below the skirt's foot at %d deg" % a)
-        B(False, skirtRo + 0.1, a, -skirtH / 2, "nothing outside the skirt (r %.1f) at %d deg" % (skirtRo + 0.1, a))
-        B(True, skirtRo - 0.1, a, -skirtH / 2, "skirt reaches its OD at %d deg" % a)
+        B(False, skirtRo + 0.05, a, -skirtH / 2, "nothing outside the skirt (r %.2f) at %d deg" % (skirtRo + 0.05, a))
+        B(True, skirtRo - 0.05, a, -skirtH / 2, "skirt reaches its OD (r %.2f) at %d deg" % (skirtRo - 0.05, a))
         B(False, innerR - 0.1, a, -skirtH / 2, "bore open through the skirt at %d deg" % a)
         B(True, innerR + 0.1, a, -skirtH / 2, "skirt starts at its ID at %d deg" % a)
     B(False, skirtRo + 0.3, 90, -0.1, "nothing below the flange outside the skirt (r %.1f)" % (skirtRo + 0.3))
@@ -751,9 +756,9 @@ def check_bezel_fit(shell, plate, des, bezel):
     for a in range(0, 360, 45):
         ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
         solid(shell, cx + (flangeR - 0.1) * ca, (flangeR - 0.1) * sa, zTop - 0.1, "shell face solid under the flange rim at %d deg" % a)
-        solid(shell, cx + (skirtRo + 0.1) * ca, (skirtRo + 0.1) * sa, zTop - 0.1, "shell face solid just outside the hole at %d deg" % a)
-        void(shell, cx + (skirtRo - 0.1) * ca, (skirtRo - 0.1) * sa, zTop - 1.0, "hole open where the skirt sits at %d deg" % a)
-        void(shell, cx + (skirtRo - 0.1) * ca, (skirtRo - 0.1) * sa, zTop - skirtH + 0.1, "hole open down to the skirt's foot at %d deg" % a)
+        solid(shell, cx + (lensR + 0.1) * ca, (lensR + 0.1) * sa, zTop - 0.1, "shell face solid just outside the hole at %d deg" % a)
+        void(shell, cx + (lensR - 0.1) * ca, (lensR - 0.1) * sa, zTop - 1.0, "hole open where the skirt sits at %d deg" % a)
+        void(shell, cx + (lensR - 0.1) * ca, (lensR - 0.1) * sa, zTop - skirtH + 0.1, "hole open down to the skirt's foot at %d deg" % a)
         void(shell, cx + rs * ca, rs * sa, zTop - skirtH - 0.1, "cavity open under the skirt's foot at %d deg" % a)
     # bore floor and no keeper hole (check_pir_socket probes these in
     # detail; the two that matter to the retention repeated here)

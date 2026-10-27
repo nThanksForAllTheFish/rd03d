@@ -210,7 +210,7 @@ def ensure_params(des):
         # at 0.1 a side: (target total - (cavity over + outside under)) /
         # 2, and may be NEGATIVE (the model overlaps, the print does not).
         ("rimGapX", "0.03 mm", "plate half-width = intW/2 - this. X: cavity prints true (41.98 for 42), plate 0.17 under (41.53 for 41.7): (0.2 - 0.17 - 0) / 2 = 0.015 -> 0.03 (rounded up: 0.19 printed gap, light push)"),
-        ("rimGapY", "-0.20 mm", "plate half-length = intH/2 - this. Y: cavity prints 0.34 OVER (46.34 for 46), plate 0.27 under (45.43 for 45.7): (0.2 - 0.27 - 0.34) / 2 = -0.205 -> -0.20: the model's plate is 0.2 a side INTO the shell's +/-Y walls (91 expects that overlap), the print has 0.1 a side. The printed plate edge (23.2 - 0.135 = 23.065) is 0.275 inside the printed cavity wall (23.34)"),
+        ("rimGapY", "-0.05 mm", "plate half-length = intH/2 - this. Reprint 2026-10-26: the plate printed 46.10 for 46.40 modelled (0.30 under) and the shell cavity measures 46.00 on this shell (the earlier 46.34 was another shell or spot), so at -0.20 the plate was 0.1 too long and needed force. Target 0.2 total: printed 45.80 -> modelled 46.10 -> -0.05 (the model's plate is 0.05 a side into the shell's +/-Y walls, 91 expects that overlap; printed edge 23.05 - 0.15 = 22.90 vs cavity 23.00, 0.1 a side). Was -0.20 from the first print's 45.43 / 46.34"),
         ("wingGap", "-0.12 mm", "wing half-width = pirBoxHalfY - this. Box cavity width prints 0.2 over (27.2 for 27.0), wing 0.24 under (26.46 for 26.7): (0.2 - 0.24 - 0.2) / 2 = -0.12; the same shrink is assumed for the 31 mm box of Task 9d. The wing's far end in X uses rimGapX (an outside wall against a cavity face in X)"),
         # PIR socket (step 14), the shell's pod box (03_shell.py step 5c)
         # and the bezel ring (03_shell.py step 8), fifth layout (Task 9e,
@@ -254,6 +254,7 @@ def ensure_params(des):
         ("pirTabRelief", "0.4 mm", "bezel: depth of the two blind relief pockets in the flange's underside over the lens tabs (r pirBezelInnerR..pirHoleR - 0.2, pirNotchW wide): the tab tops are at the face plane, so this is their clearance under the solid flange"),
         ("pirBezelInnerR", "10.40 mm", "bezel inner radius (flange and skirt): lens ring r 10.3 + 0.10, dome flank r 10.35 (at the face) + 0.05; the bore is an inside surface and prints true, so the ring just grips the lens"),
         ("pirBezelSkirtH", "2.0 mm", "bezel skirt height below the flange: the top's thickness (wall), so the skirt's foot is flush with the top's underside and above the latch hook lips (which hang to case z 13.1 under the tabs, in the notches anyway)"),
+        ("pirBezelSkirtRo", "11.80 mm", "bezel skirt outer radius (Ø23.6), decoupled from the hole (pirHoleR 11.65, Ø23.3) on 2026-10-26: the first ring's skirt printed Ø22.79 for Ø23.3 modelled (0.5 under: a thin two-perimeter ring shrinks more than a wall) in a hole that printed Ø23.2, and was loose. Ø23.6 should print about 23.1 in the 23.2 hole; the model overlaps the hole by 0.15 a side and 91 expects that press-fit pair. Skirt wall = this - pirBezelInnerR = 1.40"),
         ("pirTabW", "5.0 mm", "lens latch tab tangential width, probed on the STEP 2026-10-25 (chord 5.04 at r 10.5, 5.00 at r 10.8; the tabs are at 45/225 deg in the sensor frame, r to 11.0, sensor z 6.2..8.4)"),
         ("pirNotchW", "pirTabW + 1 mm", "bezel notch tangential width (two, 180 deg apart, through the skirt and the flange's inner region): tab width + 0.5 a side (= 6.0)"),
         # Wing snap pair (Task 9d): the shell's +X-wall bumps and the
@@ -340,8 +341,8 @@ def run(_context: str):
     intD, wall, winT = p(des, "intD"), p(des, "wall"), p(des, "windowT")
     MM = 0.1
 
-    # 1. plate: intW - 2 rimGapX by intH - 2 rimGapY (41.94 x 46.4: the
-    # +/-Y edges sit 0.2 INTO the shell's walls in the model, which the
+    # 1. plate: intW - 2 rimGapX by intH - 2 rimGapY (41.94 x 46.1: the
+    # +/-Y edges sit 0.05 INTO the shell's walls in the model, which the
     # measured Y shrink of the print takes back; 91_pir_fit.py expects
     # that overlap)
     sk = comp.sketches.add(comp.xYConstructionPlane)
