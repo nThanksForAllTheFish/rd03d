@@ -85,6 +85,17 @@ def check_baseline(plate, shell, des):
     void(shell, 4.5, 0.0, 8.0, "nothing of the shell over the USB shell at x 4.5")
     void(shell, 2.5, 0.0, 8.0, "old boss position (x 2.5) is clear")
     void(shell, 14.5, 0.0, 8.0, "nothing beyond the boss at x 14.5")
+    # LED light-pipe hole (03 step 7b) through the front wall over the
+    # XIAO's user LED, centre (ledX, ledY), diameter ledPipeD
+    def pv(n): return des.userParameters.itemByName(n).value * 10
+    lx, ly, lr = pv("ledX"), pv("ledY"), pv("ledPipeD") / 2
+    for z in (14.2, 15.0, 15.9):
+        void(shell, lx, ly, z, "LED pipe hole open at z %.1f" % z)
+    void(shell, lx + lr - 0.1, ly, 15.0, "LED pipe hole reaches its radius")
+    solid(shell, lx + lr + 0.4, ly, 15.0, "front wall solid 0.4 outside the LED hole (+x)")
+    solid(shell, lx, ly + lr + 0.4, 15.0, "front wall solid 0.4 outside the LED hole (+y)")
+    solid(shell, lx, ly - lr - 0.4, 15.0, "front wall solid 0.4 outside the LED hole (-y)")
+    void(shell, lx, ly, 10.0, "nothing of the shell between the LED and its hole")
 
 
 def check_fit_allowances(plate, shell, des):

@@ -264,6 +264,18 @@ def ensure_params(des):
         # snaps at both ends as before.
         ("wingSnapX", "40 mm", "x centre of the wing snap pair (6 mm long along X): between the boss (to x 43.2 at y 0; the pockets are at the wing's +/-Y faces, far outside it) and the wing's corner fillets (from x 46.35)"),
         ("wingSnapZ", "-5.0 mm", "z centre of the wing snap pair: bumps +/-0.5, pockets +/-0.6, in the wing's z -8..-2 with 2.4 of wing above and below"),
+        # LED light pipe (2026-10-27): the XIAO's yellow user LED (GPIO15,
+        # flashed per published event) sits beside the B button between it
+        # and the USB shell, on the 5V-column side. Measured on the user's
+        # top-view photo against the 17.8 mm board width: 4.2 in from the
+        # board's USB end (edge at x -1.72 -> x 2.5), 5.7 off the
+        # centreline. After the 180 deg rotation the 5V column is +Y. The
+        # hole is centred 0.3 further out (y 6.0) so a 3 mm pipe clears the
+        # USB shell's footprint (|y| < 4.47, top z 7.46); the B button
+        # under the outer half is only 0.5 tall. 03_shell.py step 7b.
+        ("ledX", "2.5 mm", "XIAO user LED centre x in the case (board USB end at x -1.72, LED 4.2 inboard of it)"),
+        ("ledY", "6.0 mm", "light-pipe hole centre y: LED at 5.7 on the 5V-column (+Y since the 2026-10-27 rotation) side, hole 0.3 further out to clear the USB shell footprint (|y| 4.47)"),
+        ("ledPipeD", "3.0 mm", "light-pipe hole through the shell's front wall over the LED (a 3 mm clear rod; set 1.8 for a stub of 1.75 mm clear filament). Holes print true"),
     ]
     ups = des.userParameters
     for name, expr, comment in spec:

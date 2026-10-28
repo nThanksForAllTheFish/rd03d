@@ -469,6 +469,31 @@ def run(_context: str):
     # pod box (step 5c) removes that stretch of wall entirely and encloses
     # the wing instead.
 
+    # 7b. LED LIGHT-PIPE HOLE (2026-10-27). The XIAO's yellow user LED
+    # (GPIO15) flashes for every published event and was visible through
+    # the white shell; the blue one needs a pipe. A straight hole of
+    # ledPipeD through the front wall over the LED at (ledX, ledY), the
+    # params 02_backplate.py creates from the user's photo. Cut AFTER the
+    # edge finishing (6b/6c count the front perimeter loop; a hole adds
+    # two circles the loop filter would otherwise see). The LED is clear
+    # of the radome pocket (x <= -2), the boss (x >= 6.5) and the USB
+    # shell (|y| < 4.47), asserted below, so the pipe lands on plain wall.
+    ledX, ledY, ledD = p02(des, "ledX"), p02(des, "ledY"), p02(des, "ledPipeD")
+    if ledX - ledD / 2 < -2.0 * MM + 1.0 * MM:
+        raise RuntimeError("LED hole runs into the radome pocket (x <= -2)")
+    if ledX + ledD / 2 > BOSS_CX - BOSS_W / 2 - 1.0 * MM:
+        raise RuntimeError("LED hole runs into the hold-down boss")
+    if abs(ledY) - ledD / 2 < 4.47 * MM:
+        raise RuntimeError("LED hole sits over the USB shell, not the LED")
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    sk.sketchCurves.sketchCircles.addByCenterRadius(
+        adsk.core.Point3D.create(ledX, ledY, 0), ledD / 2)
+    extrude(comp, sk.profiles.item(0), intD - 0.01 * MM, z_top + 0.01 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[shell_body])
+    print("led light-pipe hole ok (O%.1f at (%.1f, %.1f), through the front wall z %.1f..%.1f)"
+          % (ledD * 10, ledX * 10, ledY * 10, intD * 10, z_top * 10))
+
     print("FrontShell bodies:", comp.bRepBodies.count)
 
     # 8. PIR BEZEL RING (Task 9e, 2026-10-25; replaces 9d's bayonet bezel
