@@ -286,7 +286,7 @@ def ensure_params(des):
         # cavityCornerR) = 0.207 at 1.5 / 1.0.
         ("plateCornerR", "1.5 mm", "plate outside corner radius (four vertical corners); must exceed cavityCornerR"),
         ("cavityCornerR", "1.0 mm", "shell cavity inside corner radius, modelled so the printed corner is defined (a 0.6 nozzle rounds a sharp inside corner to r 0.3..0.5 anyway)"),
-        ("ledPipeD", "3.0 mm", "light-pipe hole through the shell's front wall over the LED (a 3 mm clear rod; set 1.8 for a stub of 1.75 mm clear filament). Holes print true"),
+        ("ledPipeD", "1.9 mm", "light-pipe hole through the shell's front wall over the LED: 1.9 for a stub of 1.75 mm clear polycarbonate filament (holes print true; 0.07 a side, glue it); 3.0 for a 3 mm rod"),
     ]
     ups = des.userParameters
     for name, expr, comment in spec:
@@ -1549,6 +1549,42 @@ def run(_context: str):
         raise RuntimeError("corner rounding split the plate: %d bodies" % comp.bRepBodies.count)
     print("plate corner rounding ok (r %.2f at (+/-%.2f, +/-%.2f), z -8..11; cavity corners r %.2f -> %.2f mm diagonal gap)"
           % (pcr * 10, xe * 10, ye * 10, ccr * 10, ((pcr - ccr) * (2 ** 0.5 - 1)) * 10))
+
+    # 14f. WING SNAP TONGUES (2026-10-28, user's PLA print: "close to
+    # impossible to push past" the box's bumps). The wing sits wingGap
+    # (0.12) INTO the box walls by calibration and the bumps stand snapBump
+    # (0.5) proud, and nothing in that joint could flex: the box walls are
+    # 2 mm plates held on three sides. Put the compliance in the WING,
+    # where it is hidden inside the box: a slot behind each +/-Y face
+    # leaves a tongue TONGUE_T thick that carries the snap pocket, free at
+    # its +X end (END_CUT) and rooted at TONGUE_X0. 2.0 x 6 x 14.3 mm of
+    # PLA/PETG deflecting 0.4: strain ~0.6 %, about 5 N a side. Cut AFTER
+    # 14d' so the wing's edge-fillet selectors saw the plain wing.
+    TONGUE_T, SLOT_W = 2.0 * MM, 1.2 * MM
+    TONGUE_X0, TONGUE_X1, END_CUT = 31.0 * MM, 45.3 * MM, 1.0 * MM
+    ySlotIn = wingHalfY - TONGUE_T - SLOT_W              # 10.42
+    if ySlotIn < socketR + 1.0 * MM + 0.5 * MM:
+        raise RuntimeError("wing tongue slot (y %.2f) runs into the boss foot" % (ySlotIn * 10))
+    if not (TONGUE_X0 + 0.1 * MM <= snapX - 3.1 * MM and snapX + 3.1 * MM <= TONGUE_X1 - 0.1 * MM):
+        raise RuntimeError("wing snap pocket is not on the tongue")
+    if TONGUE_X1 + END_CUT > xWing1 - corner - 0.05 * MM:
+        raise RuntimeError("tongue end cut runs into the wing's corner fillet")
+    if POCKET_D > TONGUE_T - 0.6 * MM:
+        raise RuntimeError("snap pocket leaves under 0.6 mm of tongue")
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        box(sk, TONGUE_X0, TONGUE_X1 + END_CUT, sy * ySlotIn, sy * (ySlotIn + SLOT_W))   # slot
+        box(sk, TONGUE_X1, TONGUE_X1 + END_CUT, sy * ySlotIn, sy * (wingHalfY + 0.1 * MM))  # end cut
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    extrude(comp, profs, zBack - 0.01 * MM, zWing + 0.01 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("wing tongue slots split the plate: %d bodies" % comp.bRepBodies.count)
+    print("wing snap tongues ok: %.1f thick, x %.1f..%.1f (root at -X, end cut to %.1f), "
+          "slot %.1f wide at y +/-%.2f..%.2f, through the wing"
+          % (TONGUE_T * 10, TONGUE_X0 * 10, TONGUE_X1 * 10, (TONGUE_X1 + END_CUT) * 10,
+             SLOT_W * 10, ySlotIn * 10, (ySlotIn + SLOT_W) * 10))
 
     # 14e. (deleted, Task 9d) the PirPlug component: a slotted tube pressed
     # into the bore from the back to hold the sensor's base down, backed

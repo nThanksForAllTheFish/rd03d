@@ -114,6 +114,26 @@ def check_baseline(plate, shell, des):
                   "cavity corner (%+d,%+d) filled: solid 0.15 in from the sharp corner" % (sx, sy))
             void(shell, sx * (xi - ccr * 0.6), sy * (yi - ccr * 0.6), 5.0,
                  "cavity corner fill stops at r %.1f (%+d,%+d)" % (ccr, sx, sy))
+    # pod box: +X inside corners filled, junction edges filleted (03 7d);
+    # wing snap tongues (02 14f) and bump ramps (03 5d')
+    xb, hb = pv("pirCx") + pv("pirBoxHalfX"), pv("pirBoxHalfY")          # 49, 13.5
+    snap, sz, sxn = pv("snapBump"), pv("wingSnapZ"), pv("wingSnapX")
+    wy = pv("pirBoxHalfY") - pv("wingGap")                               # 13.62
+    for sy in (-1, 1):
+        solid(shell, xb - 0.15, sy * (hb - 0.15), 5.0, "box corner (%+d) filled 0.15 in from the sharp corner" % sy)
+        void(shell, xb - ccr * 0.6, sy * (hb - ccr * 0.6), 5.0, "box corner fill stops at r %.1f (%+d)" % (ccr, sy))
+        void(shell, xi + 0.12, sy * (hb + 0.12), 5.0, "box/wall junction edge filleted (%+d): void 0.12 in from the sharp edge" % sy)
+        solid(shell, xi + 0.6, sy * (hb + 0.6), 5.0, "junction solid 0.6 in (%+d)" % sy)
+        # tongue: slot void, tongue solid below the pocket, end cut void, root solid
+        void(plate, sxn, sy * (wy - 2.6), -5.0, "wing tongue slot open (%+d)" % sy)
+        solid(plate, sxn, sy * (wy - 1.0), -7.0, "wing tongue solid below the pocket (%+d)" % sy)
+        void(plate, 45.8, sy * (wy - 1.0), -5.0, "wing tongue end cut open (%+d)" % sy)
+        solid(plate, 30.0, sy * (wy - 2.6), -5.0, "wing solid at the tongue root (%+d)" % sy)
+        solid(plate, 38.0, sy * (wy - 3.6), -5.0, "wing solid inboard of the slot (%+d)" % sy)
+        # bump ramps: the tip corners are chamfered, the mid-tip is solid
+        void(shell, sxn, sy * (hb - snap + 0.06), sz + 0.44, "bump top tip edge ramped (%+d)" % sy)
+        void(shell, sxn, sy * (hb - snap + 0.06), sz - 0.44, "bump bottom tip edge ramped (%+d)" % sy)
+        solid(shell, sxn, sy * (hb - snap + 0.1), sz, "bump tip solid at mid-height (%+d)" % sy)
 
 
 def check_fit_allowances(plate, shell, des):

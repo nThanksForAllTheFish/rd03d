@@ -341,6 +341,33 @@ def run(_context: str):
     if comp.bRepBodies.count != 1:
         raise RuntimeError("wing snap bumps did not merge with the shell: %d bodies"
                            % comp.bRepBodies.count)
+    # 5d'. ramps on the bumps (2026-10-28): 45 deg chamfers on each bump's
+    # two long tip edges (along X, at y boxHalfY - snap, z snapZ +/- 0.5)
+    # so the wing's tongue (02 step 14f) is cammed in on the way down and
+    # can be pushed back out. Equal-distance 0.4 leaves 0.2 of flat tip.
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for e in shell_body.edges:
+            g = e.geometry
+            if not isinstance(g, adsk.core.Line3D):
+                continue
+            v = g.startPoint.vectorTo(g.endPoint); v.normalize()
+            if abs(abs(v.x) - 1) > 1e-6:
+                continue
+            my = (g.startPoint.y + g.endPoint.y) / 2
+            mz = (g.startPoint.z + g.endPoint.z) / 2
+            if (abs(abs(my) - (boxHalfY - snap)) < 0.005
+                    and abs(abs(mz - snapZ) - 0.5 * MM) < 0.005):
+                edges.add(e)
+        if edges.count != 4:
+            raise RuntimeError("expected 4 bump tip edges, found %d" % edges.count)
+        ch = comp.features.chamferFeatures
+        chi = ch.createInput(edges, False)
+        chi.setToEqualDistance(adsk.core.ValueInput.createByReal(0.4 * MM))
+        ch.add(chi)
+        print("wing snap bump ramps ok (0.4 x 45 deg on 4 tip edges)")
+    except Exception as exc:
+        print("BUMP RAMPS SKIPPED:", exc)
     print("wing snap bumps ok: on the box's inner +/-Y walls (y +/-%.1f), %.1f proud, "
           "x %.1f..%.1f, z %.1f..%.1f"
           % (boxHalfY * 10, snap * 10, (snapX - 0.3) * 10, (snapX + 0.3) * 10,
@@ -532,6 +559,59 @@ def run(_context: str):
     if comp.bRepBodies.count != 1:
         raise RuntimeError("cavity corner fills did not merge: %d bodies" % comp.bRepBodies.count)
     print("cavity corner fills ok (r %.2f at (+/-%.1f, +/-%.1f), z -8..14)" % (ccr * 10, xi * 10, yi * 10))
+
+    # 7d. POD BOX CORNERS (2026-10-28, user's print review). The same
+    # treatment for the box cavity's two +X inside corners (xBoxIn,
+    # +/-boxHalfY): fills of r cavityCornerR. The wing's far corners carry
+    # the 2.5 mm fillet already, so they clear these. And the two CONVEX
+    # vertical edges where the box walls leave the shell's +X wall (x xIn,
+    # y +/-boxHalfY) get an r 1.0 fillet: the plate's matching inside
+    # corner (wing meets plate edge) prints rounded, so a sharp convex
+    # shell edge would bind there exactly as the plate's corners did.
+    fills = []
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        cx, cy = xBoxIn - ccr, sy * (boxHalfY - ccr)
+        corner_box(sk, cx, xBoxIn, min(cy, sy * boxHalfY), max(cy, sy * boxHalfY))
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            adsk.core.Point3D.create(cx, cy, 0), ccr)
+    for i in range(sk.profiles.count):
+        pr = sk.profiles.item(i)
+        c = pr.areaProperties().centroid
+        if c.x > xBoxIn - 0.4 * ccr and abs(c.y) > boxHalfY - 0.4 * ccr:
+            fills.append(pr)
+    if len(fills) != 2:
+        raise RuntimeError("expected 2 box corner profiles, found %d" % len(fills))
+    extrude(comp, collection(fills), -backT, intD,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("box corner fills did not merge: %d bodies" % comp.bRepBodies.count)
+    print("box cavity corner fills ok (r %.2f at (%.1f, +/-%.1f))" % (ccr * 10, xBoxIn * 10, boxHalfY * 10))
+    JUNCTION_R = 1.0 * MM
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for e in shell_body.edges:
+            g = e.geometry
+            if not isinstance(g, adsk.core.Line3D):
+                continue
+            v = g.startPoint.vectorTo(g.endPoint); v.normalize()
+            if abs(abs(v.z) - 1) > 1e-6:
+                continue
+            mx = (g.startPoint.x + g.endPoint.x) / 2
+            my = (g.startPoint.y + g.endPoint.y) / 2
+            if abs(mx - xIn) < 0.005 and abs(abs(my) - boxHalfY) < 0.005:
+                edges.add(e)
+        if edges.count != 2:
+            raise RuntimeError("expected 2 box/wall junction edges, found %d" % edges.count)
+        fil = comp.features.filletFeatures
+        fi = fil.createInput()
+        fi.addConstantRadiusEdgeSet(edges, adsk.core.ValueInput.createByReal(JUNCTION_R), True)
+        fil.add(fi)
+        print("box/wall junction fillets ok (r %.1f on 2 convex edges at (%.0f, +/-%.1f))"
+              % (JUNCTION_R * 10, xIn * 10, boxHalfY * 10))
+    except Exception as exc:
+        print("JUNCTION FILLETS SKIPPED:", exc)
 
     print("FrontShell bodies:", comp.bRepBodies.count)
 
