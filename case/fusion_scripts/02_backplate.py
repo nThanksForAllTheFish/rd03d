@@ -275,6 +275,17 @@ def ensure_params(des):
         # under the outer half is only 0.5 tall. 03_shell.py step 7b.
         ("ledX", "2.5 mm", "XIAO user LED centre x in the case (board USB end at x -1.72, LED 4.2 inboard of it)"),
         ("ledY", "6.0 mm", "light-pipe hole centre y: LED at 5.7 on the 5V-column (+Y since the 2026-10-27 rotation) side, hole 0.3 further out to clear the USB shell footprint (|y| 4.47)"),
+        # Corner rounding (2026-10-27, user's print review): an FDM printer
+        # cannot make the cavity's sharp inside corner (it rounds to about
+        # half the nozzle width or more) while the plate's outside corner
+        # prints nearly sharp, so the plate bound on four points before
+        # the flats touched. The plate's four corners are rounded (step 15)
+        # to a larger radius than the cavity's modelled inside corners
+        # (03_shell.py step 7c), which leaves a defined ~0.2 mm diagonal
+        # gap: (sqrt(2) * (plateCornerR - cavityCornerR)) - (plateCornerR -
+        # cavityCornerR) = 0.207 at 1.5 / 1.0.
+        ("plateCornerR", "1.5 mm", "plate outside corner radius (four vertical corners); must exceed cavityCornerR"),
+        ("cavityCornerR", "1.0 mm", "shell cavity inside corner radius, modelled so the printed corner is defined (a 0.6 nozzle rounds a sharp inside corner to r 0.3..0.5 anyway)"),
         ("ledPipeD", "3.0 mm", "light-pipe hole through the shell's front wall over the LED (a 3 mm clear rod; set 1.8 for a stub of 1.75 mm clear filament). Holes print true"),
     ]
     ups = des.userParameters
@@ -1497,6 +1508,47 @@ def run(_context: str):
                            % len(rim))
     add_fillet(rim, soft, "wing rim fillet")
     print("wing rim fillet ok (r=%.2f mm on 5 edges)" % (soft * 10))
+
+    # 15. PLATE CORNER ROUNDING (2026-10-27). Each of the four outside
+    # corners is cut with a "square minus quarter disc" profile over the
+    # plate's whole height (z -8..11, so the -X fence wall's corner at
+    # x -20.65 is rounded too), radius plateCornerR. A cut rather than a
+    # fillet: the -X corners are shared by the plate and its 1.5 mm wall,
+    # and a fillet equal to the wall thickness is refused by the kernel.
+    # The corner pieces are inboard of nothing: the pins (|x| <= 19.35),
+    # the end bars (|x| <= 19.15) and the snap pockets (|y| = 12) all lie
+    # inside the |x| 19.47 / |y| 21.55 corner squares.
+    pcr = p(des, "plateCornerR")
+    ccr = p(des, "cavityCornerR")
+    if pcr <= ccr + 0.3 * MM - 1e-9:
+        raise RuntimeError("plateCornerR %.2f must exceed cavityCornerR %.2f by 0.3 mm"
+                           % (pcr * 10, ccr * 10))
+    xe, ye = intW / 2 - rimGapX, intH / 2 - rimGapY
+    cut_profiles = []
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cx, cy = sx * (xe - pcr), sy * (ye - pcr)        # arc centre
+            box(sk, min(cx, sx * xe), max(cx, sx * xe), min(cy, sy * ye), max(cy, sy * ye))
+            sk.sketchCurves.sketchCircles.addByCenterRadius(
+                adsk.core.Point3D.create(cx, cy, 0), pcr)
+    for i in range(sk.profiles.count):
+        pr = sk.profiles.item(i)
+        ap = pr.areaProperties()
+        c = ap.centroid
+        # the corner piece's centroid lies ~0.78 r out from the arc centre
+        # toward the corner; the quarter disc's only ~0.42 r
+        if abs(c.x) > xe - 0.4 * pcr and abs(c.y) > ye - 0.4 * pcr:
+            cut_profiles.append(pr)
+    if len(cut_profiles) != 4:
+        raise RuntimeError("expected 4 plate corner profiles, found %d" % len(cut_profiles))
+    extrude(comp, collection(cut_profiles), -backT - 0.01 * MM, 11 * MM + 0.01,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("corner rounding split the plate: %d bodies" % comp.bRepBodies.count)
+    print("plate corner rounding ok (r %.2f at (+/-%.2f, +/-%.2f), z -8..11; cavity corners r %.2f -> %.2f mm diagonal gap)"
+          % (pcr * 10, xe * 10, ye * 10, ccr * 10, ((pcr - ccr) * (2 ** 0.5 - 1)) * 10))
 
     # 14e. (deleted, Task 9d) the PirPlug component: a slotted tube pressed
     # into the bore from the back to hold the sensor's base down, backed

@@ -40,6 +40,13 @@ def extrude(comp, profiles, z0, z1, op, participants=None):
     return ext.add(inp)
 
 
+def corner_box(sk, x0, x1, y0, y1):
+    """Axis-aligned rectangle by its two corners (cm), as 02_backplate.py's box();
+    named apart from the `box` extrude feature in run()."""
+    sk.sketchCurves.sketchLines.addTwoPointRectangle(
+        adsk.core.Point3D.create(x0, y0, 0), adsk.core.Point3D.create(x1, y1, 0))
+
+
 def collection(items):
     coll = adsk.core.ObjectCollection.create()
     for i in items:
@@ -493,6 +500,38 @@ def run(_context: str):
             participants=[shell_body])
     print("led light-pipe hole ok (O%.1f at (%.1f, %.1f), through the front wall z %.1f..%.1f)"
           % (ledD * 10, ledX * 10, ledY * 10, intD * 10, z_top * 10))
+
+    # 7c. CAVITY CORNER FILLS (2026-10-27, user's print review). The
+    # cavity's four inside vertical corners get a modelled radius of
+    # cavityCornerR ("square minus quarter disc" joined into each corner,
+    # z -8..14) so the printed corner is what the model says rather than
+    # whatever the nozzle leaves. The plate's corners (02 step 15) are
+    # rounded to plateCornerR, larger, so the parts meet on the flats with
+    # a defined diagonal gap. After 6a-6c on purpose: the edge-loop
+    # selectors must not see the new arcs.
+    ccr = p02(des, "cavityCornerR")
+    xi, yi = intW / 2, intH / 2
+    fills = []
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cx, cy = sx * (xi - ccr), sy * (yi - ccr)
+            corner_box(sk, min(cx, sx * xi), max(cx, sx * xi), min(cy, sy * yi), max(cy, sy * yi))
+            sk.sketchCurves.sketchCircles.addByCenterRadius(
+                adsk.core.Point3D.create(cx, cy, 0), ccr)
+    for i in range(sk.profiles.count):
+        pr = sk.profiles.item(i)
+        c = pr.areaProperties().centroid
+        if abs(c.x) > xi - 0.4 * ccr and abs(c.y) > yi - 0.4 * ccr:
+            fills.append(pr)
+    if len(fills) != 4:
+        raise RuntimeError("expected 4 cavity corner profiles, found %d" % len(fills))
+    extrude(comp, collection(fills), -backT, intD,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[shell_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("cavity corner fills did not merge: %d bodies" % comp.bRepBodies.count)
+    print("cavity corner fills ok (r %.2f at (+/-%.1f, +/-%.1f), z -8..14)" % (ccr * 10, xi * 10, yi * 10))
 
     print("FrontShell bodies:", comp.bRepBodies.count)
 

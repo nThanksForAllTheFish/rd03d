@@ -96,6 +96,24 @@ def check_baseline(plate, shell, des):
     solid(shell, lx, ly + lr + 0.4, 15.0, "front wall solid 0.4 outside the LED hole (+y)")
     solid(shell, lx, ly - lr - 0.4, 15.0, "front wall solid 0.4 outside the LED hole (-y)")
     void(shell, lx, ly, 10.0, "nothing of the shell between the LED and its hole")
+    # corner rounding (02 step 15 / 03 step 7c): plate corners r plateCornerR,
+    # cavity inside corners r cavityCornerR; both at (+/-20.97, +/-23.05) /
+    # (+/-21, +/-23)
+    pcr, ccr = pv("plateCornerR"), pv("cavityCornerR")
+    xe, ye = pv("intW") / 2 - pv("rimGapX"), pv("intH") / 2 - pv("rimGapY")
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            void(plate, sx * (xe - 0.15), sy * (ye - 0.15), -4.0,
+                 "plate corner (%+d,%+d) rounded: void 0.15 in from the sharp corner" % (sx, sy))
+            solid(plate, sx * (xe - pcr - 0.2), sy * (ye - 0.15), -4.0,
+                  "plate flat still there just past the corner arc (%+d,%+d)" % (sx, sy))
+            void(plate, sx * (xe - 0.15), sy * (ye - 0.15), 5.0,
+                 "plate corner rounded through the wall height too (%+d,%+d)" % (sx, sy))
+            xi, yi = pv("intW") / 2, pv("intH") / 2
+            solid(shell, sx * (xi - 0.15), sy * (yi - 0.15), 5.0,
+                  "cavity corner (%+d,%+d) filled: solid 0.15 in from the sharp corner" % (sx, sy))
+            void(shell, sx * (xi - ccr * 0.6), sy * (yi - ccr * 0.6), 5.0,
+                 "cavity corner fill stops at r %.1f (%+d,%+d)" % (ccr, sx, sy))
 
 
 def check_fit_allowances(plate, shell, des):
