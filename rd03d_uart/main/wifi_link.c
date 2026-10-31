@@ -143,11 +143,11 @@ void wifi_link_start(void)
 #endif
 
     ESP_ERROR_CHECK(mdns_init());
-    ESP_ERROR_CHECK(mdns_hostname_set("rd03d"));
+    ESP_ERROR_CHECK(mdns_hostname_set(CONFIG_RD03D_NODE_NAME));
     ESP_ERROR_CHECK(mdns_instance_name_set("RD-03D radar stream"));
     ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
 
-    ESP_LOGI(TAG, "mdns hostname set: rd03d.local");
+    ESP_LOGI(TAG, "mdns hostname set: %s.local", CONFIG_RD03D_NODE_NAME);
 }
 
 bool wifi_link_is_up(void)

@@ -31,6 +31,8 @@ In the case the XIAO sits with its USB end toward the radar bay (rotated 180° s
 
 Radar UART: 256000 baud, 8N1.
 
+**Node name.** `RD03D_NODE_NAME` (Kconfig, default `rd03d`) is both the mDNS hostname (`http://<name>.local`, OTA at `/update`) and the MQTT topic prefix (`<name>/status`, `<name>/target/N`, `<name>/pir`, `<name>/pir/state`). A second board on the same network needs its own name or the two answer for each other and both feed the stair-light flow. The recipe used for the spare unit: copy `sdkconfig` to `sdkconfig.unit2`, append `CONFIG_RD03D_NODE_NAME="rd03d2"`, build with `idf.py -B build.unit2 -D SDKCONFIG=sdkconfig.unit2 build`, flash once over USB, then OTA at `http://rd03d2.local/update`. When it replaces the installed unit, rebuild it with the default name and OTA it; retire or rename the old board at the same time, since only one `rd03d` can be on the air.
+
 ## Build & flash
 
 Find the port rather than assuming it — boards enumerate differently, and a

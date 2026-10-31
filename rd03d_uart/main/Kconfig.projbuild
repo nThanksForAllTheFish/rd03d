@@ -54,6 +54,17 @@ config RD03D_AP_CHANNEL
         1 and 11 are usually the most congested in offices. Change this if
         the link feels slow; it is the knob to turn first.
 
+config RD03D_NODE_NAME
+    string "Node name (mDNS hostname and MQTT topic prefix)"
+    default "rd03d"
+    help
+        The board answers at <name>.local (OTA at http://<name>.local/update)
+        and publishes under <name>/status, <name>/target/N, <name>/pir and
+        <name>/pir/state. Give every board on the LAN its own name: a second
+        unit built as "rd03d2" can sit on the bench beside the installed
+        "rd03d" without answering for it or feeding the stair-light flow.
+        Letters, digits and hyphens, at most 24 characters.
+
 config RD03D_ENABLE_MQTT
     bool "Publish targets over MQTT"
     default y

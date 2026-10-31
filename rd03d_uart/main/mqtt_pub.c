@@ -18,7 +18,15 @@
 
 static const char *TAG = "mqtt_pub";
 
-#define STATUS_TOPIC        "rd03d/status"
+/* Topics carry the node name (Kconfig RD03D_NODE_NAME, "rd03d" by default)
+ * so two boards on one broker never share a topic; the name is a string
+ * literal, so the concatenation happens at compile time. */
+_Static_assert(sizeof(CONFIG_RD03D_NODE_NAME) <= 25,
+               "RD03D_NODE_NAME must be at most 24 characters");
+#define STATUS_TOPIC        CONFIG_RD03D_NODE_NAME "/status"
+#define PIR_TOPIC           CONFIG_RD03D_NODE_NAME "/pir"
+#define PIR_STATE_TOPIC     CONFIG_RD03D_NODE_NAME "/pir/state"
+#define TARGET_TOPIC_FMT    CONFIG_RD03D_NODE_NAME "/target/%d"
 #define RESOLVE_RETRY_MS    30000
 #define MQTT_KEEPALIVE_S    15  /* short keepalive so the LWT fires quickly */
 
@@ -50,7 +58,7 @@ static void on_mqtt_event(void *arg, esp_event_base_t base, int32_t id,
         s_connected = true;
         esp_mqtt_client_publish(s_client, STATUS_TOPIC, "online", 0, 0, 1);
 #if CONFIG_RD03D_ENABLE_PIR
-        esp_mqtt_client_publish(s_client, "rd03d/pir/state",
+        esp_mqtt_client_publish(s_client, PIR_STATE_TOPIC,
                                 s_pir_state ? "1" : "0", 1, 1, 1);
 #endif
         ESP_LOGI(TAG, "connected to broker");
@@ -160,8 +168,8 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
         if (act == MQTT_THROTTLE_NONE) {
             continue;
         }
-        char topic[24];
-        snprintf(topic, sizeof(topic), "rd03d/target/%d", i + 1);
+        char topic[48];
+        snprintf(topic, sizeof(topic), TARGET_TOPIC_FMT, i + 1);
         int msg_id = -1;
         if (act == MQTT_THROTTLE_MOVED) {
             char payload[64];
@@ -240,7 +248,7 @@ void mqtt_pub_pir_event(uint32_t n, int64_t t_ms)
      * PIR traffic (three messages per event) backed up by ~29 s on the bench
      * (2026-10-25). publish() writes to the socket now; this runs on the PIR
      * task, which may block for the few ms a write takes. */
-    if (esp_mqtt_client_publish(client, "rd03d/pir", payload, len, 0, 0) < 0) {
+    if (esp_mqtt_client_publish(client, PIR_TOPIC, payload, len, 0, 0) < 0) {
         ESP_LOGW(TAG, "pir event %lu dropped", (unsigned long)n);
     }
 }
@@ -255,7 +263,7 @@ void mqtt_pub_pir_state(bool active)
     /* Retained so a fresh Node-RED subscriber learns the current state.
      * QoS 0 and publish(): see mqtt_pub_pir_event for why not enqueue(); the
      * reconnect republish above covers the retained value after an outage. */
-    if (esp_mqtt_client_publish(client, "rd03d/pir/state", active ? "1" : "0",
+    if (esp_mqtt_client_publish(client, PIR_STATE_TOPIC, active ? "1" : "0",
                                 1, 0, 1) < 0) {
         ESP_LOGW(TAG, "pir state %d dropped", active ? 1 : 0);
     }

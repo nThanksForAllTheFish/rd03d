@@ -40,3 +40,5 @@ video/models/
 case/models/
 # Raw narration takes (large WAV); kept takes travel in the transfer package
 video/takes/
+rd03d_uart/sdkconfig.unit2
+rd03d_uart/build.unit2/
