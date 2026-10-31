@@ -858,15 +858,29 @@ def run(_context: str):
     # gives ~40 mm2 of glue wall against a plug latch force of order 10 N.
     jW = p(des, "usbJackW") + p(des, "usbJackClear")      # 9.33
     jT = p(des, "usbJackT") + p(des, "usbJackClear")      # 3.42
-    JCX, JCY = 13.6 * MM, -19.0 * MM
+    # 2026-10-31 (user, wiring the second unit): the jack moves from the -Y
+    # band to the +Y band, next to the capacitor and the XIAO's 5V/GND pads
+    # (on its +Y edge since the 180 deg rotation), so no power wire crosses
+    # the board. Turned 90 deg: the slot's WIDTH (jW) now runs along Y and
+    # its THICKNESS (jT) along X, at the band's +X end: slot x 15.58..19.00,
+    # y 11.84..21.17, collar x 14.08..20.50 (0.47 inside the plate edge),
+    # y 10.34..22.67 (its -Y wall merges into the XIAO's +Y fence, 2.6 mm
+    # past the clip finger's end at x 11.5, so the finger still flexes).
+    # The seating ramps are on the +/-X collar walls now. The capacitor
+    # cradle (step 10) slides to x 1.5..13.5 to make room.
+    JCX, JCY = 17.29 * MM, 16.5 * MM
     COLLAR_T = 1.5 * MM
     COLLAR_TOP = 4.5 * MM
     RAMP_Z0 = p(des, "usbShellL") - backT                 # 2.58
     RAMP_RISE = 0.8 * MM
     RAMP_Z1 = RAMP_Z0 + RAMP_RISE                         # 3.38
     ANCHOR = 0.3 * MM            # loft sections start inside the wall
-    sx0, sx1 = JCX - jW / 2, JCX + jW / 2                 # 8.935 .. 18.265
-    sy0, sy1 = JCY - jT / 2, JCY + jT / 2                 # -20.71 .. -17.29
+    sx0, sx1 = JCX - jT / 2, JCX + jT / 2                 # 15.58 .. 19.00 (thickness along X)
+    sy0, sy1 = JCY - jW / 2, JCY + jW / 2                 # 11.835 .. 21.165 (width along Y)
+    if sx1 + COLLAR_T > intW / 2 - rimGapX - 0.3 * MM:
+        raise RuntimeError("jack collar runs into the plate's +X edge")
+    if sy1 + COLLAR_T > intH / 2 - rimGapY - 0.3 * MM:
+        raise RuntimeError("jack collar runs into the plate's +Y edge")
 
     # 9a. collar box, then one cut for the slot AND the collar bore
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -884,18 +898,20 @@ def run(_context: str):
     # 9b. seating ramps on both +/-Y collar walls, plus the narrowed wall
     # they lead into (z RAMP_Z1..COLLAR_TOP), leaving a 1.82 mm tail channel
     for s in (-1, 1):
-        # s = -1 is the -Y wall, whose material lies at more negative y and
-        # whose channel is toward +y; "inward" is therefore -s.
-        face = sy0 if s < 0 else sy1          # the wall's inner face
-        back_y = face + s * ANCHOR            # 0.3 mm INTO the wall
-        tip_y = face - s * RAMP_RISE          # 0.8 mm INTO the channel
+        # s = -1 is the -X wall, whose material lies at more negative x and
+        # whose channel is toward +x; "inward" is therefore -s. (The ramps
+        # sit on the thickness faces, which are the +/-X walls since the
+        # 2026-10-31 rotation.)
+        face = sx0 if s < 0 else sx1          # the wall's inner face
+        back_x = face + s * ANCHOR            # 0.3 mm INTO the wall
+        tip_x = face - s * RAMP_RISE          # 0.8 mm INTO the channel
         ramp_loft(comp, RAMP_Z0,
-                  (sx0, sx1, back_y, face),
+                  (back_x, face, sy0, sy1),
                   RAMP_Z1,
-                  (sx0, sx1, back_y, tip_y),
+                  (back_x, tip_x, sy0, sy1),
                   [plate_body])
         sk = comp.sketches.add(comp.xYConstructionPlane)
-        box(sk, sx0, sx1, back_y, tip_y)
+        box(sk, back_x, tip_x, sy0, sy1)
         extrude(comp, sk.profiles.item(0), RAMP_Z1, COLLAR_TOP,
                 adsk.fusion.FeatureOperations.JoinFeatureOperation,
                 participants=[plate_body])
@@ -913,10 +929,10 @@ def run(_context: str):
             my = (g.startPoint.y + g.endPoint.y) / 2
             if abs(mz + backT) > 0.005:
                 continue
-            on_x = (abs(abs(mx - JCX) - jW / 2) < 0.005
-                    and abs(my - JCY) < jT / 2 + 0.005)
-            on_y = (abs(abs(my - JCY) - jT / 2) < 0.005
-                    and abs(mx - JCX) < jW / 2 + 0.005)
+            on_x = (abs(abs(mx - JCX) - jT / 2) < 0.005
+                    and abs(my - JCY) < jW / 2 + 0.005)
+            on_y = (abs(abs(my - JCY) - jW / 2) < 0.005
+                    and abs(mx - JCX) < jT / 2 + 0.005)
             if on_x or on_y:
                 edges.add(e)
         if edges.count != 4:
@@ -933,8 +949,8 @@ def run(_context: str):
     if comp.bRepBodies.count != 1:
         raise RuntimeError("usb jack step split the plate: %d bodies"
                            % comp.bRepBodies.count)
-    print("usb jack ok: slot %.2f x %.2f at (%.2f, %.2f), collar to %.2f, "
-          "ramp %.2f->%.2f, tail channel %.2f"
+    print("usb jack ok: slot %.2f (along Y) x %.2f (along X) at (%.2f, %.2f), collar to %.2f, "
+          "ramp %.2f->%.2f on the +/-X walls, tail channel %.2f"
           % (jW * 10, jT * 10, JCX * 10, JCY * 10, COLLAR_TOP * 10,
              RAMP_Z0 * 10, RAMP_Z1 * 10, (jT - 2 * RAMP_RISE) * 10))
 
@@ -998,7 +1014,11 @@ def run(_context: str):
     # -X rib nudged 5.0 -> 5.6 so the wider block still clears the LEGO bore
     # at (0.95, +12) by 1.00 mm: the bore reaches x 3.40 and the rib now
     # spans x 4.40..6.80. Span 9.2 mm, cap centred at x 10.2.
-    RIB_X = (5.6 * MM, 14.8 * MM)
+    # 2026-10-31: ribs 5.6/14.8 -> 4.8/11.0 so the cap (body x 1.5..13.5)
+    # clears the jack collar at x 14.08 by 0.6; the x 4.8 rib's foot
+    # (3.6..6.0) stays 0.2 clear of the (0.95, 12) Technic bore's x 3.40.
+    # Lead end at -X, 8 mm from the XIAO's 5V/GND pads.
+    RIB_X = (4.8 * MM, 11.0 * MM)
 
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for rx in RIB_X:
@@ -1026,7 +1046,7 @@ def run(_context: str):
     # volume rose by exactly the two rib blocks). modelToSketchSpace asks
     # the sketch for its own mapping instead of assuming one.
     BORE_X0 = 1.0 * MM           # plane offset; ribs live at x 4.4..16.0
-    BORE_LEN = 16.0 * MM         # sweep +X clear through both ribs (to 17.0;
+    BORE_LEN = 12.0 * MM         # sweep +X clear through both ribs (to 13.0, 2026-10-31;
     #                              was 14.0, which stopped at x 15.0 and would
     #                              have left 0.4 mm of the +X rib unbored once
     #                              the ribs moved +2 mm - the want_cut guard

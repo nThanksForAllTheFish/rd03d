@@ -212,6 +212,16 @@ down means holding an iron over them.
 
 ## USB-C base jack (added 2026-09-09)
 
+> **Moved 2026-10-31.** The jack now sits in the **+Y band**, next to the
+> capacitor and the XIAO's 5V/GND pads (which are on the board's +Y edge
+> since the 2026-10-27 rotation), so no power wire crosses the board. It is
+> turned 90°: the slot runs along Y at the band's +X end (x 15.6..19.0,
+> y 11.8..21.2), the collar's −Y wall merges into the XIAO's +Y fence, and
+> the seating ramps are on the collar's ±X walls. Everything below about
+> seating it from the back, the ramps and the epoxy still applies; where the
+> text says "−Y band" or "+X end", read "+Y band" and "collar's +X wall".
+> The old slot in the −Y band is gone; that band is empty now.
+
 Power comes in through a USB-C jack in the back plate — the LEGO-mount face.
 The XIAO's own USB-C is **no longer reachable with the case closed**: the
 shell's side notch is gone. Serial console and USB reflash need the lid
@@ -252,6 +262,9 @@ It cannot go in from the inside, and it must not be pre-soldered.
    takes the rest.
 
 **Capacitor.** The 100 uF electrolytic lies on its side in the two-rib cradle
+(ribs at x 4.8 and 11.0 since 2026-10-31, body x 1.5..13.5, lead end toward
+−X so the leads are 8 mm from the XIAO's 5V and GND pads; the jack collar is
+0.6 mm off its +X end)
 in the +Y band, lead end toward +X. It snaps down past its equator; no lid
 feature holds it.
 

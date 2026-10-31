@@ -349,59 +349,55 @@ def check_lego_bores_clear(plate):
 
 
 def check_usb_jack(plate):
-    """9.33 x 3.42 through-slot at (13.6, -19.0), collar, 45 deg ramps."""
-    # slot is open the whole way through the plate and up the collar
+    """USB-C base jack in the +Y band since 2026-10-31, long axis along Y:
+    slot 9.33 (Y) x 3.42 (X) at (17.29, 16.5) through the back face, collar
+    x 14.08..20.50 / y 10.34..22.67 to z 4.5, seating ramps on the +/-X walls
+    at z 2.58..3.38 narrowing the channel to 1.82. The old -Y band slot at
+    (13.6, -19.0) is gone."""
+    cx, cy = 17.29, 16.5
     for z in (-7.5, -4.0, 0.5, 2.0):
-        void(plate, 13.6, -19.0, z, "jack slot open at z=%.1f" % z)
-    # slot walls are solid: 1.5 mm collar either side above the floor,
-    # plate either side below it
-    solid(plate, 13.6, -21.5, -4.0, "plate beside the slot (-Y)")
-    solid(plate, 13.6, -16.5, -4.0, "plate beside the slot (+Y)")
-    solid(plate, 13.6, -21.5, 2.0, "collar -Y wall")
-    solid(plate, 13.6, -16.5, 2.0, "collar +Y wall")
-    solid(plate, 8.0, -19.0, 2.0, "collar -X end wall")
-    solid(plate, 19.2, -19.0, 2.0, "collar +X end wall")
+        void(plate, cx, cy, z, "jack slot open at z=%.1f" % z)
+    solid(plate, cx, 22.1, -4.0, "plate beside the slot (+Y)")
+    solid(plate, cx, 11.0, -4.0, "plate beside the slot (-Y)")
+    solid(plate, 14.8, cy, 2.0, "collar -X wall")
+    solid(plate, 19.8, cy, 2.0, "collar +X wall")
+    solid(plate, cx, 11.1, 2.0, "collar -Y end wall (merged into the XIAO fence)")
+    solid(plate, cx, 21.9, 2.0, "collar +Y end wall")
+    solid(plate, 16.0, 10.5, 2.0, "collar and XIAO +Y fence are one wall")
     # below the ramp the channel is the full 3.42 mm
-    void(plate, 13.6, -20.2, 2.0, "full-width channel below the ramp (-Y)")
-    void(plate, 13.6, -17.8, 2.0, "full-width channel below the ramp (+Y)")
+    void(plate, cx - 1.2, cy, 2.0, "full-width channel below the ramp (-X)")
+    void(plate, cx + 1.2, cy, 2.0, "full-width channel below the ramp (+X)")
     # above the ramp it has narrowed to 1.82 mm
-    solid(plate, 13.6, -20.2, 4.0, "ramped wall above z=3.38 (-Y)")
-    solid(plate, 13.6, -17.8, 4.0, "ramped wall above z=3.38 (+Y)")
-    void(plate, 13.6, -19.0, 4.0, "tail channel still open at z=4.0")
-    # nothing above the collar top
-    void(plate, 13.6, -19.0, 5.0, "above the 4.5 mm collar top")
-    # the collar clears the plate edge and the LEGO counterbore band
-    solid(plate, 20.3, -19.0, -4.0, "plate between collar and +X edge")
-    void(plate, 13.6, -19.0, -8.5, "outside the back face")
+    solid(plate, cx - 1.2, cy, 4.0, "ramped wall above z=3.38 (-X)")
+    solid(plate, cx + 1.2, cy, 4.0, "ramped wall above z=3.38 (+X)")
+    void(plate, cx, cy, 4.0, "tail channel still open at z=4.0")
+    void(plate, cx, cy, 5.0, "above the 4.5 mm collar top")
+    solid(plate, 20.75, cy, -4.0, "plate between collar and +X edge")
+    void(plate, cx, cy, -8.5, "outside the back face")
+    solid(plate, 13.6, -19.0, -4.0, "old -Y band slot (13.6, -19) is closed")
+    void(plate, 11.5, 9.9, 6.0, "XIAO +Y clip finger still free above the fence at x 11.5")
 
 
 def check_cap_cradle(plate):
-    """Two 1.2 mm C-clip ribs saddling a 8.2 mm cap at y 16.75, z 5.5.
+    """Two 2.4 mm C-clip ribs saddling a 8.2 mm cap at y 16.75, z 5.5.
 
-    Ribs moved 3.0/12.8 -> 5.0/14.8 on 2026-09-09 to clear the LEGO bore at
-    (0.95, +12); see check_lego_bores_clear. Span (9.8 mm) is unchanged, so
-    the cap sits the same way, centred at x 9.9 instead of x 7.9.
+    Ribs 5.6/14.8 -> 4.8/11.0 on 2026-10-31 (cap body x 1.5..13.5) to make
+    room for the jack collar at x 14.08; the x 4.8 rib's foot (3.6..6.0)
+    keeps 0.2 off the (0.95, +12) bore's x 3.40 (see check_lego_bores_clear).
     """
-    for rx in (5.0, 14.8):
+    for rx in (4.8, 11.0):
         solid(plate, rx, 12.0, 2.0, "cradle rib body at x=%.1f" % rx)
         solid(plate, rx, 21.5, 2.0, "cradle rib body at x=%.1f" % rx)
         void(plate, rx, 16.75, 5.5, "cap bore at x=%.1f" % rx)
         solid(plate, rx, 16.75, 0.5, "rib material below the bore x=%.1f" % rx)
         void(plate, rx, 16.75, 8.5, "open above the rib top x=%.1f" % rx)
-    # nothing between the ribs
-    void(plate, 8.0, 16.75, 4.0, "clear between the cradle ribs")
-    void(plate, 8.0, 12.0, 2.0, "clear between the cradle ribs")
-    # ribs stop clear of the fence and the plate edge
-    void(plate, 5.0, 11.0, 2.0, "gap between cradle rib and XIAO fence")
-    void(plate, 5.0, 22.5, 2.0, "gap between cradle rib and plate edge")
-    # REMOVED 2026-09-10: two probes at (5.0, 11.5, -0.75) and
-    # (8.0, 11.25, -0.75) that asserted the +Y clip's outboard trench stayed
-    # open under and beside the -X cradle rib. The trenches are gone
-    # (02_backplate step 8b), so both points are ordinary solid plate and
-    # the rib/trench interaction they guarded no longer exists. Flipping
-    # them to `solid` here would only duplicate check_xiao_clips, which now
-    # owns that ground; the rib's own placement is still guarded by
-    # check_lego_bores_clear.
+    void(plate, 7.9, 16.75, 4.0, "clear between the cradle ribs")
+    void(plate, 7.9, 12.0, 2.0, "clear between the cradle ribs")
+    void(plate, 4.8, 11.0, 2.0, "gap between cradle rib and XIAO fence")
+    void(plate, 4.8, 22.5, 2.0, "gap between cradle rib and plate edge")
+    void(plate, 13.5, 16.75, 2.0, "gap between the +X rib and the jack collar")
+    void(plate, 3.5, 12.0, 0.5, "x 4.8 rib's foot clear of the (0.95, 12) bore's +x flank")
+    void(plate, 14.8, 16.75, 6.0, "old rib position above the collar is open")
 
 
 def check_radar_bay(plate, des):
