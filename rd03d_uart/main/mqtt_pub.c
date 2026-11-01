@@ -1,11 +1,13 @@
 #include "mqtt_pub.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "mdns.h"
 #include "mqtt_client.h"
 #include "sdkconfig.h"
@@ -16,7 +18,15 @@
 
 static const char *TAG = "mqtt_pub";
 
-#define STATUS_TOPIC        "rd03d/status"
+/* Topics carry the node name (Kconfig RD03D_NODE_NAME, "rd03d" by default)
+ * so two boards on one broker never share a topic; the name is a string
+ * literal, so the concatenation happens at compile time. */
+_Static_assert(sizeof(CONFIG_RD03D_NODE_NAME) <= 25,
+               "RD03D_NODE_NAME must be at most 24 characters");
+#define STATUS_TOPIC        CONFIG_RD03D_NODE_NAME "/status"
+#define PIR_TOPIC           CONFIG_RD03D_NODE_NAME "/pir"
+#define PIR_STATE_TOPIC     CONFIG_RD03D_NODE_NAME "/pir/state"
+#define TARGET_TOPIC_FMT    CONFIG_RD03D_NODE_NAME "/target/%d"
 #define RESOLVE_RETRY_MS    30000
 #define MQTT_KEEPALIVE_S    15  /* short keepalive so the LWT fires quickly */
 
@@ -24,6 +34,18 @@ static esp_mqtt_client_handle_t s_client;
 static volatile bool s_connected;
 static volatile bool s_reset_pending;
 static mqtt_throttle_t s_throttle;
+
+/* Last parsed frame, copied on the radar task and read on the PIR task. The
+ * spinlock makes the copy atomic; a torn read would pair one target's x with
+ * another frame's y. */
+static rd03d_frame_t s_last_frame;
+static portMUX_TYPE s_frame_lock = portMUX_INITIALIZER_UNLOCKED;
+static int64_t s_last_frame_us;
+/* Latest PIR hold state, kept even while disconnected so it can be
+ * republished on connect (the retained copy may be stale by then). */
+static volatile bool s_pir_state;
+
+#define PIR_FRAME_MAX_AGE_US 300000
 
 static void on_mqtt_event(void *arg, esp_event_base_t base, int32_t id,
                           void *data)
@@ -35,6 +57,10 @@ static void on_mqtt_event(void *arg, esp_event_base_t base, int32_t id,
         s_reset_pending = true; /* throttle reset runs on the radar task */
         s_connected = true;
         esp_mqtt_client_publish(s_client, STATUS_TOPIC, "online", 0, 0, 1);
+#if CONFIG_RD03D_ENABLE_PIR
+        esp_mqtt_client_publish(s_client, PIR_STATE_TOPIC,
+                                s_pir_state ? "1" : "0", 1, 1, 1);
+#endif
         ESP_LOGI(TAG, "connected to broker");
     } else if (id == MQTT_EVENT_DISCONNECTED) {
         s_connected = false;
@@ -120,6 +146,11 @@ void mqtt_pub_start(void)
 
 void mqtt_pub_frame(const rd03d_frame_t *f)
 {
+    portENTER_CRITICAL(&s_frame_lock);
+    s_last_frame = *f;
+    s_last_frame_us = esp_timer_get_time();
+    portEXIT_CRITICAL(&s_frame_lock);
+
     if (!s_connected) {
         return;
     }
@@ -137,8 +168,8 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
         if (act == MQTT_THROTTLE_NONE) {
             continue;
         }
-        char topic[24];
-        snprintf(topic, sizeof(topic), "rd03d/target/%d", i + 1);
+        char topic[48];
+        snprintf(topic, sizeof(topic), TARGET_TOPIC_FMT, i + 1);
         int msg_id = -1;
         if (act == MQTT_THROTTLE_MOVED) {
             char payload[64];
@@ -163,5 +194,77 @@ void mqtt_pub_frame(const rd03d_frame_t *f)
              * broker" rather than "we considered sending one". */
             led_pulse();
         }
+    }
+}
+
+void mqtt_pub_pir_event(uint32_t n, int64_t t_ms)
+{
+    esp_mqtt_client_handle_t client = s_client;
+    if (!s_connected || client == NULL) {
+        return;
+    }
+    rd03d_frame_t f;
+    int64_t frame_us;
+    portENTER_CRITICAL(&s_frame_lock);
+    f = s_last_frame;
+    frame_us = s_last_frame_us;
+    portEXIT_CRITICAL(&s_frame_lock);
+
+    /* A stalled radar must not be reported as a current target. */
+    bool fresh = frame_us != 0 &&
+                 esp_timer_get_time() - frame_us <= PIR_FRAME_MAX_AGE_US;
+
+    const rd03d_target_t *nearest = NULL;
+    uint32_t best = UINT32_MAX;
+    for (int i = 0; i < RD03D_NUM_TARGETS; i++) {
+        const rd03d_target_t *t = &f.targets[i];
+        if (!fresh || !t->present) {
+            continue;
+        }
+        uint32_t d2 = (uint32_t)((int32_t)t->x_mm * t->x_mm) +
+                      (uint32_t)((int32_t)t->y_mm * t->y_mm);
+        if (d2 < best) {
+            best = d2;
+            nearest = t;
+        }
+    }
+    char payload[128];
+    int len;
+    if (nearest) {
+        len = snprintf(payload, sizeof(payload),
+                       "{\"n\":%lu,\"t\":%lld,\"radar\":{\"x\":%d,\"y\":%d,\"v\":%d}}",
+                       (unsigned long)n, (long long)t_ms,
+                       nearest->x_mm, nearest->y_mm, nearest->speed_cms);
+    } else {
+        len = snprintf(payload, sizeof(payload),
+                       "{\"n\":%lu,\"t\":%lld,\"radar\":null}",
+                       (unsigned long)n, (long long)t_ms);
+    }
+    if (len <= 0 || len >= (int)sizeof(payload)) {
+        return;
+    }
+    /* publish(), not enqueue(): esp-mqtt drains its outbox one message per
+     * loop iteration, and an idle loop iteration is a 1 s poll, so enqueued
+     * PIR traffic (three messages per event) backed up by ~29 s on the bench
+     * (2026-10-25). publish() writes to the socket now; this runs on the PIR
+     * task, which may block for the few ms a write takes. */
+    if (esp_mqtt_client_publish(client, PIR_TOPIC, payload, len, 0, 0) < 0) {
+        ESP_LOGW(TAG, "pir event %lu dropped", (unsigned long)n);
+    }
+}
+
+void mqtt_pub_pir_state(bool active)
+{
+    s_pir_state = active;
+    esp_mqtt_client_handle_t client = s_client;
+    if (!s_connected || client == NULL) {
+        return;
+    }
+    /* Retained so a fresh Node-RED subscriber learns the current state.
+     * QoS 0 and publish(): see mqtt_pub_pir_event for why not enqueue(); the
+     * reconnect republish above covers the retained value after an outage. */
+    if (esp_mqtt_client_publish(client, PIR_STATE_TOPIC, active ? "1" : "0",
+                                1, 0, 1) < 0) {
+        ESP_LOGW(TAG, "pir state %d dropped", active ? 1 : 0);
     }
 }

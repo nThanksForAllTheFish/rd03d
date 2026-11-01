@@ -9,16 +9,31 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
 2. Menu (☰) → **Import** → select `flows-stair-light.json` (or paste its
    contents) → Import → **Deploy**.
 
-## Configure (3 edit points)
+## Configure (4 edit points)
 
 1. **Broker** — the flow ships with an `iotstack` broker config node
    (`iotstack.local:1883`, anonymous). If your Node-RED already has a broker
-   config for the same server, you can repoint the three MQTT nodes at it
+   config for the same server, you can repoint the four MQTT nodes at it
    instead.
-2. **Device topic** — double-click *"to Tasmota topic (EDIT DEVICE)"* and
-   replace `stairlight` in `cmnd/stairlight/POWER` with your relay's topic.
+2. **Device** — the light is a radio-controlled lamp driven through a Tasmota
+   Sonoff RF Bridge: double-click *"to Sonoff RF bridge (EDIT DEVICE)"* and set
+   `BRIDGE` to the bridge's Tasmota topic. ON sends `cmnd/<BRIDGE>/RfKey1`,
+   OFF sends `RfKey2` (empty payload = send the learned code; on this bridge `1` sent the default code and `4` saved). For a Tasmota
+   relay instead, make the node set `msg.topic` to `cmnd/<device>/POWER` and
+   leave the payload as ON/OFF.
 3. **Zone** — double-click *"zone filter (EDIT ZONE)"* and set the four
    `ZONE` numbers (mm). Tune them with the walk test below.
+4. **Source** — double-click *"source switch (EDIT SOURCE)"* and set
+   `SOURCE` to `radar`, `pir` or `either` (see the PIR section below).
+
+## Renamed node
+
+The firmware's node name (`RD03D_NODE_NAME`, default `rd03d`) is the topic
+prefix the flow listens to. If your board runs under another name, change
+five strings and Deploy: the topics of the three MQTT-in nodes *"radar
+targets"*, *"sensor status"* and *"PIR events"*, and the `"rd03d/pir"`
+comparison in *"source switch"* and *"compare log"*. The radar chart and OTA
+address move with it (`http://<name>.local`).
 
 ## Zone tuning walk test
 
@@ -40,7 +55,8 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
   (arguments are positional; `--wait-off` may appear anywhere)
 
   Run it while the radar's view is quiet — real in-zone motion breaks the
-  out-of-zone check and extends the hold.
+  out-of-zone check and extends the hold. The harness assumes `SOURCE` is
+  `radar` or `either`.
 
 ## Behavior notes
 
@@ -61,3 +77,37 @@ zone, and off 60 s after the last in-zone activity. Built-in nodes only.
 - The *only changes* (rbe) node is belt-and-suspenders — the trigger already
   alternates ON/OFF strictly. Don't reconfigure it to "per topic" mode; that
   can swallow legitimate ONs.
+
+## Manual remote (2026-10-25)
+
+The bridge reports every RF code it hears on `tele/sonoffBridge/RESULT`,
+including the hand remote's, as `RfReceived` with `RfKey` 1 (ON) or 2 (OFF).
+The "manual OFF resets the hold" node listens there: a manual OFF resets the
+trigger's hold and the rbe, so the next approach sends a fresh ON instead of
+being swallowed by a hold that still thinks the light is on. A manual ON needs
+nothing. Edit the topic in that mqtt-in node if the bridge's name changes.
+
+## PIR companion (2026-10-11)
+
+The flow also subscribes to `rd03d/pir`. Edit `SOURCE` in the "source switch"
+node: `radar` (default) keeps today's behaviour, `pir` runs the light from the
+PIR only, `either` from whichever fires first.
+
+In `either` and `pir` modes the PIR only *starts* the light (2026-11-01). The
+"light state" node remembers whether the hold is running, and the source
+switch drops PIR events while it is, so once the light is on only in-zone
+radar targets extend the 60 s hold. Without this the PIR's wide cone, which
+reaches well past the radar zone, kept the light on for anyone moving in
+view. A manual OFF clears the flag with the rest of the hold.
+
+The "compare log" writes `/data/stair_compare.csv` (on the Pi:
+`~/IOTstack/volumes/nodered/data/stair_compare.csv`), one line per trigger
+episode:
+
+    episode start (ISO, UTC), first sensor, second sensor, delay ms, radar x y at the PIR event, PIR one-way latency ms
+
+A new episode starts after 60 s of quiet. If the other sensor never fired
+during the episode, the second-sensor and delay columns are blank, and the row
+is written when the next episode begins. The radar column reads `none` when
+the PIR event carried no radar target. The latency column is empty until the
+node's SNTP has synced (`t` of 0 in the payload).

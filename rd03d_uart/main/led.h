@@ -12,5 +12,5 @@ void led_init(void);
 
 /* Light the LED for RD03D_LED_MS then extinguish it. Retriggerable: a pulse
  * arriving mid-pulse restarts the timer rather than stacking, so a burst of
- * events reads as one longer flash. Non-blocking; safe from the radar task. */
+ * events reads as one longer flash. Non-blocking; safe from any task. */
 void led_pulse(void);

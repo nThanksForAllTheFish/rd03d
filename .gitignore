@@ -23,6 +23,7 @@ rd03d_uart/build.ap/
 rd03d_uart/tests/test_rd03d
 rd03d_uart/managed_components/
 rd03d_uart/tests/test_mqtt_throttle
+rd03d_uart/tests/test_pir_gate
 
 # Video build outputs (regenerable; large) - keep only the scripts, narration and stills
 video/audio*/
@@ -35,5 +36,9 @@ video/durations.json
 # Third-party board models (GrabCAD uploads) - licence not cleared for redistribution
 video/models/
 
+# Vendor sensor models (third-party downloads, not redistributed)
+case/models/
 # Raw narration takes (large WAV); kept takes travel in the transfer package
 video/takes/
+rd03d_uart/sdkconfig.unit2
+rd03d_uart/build.unit2/

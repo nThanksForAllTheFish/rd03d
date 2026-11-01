@@ -27,7 +27,28 @@ join.
 | 5V | 5V |
 | GND | GND |
 
+In the case the XIAO sits with its USB end toward the radar bay (rotated 180° since the 2026-10-27 plate), so its 5V, GND, 3V3 and D1 pads are at that end and D6/D7 are at the wing end. The radar cable comes through the window at the foot of the XIAO fence: 5V and GND come up beside the USB receptacle, and the two UART wires run under the board from the window to the fence's open +X end for D6/D7. The PIR leads come over the wing and across the board to the window end.
+
 Radar UART: 256000 baud, 8N1.
+
+PIR (Panasonic EKMC1603111, station image only):
+
+| PIR | XIAO ESP32-C6 |
+| --- | --- |
+| VDD | 3V3 |
+| OUT | D1 (GPIO1), internal pull-down |
+| GND | GND |
+
+Pins, looking at the sensor from the pin side with the two rim tabs at 3 and
+9 o'clock: VDD is the single pin at 12 o'clock, GND lower left, OUT lower
+right. The output sources VDD on detection and floats otherwise, so nothing
+but the pull-down is needed; no capacitor was fitted at the sensor. Kconfig:
+`RD03D_ENABLE_PIR` (default on; `sdkconfig.ap` turns it off and the PIR code
+is not compiled), `RD03D_PIR_GPIO` (1) and `RD03D_PIR_HOLD_MS` (1500, edges
+inside the window extend it without publishing). Numbers from the wall are in
+`docs/2026-10-pir-companion-notes.md`.
+
+**Node name.** `RD03D_NODE_NAME` (Kconfig, default `rd03d`) is both the mDNS hostname (`http://<name>.local`, OTA at `/update`) and the MQTT topic prefix (`<name>/status`, `<name>/target/N`, `<name>/pir`, `<name>/pir/state`). A second board on the same network needs its own name or the two answer for each other and both feed the stair-light flow. The recipe used for the spare unit: copy `sdkconfig` to `sdkconfig.unit2`, append `CONFIG_RD03D_NODE_NAME="rd03d2"`, build with `idf.py -B build.unit2 -D SDKCONFIG=sdkconfig.unit2 build`, flash once over USB, then OTA at `http://rd03d2.local/update`. When it replaces the installed unit, either rebuild it with the default name and OTA it, or keep the name and repoint the flow's topics (see `node-red/README.md`, *Renamed node*); the installed unit kept `rd03d2`. Either way retire or rename the old board, since two boards with one name answer for each other.
 
 ## Build & flash
 
@@ -188,6 +209,12 @@ The station image publishes to the broker configured in `idf.py menuconfig`
   QoS 0, not retained.
 - `rd03d/status` — retained `online`/`offline` (Last-Will), so consumers
   (e.g. Node-RED) always know whether the sensor is alive.
+- `rd03d/pir` — one `{"n":12,"t":1761940000123,"radar":{"x":-551,"y":4467,"v":0}}`
+  per PIR event: `n` counts events since boot, `t` is the SNTP-synced time in
+  ms (0 before sync), `radar` is the nearest radar target at that instant or
+  `null`. QoS 0, not retained.
+- `rd03d/pir/state` — `1` while the PIR hold window is open, `0` when it
+  closes. Retained.
 
 While the broker is unreachable nothing is queued; on (re)connect the device
 republishes `online` and the current position of every present target.
@@ -203,6 +230,7 @@ are unaffected by which image you are building:
 cd tests
 cc -Wall -Wextra -o test_rd03d test_rd03d.c ../main/rd03d.c && ./test_rd03d
 cc -Wall -Wextra -o test_mqtt_throttle test_mqtt_throttle.c ../main/mqtt_throttle.c && ./test_mqtt_throttle
+cc -Wall -Wextra -o test_pir_gate test_pir_gate.c ../main/pir_gate.c && ./test_pir_gate
 ```
 
 Frame format and sign-magnitude decoding match

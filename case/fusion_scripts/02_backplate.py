@@ -185,12 +185,115 @@ def ensure_params(des):
         ("capDia", "8.2 mm", "bulk capacitor diameter"),
         ("capLen", "12 mm", "bulk capacitor body length"),
         ("capClear", "0.4 mm", "total capacitor cradle clearance"),
+        # Radar bay side clearance (2026-10-26, from the user's print): the
+        # fence walls' inner faces measured 15.68 apart for 15.60 modelled
+        # (radarW 15.1 + 2 x boardClear 0.25; this cavity printed +0.08)
+        # while the RD-03D PCB is 15.09 wide, so the board had 0.6 of side
+        # play and the clip lips (0.85 projecting, printing about 0.65)
+        # barely overlapped its edge. The radar bay uses this instead of
+        # boardClear (the XIAO bay keeps boardClear): 0.10 a side -> 15.30
+        # modelled, about 15.38 printed, 0.15 a side on the 15.09 board,
+        # and the lips overlap the board edge by about 0.75 nominal.
+        ("radarClear", "0.10 mm", "radar bay side clearance per side (X): fence inner faces at radarCx +/- (radarW/2 + this). Print 2026-10-26: 15.68 measured for 15.60 modelled with boardClear 0.25, PCB 15.09 -> 0.6 of play; 0.10 gives 0.15 a side printed. The XIAO bay keeps boardClear"),
+        # Fit allowances from caliper measurements of the 9c print
+        # (2026-10-25), replacing the single rimGap (0.15 a side, still in
+        # the document, no longer read). Measured: plate outside X 41.53
+        # for 41.7 modelled (0.17 under), plate outside Y 45.43 for 45.7
+        # (0.27 under), shell cavity inside X 41.98 for 42.0 (true),
+        # cavity inside Y 46.34 for 46.0 (0.34 OVER), wing width 26.46
+        # for 26.7 (0.24 under), box cavity width 27.2 for 27.0 (0.2
+        # over). So the gaps came out 0.45 total in X, 0.91 in Y, 0.74
+        # wing-to-box; the target is 0.2 total (0.1 a side, a light push
+        # fit). Rule on this printer: outside walls print 0.17..0.27
+        # under, cavities true in X but 0.2..0.34 over in Y. Each
+        # allowance is the per-side model gap that lands the printed gap
+        # at 0.1 a side: (target total - (cavity over + outside under)) /
+        # 2, and may be NEGATIVE (the model overlaps, the print does not).
+        ("rimGapX", "0.03 mm", "plate half-width = intW/2 - this. X: cavity prints true (41.98 for 42), plate 0.17 under (41.53 for 41.7): (0.2 - 0.17 - 0) / 2 = 0.015 -> 0.03 (rounded up: 0.19 printed gap, light push)"),
+        ("rimGapY", "-0.05 mm", "plate half-length = intH/2 - this. Reprint 2026-10-26: the plate printed 46.10 for 46.40 modelled (0.30 under) and the shell cavity measures 46.00 on this shell (the earlier 46.34 was another shell or spot), so at -0.20 the plate was 0.1 too long and needed force. Target 0.2 total: printed 45.80 -> modelled 46.10 -> -0.05 (the model's plate is 0.05 a side into the shell's +/-Y walls, 91 expects that overlap; printed edge 23.05 - 0.15 = 22.90 vs cavity 23.00, 0.1 a side). Was -0.20 from the first print's 45.43 / 46.34"),
+        ("wingGap", "-0.12 mm", "wing half-width = pirBoxHalfY - this. Box cavity width prints 0.2 over (27.2 for 27.0), wing 0.24 under (26.46 for 26.7): (0.2 - 0.24 - 0.2) / 2 = -0.12; the same shrink is assumed for the 31 mm box of Task 9d. The wing's far end in X uses rimGapX (an outside wall against a cavity face in X)"),
+        # PIR socket (step 14), the shell's pod box (03_shell.py step 5c)
+        # and the bezel ring (03_shell.py step 8), fifth layout (Task 9e,
+        # 2026-10-25): the sensor's axis is parallel to the radar's
+        # (pirTilt 0), the plate carries only a straight, snug socket on
+        # its wing, the shell's box covers it, and a thin ring dropped into
+        # the lens gap from the front, clocked to the lens's latch tabs,
+        # closes the gap and holds the lens ring by friction (no plug, no
+        # keeper pin, no bayonet). Radii measured on Panasonic's STEP by
+        # point probing (2026-10-11, re-probed 2026-10-25): base/can r 5.5
+        # (calipers on the real part: 5.4), neck r 5.3 -> 5.0, flange
+        # r 9.4 with its underside at sensor z 6.4, lens ring r 10.3 (top
+        # at z 8.4), TWO lens latch tabs centred at 45/225 deg, 5.0 wide,
+        # reaching r 11.0 over sensor z 6.2..8.4 (case 14.2..16), whose
+        # hook lips (r 9.6..10.7) hang down to z 5.5; the dome's flank
+        # just above the ring is r 10.35 (a 2 deg taper, then the R 10.89
+        # cap above case z 19.8).
+        ("pirBoreR", "5.55 mm", "socket bore radius (Ø11.1): the sensor's metal base measured Ø10.8 with calipers (the STEP says 11.0) and the printed Ø11.8 bore measured 11.8 (holes print true), i.e. 0.5 mm of radial play; 5.55 is 0.15 a side on the measured base. Was 5.9. The neck (r 5.3..5.0) passes"),
+        ("pirSocketR", "7.7 mm", "socket boss outer radius: 2.15 mm wall round the r 5.55 bore; the flange (r 9.4) seats on its top rim and the latch hook lips (r 9.6..10.7) hang outside it"),
+        ("pirSeatZ", "intD + wall - 2.0 mm", "socket boss top = the flange's underside (sensor z 6.4), 2.0 under the shell's face so the lens ring's top (sensor z 8.4) is flush with it (= 14.0)"),
+        ("pirCx", "35.5 mm", "socket / lens axis x. 34.5 would centre it in the box, but the Technic hole at (24.95, 4) would then pass 0.20 mm from the boss's foot in plan; 35.5 gives 1.13 (step 14d asserts >= 0.6). The box in 03_shell.py follows"),
+        ("pirBoxHalfY", "13.5 mm", "shell pod box: inner half-width in Y (walls outside it); the plate's wing is this less wingGap (13.5 again since Task 9e; 9d's bayonet lugs had it at 15.5)"),
+        ("pirBoxHalfX", "13.5 mm", "shell pod box: cavity +X wall at pirCx + this (= 49); the wing ends rimGapX short of it. Separate from pirBoxHalfY since Task 9d"),
+        ("pirHoleR", "11.65 mm", "lens hole radius in the shell's pod box top (Task 9e; 11.5 as pirRecessR in 9c, 12.8 in 9d): the lens ring (r 10.3) and latch tabs (r 11.0) pass, and the bezel ring's skirt (OD = this, an outside wall that prints 0.2 under in a true hole: 0.1 a side) is a light push fit in it. 11.65 so the skirt wall (this - pirBezelInnerR) is 1.25, two 0.6 lines"),
+        ("pirTilt", "0 deg", "PIR axis tilt from the plate normal: 0 since 2026-10-25 (the PIR looks where the radar looks, max field overlap). Step 14 refuses anything else: a tilted axis needs the 9b tower, which is gone"),
+        ("pirTiltSign", "1", "+1: XIAO end hangs DOWN on the wall (confirmed 2026-10-11); -1: up. Unused by the geometry while pirTilt is 0; the firmware reads the orientation"),
+        ("pirWireDia", "3.0 mm", "wire hole out of the socket's -X side, level, into the pod cavity"),
+        ("pirWireZ", "4.0 mm", "wire hole centre z: pin-tip level (sensor pins end at z 2.1; the cap standing on them reaches down to z -0.9), so the wires leave the pins radially through the hole"),
+        # Bezel ring (03_shell.py step 8, Task 9e; its own frame: flange
+        # underside on z 0 = the shell's face, axis +Z). A flat flange on
+        # the face round the lens, two arc skirts below it filling the
+        # lens hole, two notches 180 deg apart (through the skirt, and
+        # as blind pockets in the flange's underside, so its top stays
+        # whole) that the lens's two latch tabs sit in. Inserted
+        # from the front clocked to the tabs; a light push fit in the hole
+        # and round the lens ring; holds the lens ring by friction and
+        # closes the gap. Nothing clamps along the axis (user's decision:
+        # wall-mounted, horizontal axis, snug socket). Prints flange-down.
+        ("pirBezelFlangeR", "12.5 mm", "bezel flange outer radius: 0.9 of face round the r 11.6 hole, 1.1 of bridge outside the flange notches (to r 11.4)"),
+        ("pirBezelFlangeT", "1.5 mm", "bezel flange thickness (z 0..1.5 in the bezel frame, 16..17.5 in the case): the only part above the face; its top is continuous (the lens tabs are cleared by blind pockets in its underside, pirTabRelief), so 1.1 of solid flange stays over them"),
+        ("pirTabRelief", "0.4 mm", "bezel: depth of the two blind relief pockets in the flange's underside over the lens tabs (r pirBezelInnerR..pirHoleR - 0.2, pirNotchW wide): the tab tops are at the face plane, so this is their clearance under the solid flange"),
+        ("pirBezelInnerR", "10.40 mm", "bezel inner radius (flange and skirt): lens ring r 10.3 + 0.10, dome flank r 10.35 (at the face) + 0.05; the bore is an inside surface and prints true, so the ring just grips the lens"),
+        ("pirBezelSkirtH", "2.0 mm", "bezel skirt height below the flange: the top's thickness (wall), so the skirt's foot is flush with the top's underside and above the latch hook lips (which hang to case z 13.1 under the tabs, in the notches anyway)"),
+        ("pirBezelSkirtRo", "11.80 mm", "bezel skirt outer radius (Ø23.6), decoupled from the hole (pirHoleR 11.65, Ø23.3) on 2026-10-26: the first ring's skirt printed Ø22.79 for Ø23.3 modelled (0.5 under: a thin two-perimeter ring shrinks more than a wall) in a hole that printed Ø23.2, and was loose. Ø23.6 should print about 23.1 in the 23.2 hole; the model overlaps the hole by 0.15 a side and 91 expects that press-fit pair. Skirt wall = this - pirBezelInnerR = 1.40"),
+        ("pirTabW", "5.0 mm", "lens latch tab tangential width, probed on the STEP 2026-10-25 (chord 5.04 at r 10.5, 5.00 at r 10.8; the tabs are at 45/225 deg in the sensor frame, r to 11.0, sensor z 6.2..8.4)"),
+        ("pirNotchW", "pirTabW + 1 mm", "bezel notch tangential width (two, 180 deg apart, through the skirt and the flange's inner region): tab width + 0.5 a side (= 6.0)"),
+        # Wing snap pair (Task 9d): the shell's +X-wall bumps and the
+        # plate's +X-edge pockets (snapYpx, retired) are replaced by bumps
+        # on the pod box's inner +/-Y walls (03_shell.py step 5d) into
+        # blind pockets in the wing's +/-Y faces (step 14a'), so the lid
+        # snaps at both ends as before.
+        ("wingSnapX", "40 mm", "x centre of the wing snap pair (6 mm long along X): between the boss (to x 43.2 at y 0; the pockets are at the wing's +/-Y faces, far outside it) and the wing's corner fillets (from x 46.35)"),
+        ("wingSnapZ", "-5.0 mm", "z centre of the wing snap pair: bumps +/-0.5, pockets +/-0.6, in the wing's z -8..-2 with 2.4 of wing above and below"),
+        # LED light pipe (2026-10-27): the XIAO's yellow user LED (GPIO15,
+        # flashed per published event) sits beside the B button between it
+        # and the USB shell, on the 5V-column side. Measured on the user's
+        # top-view photo against the 17.8 mm board width: 4.2 in from the
+        # board's USB end (edge at x -1.72 -> x 2.5), 5.7 off the
+        # centreline. After the 180 deg rotation the 5V column is +Y. The
+        # hole is centred 0.3 further out (y 6.0) so a 3 mm pipe clears the
+        # USB shell's footprint (|y| < 4.47, top z 7.46); the B button
+        # under the outer half is only 0.5 tall. 03_shell.py step 7b.
+        ("ledX", "2.5 mm", "XIAO user LED centre x in the case (board USB end at x -1.72, LED 4.2 inboard of it)"),
+        ("ledY", "6.0 mm", "light-pipe hole centre y: LED at 5.7 on the 5V-column (+Y since the 2026-10-27 rotation) side, hole 0.3 further out to clear the USB shell footprint (|y| 4.47)"),
+        # Corner rounding (2026-10-27, user's print review): an FDM printer
+        # cannot make the cavity's sharp inside corner (it rounds to about
+        # half the nozzle width or more) while the plate's outside corner
+        # prints nearly sharp, so the plate bound on four points before
+        # the flats touched. The plate's four corners are rounded (step 15)
+        # to a larger radius than the cavity's modelled inside corners
+        # (03_shell.py step 7c), which leaves a defined ~0.2 mm diagonal
+        # gap: (sqrt(2) * (plateCornerR - cavityCornerR)) - (plateCornerR -
+        # cavityCornerR) = 0.207 at 1.5 / 1.0.
+        ("plateCornerR", "1.5 mm", "plate outside corner radius (four vertical corners); must exceed cavityCornerR"),
+        ("cavityCornerR", "1.0 mm", "shell cavity inside corner radius, modelled so the printed corner is defined (a 0.6 nozzle rounds a sharp inside corner to r 0.3..0.5 anyway)"),
+        ("ledPipeD", "1.9 mm", "light-pipe hole through the shell's front wall over the LED: 1.9 for a stub of 1.75 mm clear polycarbonate filament (holes print true; 0.07 a side, glue it); 3.0 for a 3 mm rod"),
     ]
     ups = des.userParameters
     for name, expr, comment in spec:
         if ups.itemByName(name) is None:
+            unit = "deg" if "deg" in expr else ("" if expr.lstrip("-").isdigit() else "mm")
             ups.add(name, adsk.core.ValueInput.createByString(expr),
-                    "mm", comment)
+                    unit, comment)
             print("added param", name, "=", expr)
 
 
@@ -198,33 +301,75 @@ def run(_context: str):
     app = adsk.core.Application.get()
     des = adsk.fusion.Design.cast(app.activeProduct)
     root = des.rootComponent
+    # parameters of the tilted layouts (the shell pod of 2026-10-11 and the
+    # 9b wing tower of 2026-10-25 morning): recess depth, flange ledge,
+    # hook groove, pod wall, sloped wire hole, shell notch top and the
+    # along-the-axis pin depth; and (Task 9d, the bezel) the 9c plug,
+    # keeper pin, +X snap pair position and the old lens hole radius
+    # (pirRecessR -> pirHoleR); and (Task 9e, the plain ring) the 9d
+    # bayonet bezel's lugs, lip, skirt radii and dome radius. Nothing
+    # reads them any more; delete them so Change Parameters shows only
+    # live values. Dependents first: pirPinZ is an expression on pirSeatD
+    # / pirPlugL / pirPinDia, pirBezelLipH on pirDomeR / pirBezelLipR /
+    # pirBezelPreload.
+    for name in ("pirRecessD", "pirFlangeR", "pirHookD", "pirPodWall", "pirWireD",
+                 "pirWireExitZ", "pirNotchTop", "pirPinD",
+                 "pirPinZ", "pirPinDia", "pirPlugSlotW", "pirPlugL", "pirPlugID",
+                 "pirPlugOD", "pirSeatD", "snapYpx", "pirRecessR",
+                 "pirBezelLipH", "pirBezelLipR", "pirBezelPreload", "pirDomeR",
+                 "pirNotchR", "pirLugT", "pirLugW", "pirLugRo",
+                 "pirBezelSkirtRi", "pirBezelSkirtRo"):
+        old = des.userParameters.itemByName(name)
+        if old is not None:
+            try:
+                old.deleteMe()
+                print("deleted obsolete param", name)
+            except Exception as exc:  # still referenced by something: say so, carry on
+                print("could not delete obsolete param %s: %s" % (name, exc))
     ensure_params(des)
 
     for occ in list(root.occurrences):
-        if occ.component.name.startswith("BackPlate"):
+        name = occ.component.name
+        if name.startswith(("BackPlate", "PirPlug")):
             # rename before deleting: the dead component keeps its name
             # reserved in the document's name registry (until save), which
-            # would force the rebuilt component to "BackPlate (1)"
-            occ.component.name = "BackPlate_deleted"
+            # would force the rebuilt component to "BackPlate (1)". PirPlug
+            # (the 9c retaining plug) is gone since Task 9d (the bezel on
+            # the shell side holds the sensor); a document that still has
+            # one gets it removed here and nothing rebuilds it.
+            occ.component.name = name + "_deleted"
             occ.deleteMe()
-            print("removed existing BackPlate")
+            print("removed existing", name)
+        elif name.startswith(("EKMC", "PaPIRs")):
+            # the PIR sensor placed by 91_pir_fit.py against the plate's
+            # pod; it is re-imported against the rebuilt plate by re-running
+            # that script
+            occ.deleteMe()
+            print("removed prior sensor import:", name)
 
     occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     comp = occ.component
     comp.name = "BackPlate"
 
     intW, intH = p(des, "intW"), p(des, "intH")
-    backT, rimGap = p(des, "backT"), p(des, "rimGap")
+    backT = p(des, "backT")
+    # fit allowances (see ensure_params): per-side model gaps, X and Y
+    # differ and may be negative; rimGap itself is no longer read
+    rimGapX, rimGapY, wingGap = p(des, "rimGapX"), p(des, "rimGapY"), p(des, "wingGap")
     rW, rH, rT = p(des, "radarW"), p(des, "radarH"), p(des, "radarT")
     rCx = p(des, "radarCx")
     xW, xH, xCx = p(des, "xiaoW"), p(des, "xiaoH"), p(des, "xiaoCx")
     postH, clear = p(des, "postH"), p(des, "boardClear")
+    radarClear = p(des, "radarClear")            # the radar bay's X clearance (see ensure_params)
     intD, wall, winT = p(des, "intD"), p(des, "wall"), p(des, "windowT")
     MM = 0.1
 
-    # 1. plate
+    # 1. plate: intW - 2 rimGapX by intH - 2 rimGapY (41.94 x 46.1: the
+    # +/-Y edges sit 0.05 INTO the shell's walls in the model, which the
+    # measured Y shrink of the print takes back; 91_pir_fit.py expects
+    # that overlap)
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, 0, 0, intW - 2 * rimGap, intH - 2 * rimGap)
+    rect(sk, 0, 0, intW - 2 * rimGapX, intH - 2 * rimGapY)
     plate = extrude(comp, sk.profiles.item(0), -backT, 0,
                     adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
     plate_body = plate.bodies.item(0)
@@ -237,30 +382,41 @@ def run(_context: str):
     # fully flat; adhesive tape sticks directly to it. The rear Technic
     # counterbores (0.9 deep, step 7) are unchanged.
 
-    # 3. snap pockets at plate +/-X edges, y=+/-12 (BLIND: z -1.7..-0.3,
-    # leaving material ledges at both z ends so the shell's bumps
-    # (z -1.6..-0.4) are retained axially with 0.1mm slop per side)
+    # 3. snap pockets at the plate's -X edge (BLIND: z -1.7..-0.3, leaving
+    # material ledges at both z ends so the shell's bumps (z -1.6..-0.4)
+    # are retained axially with 0.1mm slop per side), at y +/-12. The +X
+    # pair (at y +/-19 outboard of the pod box for most of 2026-10-25,
+    # snapYpx) is gone since Task 9d: the lid's +X end snaps into the
+    # WING instead (pockets in its +/-Y faces, step 14a'; bumps on the
+    # box's inner walls, 03_shell.py step 5d). The plate's +X edge is
+    # plain again.
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    for sx in (-1, 1):
-        edge = sx * (intW / 2 - rimGap)
-        for sy in (-1, 1):
-            # rect centered on the edge, 1.2 wide -> cuts 0.6 deep into plate
-            rect(sk, edge, sy * 12 * MM, 0.12, 6.2 * MM)
+    edge = -(intW / 2 - rimGapX)
+    for sy in (-1, 1):
+        # rect centered on the edge, 1.2 wide -> cuts 0.6 deep into plate
+        rect(sk, edge, sy * 12 * MM, 0.12, 6.2 * MM)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, -1.7 * MM, -0.3 * MM,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("snap pockets ok")
+    print("snap pockets ok (-X at y +/-12; the +X pair is in the wing, step 14a')")
 
-    # 4. radar bay: two +/-X side walls + crossbars. (Thin-wall fix
+    # 4. radar bay: two +/-X side walls + end bars. (Thin-wall fix
     # 2026-09-07: the old full perimeter fence ring left 0.6 mm +/-Y wall
     # segments after the plate-outline trim - unprintable on a 0.6 mm
-    # nozzle. The +/-Y restraint is now two retention ribs inside the
-    # FrontShell (03_shell.py); the plate keeps only the 1.5 mm-thick
-    # +/-X walls, spanning the full old ring extent in Y and still
-    # trimmed by the plate outline in step 6.)
-    bayW, bayH = rW + 2 * clear, rH + 2 * clear
+    # nozzle. The +/-Y restraint was two retention ribs inside the
+    # FrontShell until 2026-10-27; the corner pins (6b) do it now. The
+    # plate keeps only the 1.5 mm-thick +/-X walls, spanning the full old
+    # ring extent in Y and still trimmed by the plate outline in step 6.)
+    # bay width from radarClear (0.10 a side, measured print 2026-10-26);
+    # the bay's length keeps boardClear (it only sets the walls' Y extent,
+    # which the plate outline trims anyway). Everything below that is
+    # built from bayW - the walls, the end bars, the 4b opening, the 5a
+    # window, the three clips (8a) - follows.
+    bayW, bayH = rW + 2 * radarClear, rH + 2 * clear
     t = 1.5 * MM
+    RW_OUT, RW_IN = rCx - bayW / 2 - t, rCx - bayW / 2     # -X wall faces, -20.65 / -19.15
+    RE_OUT, RE_IN = rCx + bayW / 2 + t, rCx + bayW / 2     # +X wall faces, -2.35 / -3.85
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, rCx - bayW / 2 - t / 2, 0, t, bayH + 2 * t)   # -X wall
     rect(sk, rCx + bayW / 2 + t / 2, 0, t, bayH + 2 * t)   # +X wall
@@ -268,67 +424,55 @@ def run(_context: str):
     extrude(comp, profs, 0, 11 * MM,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
-    # Board-seating fix 2026-09-07: the crossbars now bear on the RD-03D's
-    # BARE PCB, not on its rear connector.
-    #   Was: two 4 mm-wide bars at y = +/-18 with tops at z = intD - 1 - radarT
-    #   = 6.65 mm (the board's TOTAL thickness incl. the rear connector). That
-    #   was wrong in both places: probing the live vendor model showed the
-    #   board's rear profile is a bare PCB face at z = 10.50 mm, with only the
-    #   5-pin connector reaching back to z = 6.70 over y -20..-13.5. So the
-    #   +18 bar stopped 3.85 mm short of the board (no contact at all) and the
-    #   -18 bar was the sole support, loading the connector - the board could
-    #   rock on it.
-    #   Now: tops at the measured PCB rear face, placed in the two
-    #   full-board-width bands measured clear of every rear component
-    #   (probed at x -18.6, -17, -14, -11.5, -9, -6, -4.4):
-    #       band y -13.0..-11.0  -> crossbar A, y -12.8..-11.2 (1.6 wide)
-    #       band y +17.5..+20.0  -> crossbar B, y +17.7..+19.8 (2.1 wide)
-    #   The connector now hangs free in the open space below the bars.
-    #   The board's resting position is UNCHANGED: PCB rear + the 2.54 mm
-    #   PCB/patch stack = patch face at z = 13.0, i.e. 1 mm behind the shell's
-    #   front inner wall exactly as before, so the RF geometry is unaffected.
-    #   (rT / radarT is now only descriptive of the board's total thickness;
-    #   the support height is the measured PCB rear face, a local constant.)
-    #   Height provenance: the change request quoted a coarse probe reading of
-    #   10.50 mm. Bisecting the vendor solid's underside on a 21 x 9 grid over
-    #   both bar footprints put the rear face uniformly at 10.4600 mm, so a
-    #   10.50 top left a 0.04 mm nominal overlap (2.235 mm^3 = 15.1 x 3.7 x
-    #   0.04, exactly the board-width x total-bar-width slab) and a nonzero
-    #   plate<->radar interference pair. 10.46 restores exact face contact and
-    #   the zero-interference invariant; functionally identical either way,
-    #   since the board simply rests on whatever height the bars are.
     PCB_REAR_Z = 10.46 * MM      # measured bare-PCB rear face of the RD-03D
-    XBARS = ((-12.0 * MM, 1.6 * MM),    # A: y -12.8..-11.2
-             (18.75 * MM, 2.1 * MM))    # B: y +17.7..+19.8
+    # End bars (2026-10-27, user review of the 2026-10-26 print): carry the
+    # board under its ENDS, where the rear side is bare PCB across the full
+    # width (probed read-only on the placed vendor body: y -22.0..-20.7 and
+    # y +19.8..+22.0 bare; the 5-pin connector starts at y -20.7 and reaches
+    # z 6.64 over x -15.3..-9.3). The two crossbars at y -12 and +18.75 that
+    # sat between rear components are gone, and with them the crossbar A
+    # cable slot (old step 13) and the corner cable exit (old step 12): the
+    # connector pocket is now open to the floor and the cable leaves through
+    # the floor opening in the +X wall (step 4b/5a).
+    #   -Y bar y -22.0..-20.8 (1.2 wide): 0.1 clear of the connector.
+    #   +Y bar y +20.0..+22.0 (2.0 wide).
+    # Both run the full bay width between the walls' inner faces and tie
+    # into both walls. The board's ends overhang them by 0.02 (edge 22.02).
+    ENDBARS = ((-21.4 * MM, 1.2 * MM),    # -Y: y -22.0..-20.8
+               (21.0 * MM, 2.0 * MM))     # +Y: y +20.0..+22.0
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    for cy, w in XBARS:
+    for cy, w in ENDBARS:
         rect(sk, rCx, cy, bayW, w)
     profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
     extrude(comp, profs, 0, PCB_REAR_Z,
             adsk.fusion.FeatureOperations.JoinFeatureOperation,
             participants=[plate_body])
-    print("radar bay ok (X walls + crossbars bearing on the PCB; "
-          "Y-restraint is the shell's job), crossbar top z(mm)=",
+    print("radar bay ok (X walls + end bars bearing on the PCB ends; "
+          "Y-location is the corner pins' job), bar top z(mm)=",
           round(PCB_REAR_Z * 10, 3), "board total thickness radarT(mm)=",
           round(rT * 10, 2))
+    print("radar bay walls: inner faces x %.2f / %.2f (bay %.2f wide = radarW %.1f + 2 x "
+          "radarClear %.2f), outer faces %.2f / %.2f"
+          % (RW_IN * 10, RE_IN * 10, bayW * 10, rW * 10, radarClear * 10, RW_OUT * 10, RE_OUT * 10))
 
-    # 4b. notch the radar fence +X wall where the XIAO board crosses it
-    # (as-built correction found in Task 5: the bay centers put the radar
-    # fence's +X wall at x -3.7..-2.2mm while the XIAO board's -X edge
-    # reaches x -3.23mm, so the full-height wall would pass through the
-    # board. Remove the wall above the post height over the XIAO footprint
-    # +0.5mm clearance; the stub below z=postH stays and is co-planar with
-    # the posts, and the wall segments beyond y=+/-9.4mm still retain the
-    # radar board laterally.)
+    # 4b. open the radar fence +X wall where the XIAO sits (2026-10-27: now
+    # floor to top). The XIAO's USB end faces this wall since the 180 deg
+    # rotation (04_boards.py), so nothing rests on the old 3 mm stub, and
+    # the radar cable leaves the bay at FLOOR level through here instead
+    # of over the top. Over |y| < 9.4 the wall's only remaining job was
+    # that stub; the clip B and C stretches beyond |y| 9.4 are untouched.
+    # The XIAO fence's -X wall (step 5, x -5.0..-3.5, z 0..5) is built
+    # after this cut and keeps the XIAO's -X stop face at x -3.5; step 5a
+    # windows it for the wires.
     nx0 = rCx + bayW / 2 - 0.01
     nx1 = rCx + bayW / 2 + 1.5 * MM + 0.01
     ny = xH / 2 + clear + 0.25 * MM
     sk = comp.sketches.add(comp.xYConstructionPlane)
     rect(sk, (nx0 + nx1) / 2, 0, nx1 - nx0, 2 * ny)
-    extrude(comp, sk.profiles.item(0), postH, 11 * MM + 0.01,
+    extrude(comp, sk.profiles.item(0), -0.01 * MM, 11 * MM + 0.01,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("radar fence notched for xiao board")
+    print("radar fence +X wall opened floor to top over |y| < %.1f" % (ny * 10))
 
     # 5. xiao bay: 4 posts + 3-sided fence (open toward +X)
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -352,15 +496,112 @@ def run(_context: str):
             participants=[plate_body])
     print("xiao bay ok")
 
+    # 5a. wire window (2026-10-27): the radar's 4-wire cable comes off the
+    # connector, drops to the floor, runs under the board and through this
+    # window in the XIAO fence's -X wall. The rotated XIAO's 5V, GND, 3V3
+    # and D1 pads are at this -X end (5V/GND come up in the channels
+    # beside the USB receptacle); D6 and D7 are at the +X end, so their
+    # two wires run on under the board (it stands on 3 mm posts) to the
+    # fence's open +X end. |y| < 3.5, z 0..5,
+    # through the full 1.5 mm wall. Narrower than the USB-C receptacle
+    # (8.9 wide) on purpose: the receptacle's shoulders stay the XIAO's -X
+    # stop against the fence face at x -3.5.
+    WIN_HALF_Y = 3.5 * MM
+    fx0 = xCx - fW / 2 - t - 0.01            # fence outer face, -5.0
+    fx1 = rCx + bayW / 2 + 1.5 * MM + 0.01   # through the old wall footprint too
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    box(sk, fx0, fx1, -WIN_HALF_Y, WIN_HALF_Y)
+    extrude(comp, sk.profiles.item(0), -0.01 * MM, 5 * MM + 0.01,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    print("wire window ok (XIAO fence -X wall, |y| < %.1f, z 0..5)" % (WIN_HALF_Y * 10))
+
     # 6. trim everything to the plate outline (the radar fence and the xiao
     # fence ±Y bars as drawn overhang the 41.7 x 45.7 plate; the shell's
     # interior walls occupy that space, so intersect with the plate footprint)
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    rect(sk, 0, 0, intW - 2 * rimGap, intH - 2 * rimGap)
+    rect(sk, 0, 0, intW - 2 * rimGapX, intH - 2 * rimGapY)
     extrude(comp, sk.profiles.item(0), -backT, 11 * MM,
             adsk.fusion.FeatureOperations.IntersectFeatureOperation,
             participants=[plate_body])
     print("trimmed to plate outline")
+
+    # 6b. LOCATING PINS (2026-10-27, user review): the RD-03D has two open
+    # half-notches in diagonal corners of its PCB, radius 1.14, probed on
+    # the placed vendor body at (-18.25, -21.40) and (-4.75, +21.30) in the
+    # case frame (the other two corners are r 1.8 roundings, not holes).
+    # A pin in each locates the board in Y and rotation; X is shared with
+    # the bay walls at radarClear. This retires the shell's retention ribs
+    # (03_shell.py 4b/4c, deleted the same day).
+    #
+    # O2.2 modelled (thin pillars print ~0.2 under: ~0.15 radial play in
+    # the O2.28 notch), floor to z 12.4 (0.5 under the shell's 12.9 radome
+    # step), top edge chamfered 0.4 as lead-in. Each pin is a D: cut flat
+    # on the outboard side at |y| 22.0, the board's end line, which keeps
+    # it inside the board's footprint and clear of the shell's +/-Y wall
+    # (the shell is reprinted anyway: its boss moved, 03 step 5b). The
+    # inboard side merges into the bay wall (x overlap 0.2) and the end
+    # bar, so only 2 mm of pin stands free above the bar.
+    #
+    # Built AFTER step 6 because the outline trim only keeps z -backT..11.
+    PIN_R = 1.1 * MM
+    PIN_TOP = 12.4 * MM
+    PIN_FLAT_Y = 22.0 * MM
+    # the notch centres are symmetric about the board: 0.8 in from each
+    # side edge, i.e. radarCx -/+ 6.75; keyed off rCx like the walls
+    PIN_DX = 6.75 * MM
+    PINS = ((rCx - PIN_DX, -21.40 * MM), (rCx + PIN_DX, 21.30 * MM))
+    # each pin must merge into its bay wall (0.2 nominal at radarClear
+    # 0.10); below 0.05 the pin would stand alone and flex
+    pin_wall_overlap = (RW_IN - (PINS[0][0] - PIN_R))
+    if pin_wall_overlap < 0.05 * MM - 1e-9:
+        raise RuntimeError("locating pins overlap the bay walls by only %.2f mm: "
+                           "radarClear too big" % (pin_wall_overlap * 10))
+    for cx, cy in PINS:
+        sy = 1 if cy > 0 else -1
+        sk = comp.sketches.add(comp.xYConstructionPlane)
+        sk.sketchCurves.sketchCircles.addByCenterRadius(
+            adsk.core.Point3D.create(cx, cy, 0), PIN_R)
+        # the flat: a line across the circle at the board's end line
+        sk.sketchCurves.sketchLines.addByTwoPoints(
+            adsk.core.Point3D.create(cx - 1.5 * MM, sy * PIN_FLAT_Y, 0),
+            adsk.core.Point3D.create(cx + 1.5 * MM, sy * PIN_FLAT_Y, 0))
+        # keep the inboard (larger) profile: its centroid lies toward y=0
+        if sk.profiles.count != 2:
+            raise RuntimeError("pin at (%.2f, %.2f): the flat should split the circle "
+                               "into 2 profiles, got %d" % (cx * 10, cy * 10, sk.profiles.count))
+        best, best_area = None, 0.0
+        for i in range(sk.profiles.count):
+            pr = sk.profiles.item(i)
+            ap = pr.areaProperties()
+            if abs(ap.centroid.y) < PIN_FLAT_Y and ap.area > best_area:
+                best, best_area = pr, ap.area
+        if best is None:
+            raise RuntimeError("pin at (%.2f, %.2f): no inboard profile" % (cx * 10, cy * 10))
+        extrude(comp, best, 0, PIN_TOP,
+                adsk.fusion.FeatureOperations.JoinFeatureOperation,
+                participants=[plate_body])
+    # lead-in chamfer on each pin's top arc (nice-to-have; a square top
+    # still locates). Select arc edges at z = PIN_TOP with radius PIN_R.
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for e in plate_body.edges:
+            g = e.geometry
+            if (isinstance(g, adsk.core.Arc3D)
+                    and abs(g.radius - PIN_R) < 0.005
+                    and abs(g.center.z - PIN_TOP) < 0.005):
+                edges.add(e)
+        if edges.count != 2:
+            raise RuntimeError("expected 2 pin top arcs, found %d" % edges.count)
+        ch = comp.features.chamferFeatures
+        chi = ch.createInput(edges, False)
+        chi.setToEqualDistance(adsk.core.ValueInput.createByReal(0.4 * MM))
+        ch.add(chi)
+        print("locating pins ok (O%.1f at %s, top z %.1f, flat at |y| %.1f, 0.4 chamfer)"
+              % (PIN_R * 20, [(round(x * 10, 2), round(y * 10, 2)) for x, y in PINS],
+                 PIN_TOP * 10, PIN_FLAT_Y * 10))
+    except Exception as exc:
+        print("locating pins ok, PIN CHAMFER SKIPPED:", exc)
 
     # 7. LEGO Technic mounting holes (change request 2026-09-07): six
     # through-holes on the 8mm LEGO pitch — a 1x4 column at x=0.95mm
@@ -429,10 +670,12 @@ def run(_context: str):
     # MUST come after step 6 (the plate-outline Intersect is limited to
     # z <= 11 mm and would decapitate anything taller) and after step 7 (the
     # LEGO bore chamfer selects edges by circle radius; extra clip edges are
-    # harmless but the ordering keeps that selection on virgin topology).
+    # harmless but the ordering keeps that selection simple. The pins of
+    # 6b, built before step 7, only add Arc3D edges of r 1.1, which the
+    # step-7 Circle3D/r 2.45 filter cannot match).
     #
     # Measurement provenance (probed on the live vendor solids, not derived):
-    #   RD-03D  PCB rear face z = 10.46 (rests on the crossbars); PCB FRONT
+    #   RD-03D  PCB rear face z = 10.46 (rests on the end bars); PCB FRONT
     #           face - the antenna/patch plane - z = 11.70, flat across both
     #           board edges over the whole clip range; board x -19.05..-3.95,
     #           y +/-22.01. Its 45-degree IC protrudes to 12.95, but only over
@@ -442,9 +685,12 @@ def run(_context: str):
     #           y +/-8.89. Edge castellations bite ~0.24 mm in at a ~2.54 mm
     #           pitch, so a lip reaching 0.34 mm past the edge still lands on
     #           solid board (0.10 mm) even where it crosses a castellation.
-    #   Fence walls as built: radar +/-X walls x -20.8..-19.3 (inner face
-    #           -19.3) and x -3.7..-2.2 (inner face -3.7); XIAO +/-Y walls
-    #           y +/-9.15..+/-10.65 (inner faces +/-9.15), 1.5 thick.
+    #   Fence walls as built: radar +/-X walls x -20.65..-19.15 (inner
+    #           face -19.15) and x -3.85..-2.35 (inner face -3.85) since
+    #           radarClear 0.10 (2026-10-26; -20.8/-19.3 and -3.7/-2.2 with
+    #           boardClear 0.25 before); XIAO +/-Y walls y +/-9.15..+/-10.65
+    #           (inner faces +/-9.15), 1.5 thick. The radar clips below
+    #           take the wall faces from RW_*/RE_* (step 4).
     #
     # Each lip's flat underside sits 0.10 mm above its board's front/top face,
     # so the clips CLEAR the boards at rest (no press, no interference) and
@@ -471,7 +717,7 @@ def run(_context: str):
     # Bonus effect of dropping the +X clip's inboard slot: the 1.7 x 1.25
     # x 3 mm nick it used to take out of the XIAO's +Y fence bar (recorded
     # as cosmetic on 2026-09-08) is gone, and the +X wall is continuous
-    # from the step-4b notch edge (y=9.4) to the plate outline.
+    # from the step-4b opening's edge (y=9.4) to the plate outline.
     #
     # (2026-09-10: the XIAO clips in 8b are now slot-free too, but for the
     # opposite reason - see 8b. Here the wall is long enough to flex; there
@@ -489,37 +735,51 @@ def run(_context: str):
     # separate prints, so nominal clearance absorbs their stacked tolerance.
     R_TOP_Z_PX = 12.30 * MM
     NO_SLOTS = []
+    # the lip (0.85) reaches past the board's edge (x -19.05 / -3.95,
+    # probed on the vendor solid) by this much nominally; printed lips
+    # come out about 0.2 shorter
+    RADAR_BOARD_HALF = 7.55 * MM
+    lip_overlap = R_LIP - ((rCx - RADAR_BOARD_HALF) - RW_IN)
+    if lip_overlap < 0.05 - 1e-9:
+        raise RuntimeError("radar clip lips overlap the board edge by only %.2f mm (need 0.5): "
+                           "radarClear too big" % (lip_overlap * 10))
+    print("  radar clip lips reach %.2f mm over the board's edges (lip %.2f, wall to board %.2f)"
+          % (lip_overlap * 10, R_LIP * 10, ((rCx - RADAR_BOARD_HALF) - RW_IN) * 10))
 
     # A - LEFT wall, finger centred on y=0. This is the radar IC's y band,
     # which is exactly why it is free: the shell keeps its front inner face
     # at 14.0 over y -4..+4 (the radome step in 03_shell.py skips that band
     # for the IC), so a 12.50 clip top has 1.50 mm of headroom.
-    clip(comp, plate_body, "x", -20.8 * MM, -19.3 * MM,
+    clip(comp, plate_body, "x", RW_OUT, RW_IN,
          -3.5 * MM, 3.5 * MM,
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z, R_LIP_Z, R_LIP, label="radar A -X")
 
-    # The +X wall cannot carry a clip at y=0: step 4b notches it down to
-    # z=postH (3 mm) over y +/-9.4 because the XIAO board (x -3.23..19.23)
-    # crosses the wall's x -3.7..-2.2 footprint. So the two +X clips take
+    # The +X wall cannot carry a clip at y=0: step 4b opens it floor to top
+    # over |y| < 9.4 (since 2026-10-27; before that it was cut down to
+    # z=postH) because the XIAO board (x -3.23..19.23) crosses the wall's
+    # x -3.7..-2.2 footprint. So the two +X clips take
     # the two full-height stretches of that wall, one under each radome
-    # zone, each placed to sit CLEAR of a crossbar - a crossbar runs the
-    # full bay width (x -19.3..-3.7) and butts into both walls, so a lip
-    # band on top of one would be locally braced and would not flex.
+    # zone, each placed to sit CLEAR of an end bar - a bar runs the full
+    # bay width and butts into both walls, so a lip band over one would be
+    # locally braced and would not flex (crossbars, same rule, until
+    # 2026-10-27).
     #
-    # B - +X wall under the TX radome. Crossbar A occupies y -12.8..-11.2,
-    # so the band stops at -13.5 (0.70 mm clear) and runs down to -20.5
-    # (1.51 mm inside the board's -22.01 edge).
-    clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
-         -20.5 * MM, -13.5 * MM,
+    # B - +X wall under the TX radome. The -Y end bar occupies y -22.0..-20.8
+    # (2026-10-27), so the band starts at -20.0 (0.8 mm clear, same rule as
+    # the old 0.7 to crossbar A) and runs to -13.0; crossbar A is gone, so
+    # nothing bounds it on the +Y side before the 4b opening at -9.4.
+    clip(comp, plate_body, "x", RE_OUT, RE_IN,
+         -20.0 * MM, -13.0 * MM,
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
          label="radar B +X")
 
     # C - +X wall under the RX radome, in the free stretch between the
-    # step-4b notch edge (y=9.4) and crossbar B (y +17.7..+19.8):
-    # y +10.0..+17.0 leaves 0.60 mm to the notch and 0.70 mm to the bar.
-    clip(comp, plate_body, "x", -2.2 * MM, -3.7 * MM,
+    # step-4b opening's edge (y=9.4) and the +Y end bar (y +20.0..+22.0):
+    # y +10.0..+17.0 leaves 0.60 mm to the opening and 3.0 mm to the bar
+    # (it was 0.70 to crossbar B until 2026-10-27; the span is unchanged).
+    clip(comp, plate_body, "x", RE_OUT, RE_IN,
          10.0 * MM, 17.0 * MM,
          NO_SLOTS,
          R_SLOT_Z0, R_RAISE_Z0, R_TOP_Z_PX, R_LIP_Z, R_LIP,
@@ -598,15 +858,29 @@ def run(_context: str):
     # gives ~40 mm2 of glue wall against a plug latch force of order 10 N.
     jW = p(des, "usbJackW") + p(des, "usbJackClear")      # 9.33
     jT = p(des, "usbJackT") + p(des, "usbJackClear")      # 3.42
-    JCX, JCY = 13.6 * MM, -19.0 * MM
+    # 2026-10-31 (user, wiring the second unit): the jack moves from the -Y
+    # band to the +Y band, next to the capacitor and the XIAO's 5V/GND pads
+    # (on its +Y edge since the 180 deg rotation), so no power wire crosses
+    # the board. Turned 90 deg: the slot's WIDTH (jW) now runs along Y and
+    # its THICKNESS (jT) along X, at the band's +X end: slot x 15.58..19.00,
+    # y 11.84..21.17, collar x 14.08..20.50 (0.47 inside the plate edge),
+    # y 10.34..22.67 (its -Y wall merges into the XIAO's +Y fence, 2.6 mm
+    # past the clip finger's end at x 11.5, so the finger still flexes).
+    # The seating ramps are on the +/-X collar walls now. The capacitor
+    # cradle (step 10) slides to x 1.5..13.5 to make room.
+    JCX, JCY = 17.29 * MM, 16.5 * MM
     COLLAR_T = 1.5 * MM
     COLLAR_TOP = 4.5 * MM
     RAMP_Z0 = p(des, "usbShellL") - backT                 # 2.58
     RAMP_RISE = 0.8 * MM
     RAMP_Z1 = RAMP_Z0 + RAMP_RISE                         # 3.38
     ANCHOR = 0.3 * MM            # loft sections start inside the wall
-    sx0, sx1 = JCX - jW / 2, JCX + jW / 2                 # 8.935 .. 18.265
-    sy0, sy1 = JCY - jT / 2, JCY + jT / 2                 # -20.71 .. -17.29
+    sx0, sx1 = JCX - jT / 2, JCX + jT / 2                 # 15.58 .. 19.00 (thickness along X)
+    sy0, sy1 = JCY - jW / 2, JCY + jW / 2                 # 11.835 .. 21.165 (width along Y)
+    if sx1 + COLLAR_T > intW / 2 - rimGapX - 0.3 * MM:
+        raise RuntimeError("jack collar runs into the plate's +X edge")
+    if sy1 + COLLAR_T > intH / 2 - rimGapY - 0.3 * MM:
+        raise RuntimeError("jack collar runs into the plate's +Y edge")
 
     # 9a. collar box, then one cut for the slot AND the collar bore
     sk = comp.sketches.add(comp.xYConstructionPlane)
@@ -624,18 +898,20 @@ def run(_context: str):
     # 9b. seating ramps on both +/-Y collar walls, plus the narrowed wall
     # they lead into (z RAMP_Z1..COLLAR_TOP), leaving a 1.82 mm tail channel
     for s in (-1, 1):
-        # s = -1 is the -Y wall, whose material lies at more negative y and
-        # whose channel is toward +y; "inward" is therefore -s.
-        face = sy0 if s < 0 else sy1          # the wall's inner face
-        back_y = face + s * ANCHOR            # 0.3 mm INTO the wall
-        tip_y = face - s * RAMP_RISE          # 0.8 mm INTO the channel
+        # s = -1 is the -X wall, whose material lies at more negative x and
+        # whose channel is toward +x; "inward" is therefore -s. (The ramps
+        # sit on the thickness faces, which are the +/-X walls since the
+        # 2026-10-31 rotation.)
+        face = sx0 if s < 0 else sx1          # the wall's inner face
+        back_x = face + s * ANCHOR            # 0.3 mm INTO the wall
+        tip_x = face - s * RAMP_RISE          # 0.8 mm INTO the channel
         ramp_loft(comp, RAMP_Z0,
-                  (sx0, sx1, back_y, face),
+                  (back_x, face, sy0, sy1),
                   RAMP_Z1,
-                  (sx0, sx1, back_y, tip_y),
+                  (back_x, tip_x, sy0, sy1),
                   [plate_body])
         sk = comp.sketches.add(comp.xYConstructionPlane)
-        box(sk, sx0, sx1, back_y, tip_y)
+        box(sk, back_x, tip_x, sy0, sy1)
         extrude(comp, sk.profiles.item(0), RAMP_Z1, COLLAR_TOP,
                 adsk.fusion.FeatureOperations.JoinFeatureOperation,
                 participants=[plate_body])
@@ -653,10 +929,10 @@ def run(_context: str):
             my = (g.startPoint.y + g.endPoint.y) / 2
             if abs(mz + backT) > 0.005:
                 continue
-            on_x = (abs(abs(mx - JCX) - jW / 2) < 0.005
-                    and abs(my - JCY) < jT / 2 + 0.005)
-            on_y = (abs(abs(my - JCY) - jT / 2) < 0.005
-                    and abs(mx - JCX) < jW / 2 + 0.005)
+            on_x = (abs(abs(mx - JCX) - jT / 2) < 0.005
+                    and abs(my - JCY) < jW / 2 + 0.005)
+            on_y = (abs(abs(my - JCY) - jW / 2) < 0.005
+                    and abs(mx - JCX) < jT / 2 + 0.005)
             if on_x or on_y:
                 edges.add(e)
         if edges.count != 4:
@@ -673,8 +949,8 @@ def run(_context: str):
     if comp.bRepBodies.count != 1:
         raise RuntimeError("usb jack step split the plate: %d bodies"
                            % comp.bRepBodies.count)
-    print("usb jack ok: slot %.2f x %.2f at (%.2f, %.2f), collar to %.2f, "
-          "ramp %.2f->%.2f, tail channel %.2f"
+    print("usb jack ok: slot %.2f (along Y) x %.2f (along X) at (%.2f, %.2f), collar to %.2f, "
+          "ramp %.2f->%.2f on the +/-X walls, tail channel %.2f"
           % (jW * 10, jT * 10, JCX * 10, JCY * 10, COLLAR_TOP * 10,
              RAMP_Z0 * 10, RAMP_Z1 * 10, (jT - 2 * RAMP_RISE) * 10))
 
@@ -738,7 +1014,11 @@ def run(_context: str):
     # -X rib nudged 5.0 -> 5.6 so the wider block still clears the LEGO bore
     # at (0.95, +12) by 1.00 mm: the bore reaches x 3.40 and the rib now
     # spans x 4.40..6.80. Span 9.2 mm, cap centred at x 10.2.
-    RIB_X = (5.6 * MM, 14.8 * MM)
+    # 2026-10-31: ribs 5.6/14.8 -> 4.8/11.0 so the cap (body x 1.5..13.5)
+    # clears the jack collar at x 14.08 by 0.6; the x 4.8 rib's foot
+    # (3.6..6.0) stays 0.2 clear of the (0.95, 12) Technic bore's x 3.40.
+    # Lead end at -X, 8 mm from the XIAO's 5V/GND pads.
+    RIB_X = (4.8 * MM, 11.0 * MM)
 
     sk = comp.sketches.add(comp.xYConstructionPlane)
     for rx in RIB_X:
@@ -766,7 +1046,7 @@ def run(_context: str):
     # volume rose by exactly the two rib blocks). modelToSketchSpace asks
     # the sketch for its own mapping instead of assuming one.
     BORE_X0 = 1.0 * MM           # plane offset; ribs live at x 4.4..16.0
-    BORE_LEN = 16.0 * MM         # sweep +X clear through both ribs (to 17.0;
+    BORE_LEN = 12.0 * MM         # sweep +X clear through both ribs (to 13.0, 2026-10-31;
     #                              was 14.0, which stopped at x 15.0 and would
     #                              have left 0.4 mm of the +X rib unbored once
     #                              the ribs moved +2 mm - the want_cut guard
@@ -825,90 +1105,510 @@ def run(_context: str):
     # rework (8b) removed the isolating slots, so the finger's stiffness now
     # comes from being continuous with the wall either side of it, and a
     # notch 3 mm past the finger's end at x 11.5 is a discontinuity in
-    # exactly that load path. The radar cable crosses above the board via
-    # the step-4b notch and never needed these either.
+    # exactly that load path. The radar cable reaches the XIAO through the
+    # step-5a floor window (over the top via the 4b notch before 2026-10-27)
+    # and never needed these either.
 
-    # 12. Radar cable exit (2026-09-10). The user photographed the assembled
-    # plate: the RD-03D's 4-wire connector cable leaves the connector heading
-    # -Y, straight off the end of the board, and had nowhere to go. The
-    # connector pocket is sealed on three sides - the two 1.5 mm bay walls at
-    # +/-X, and CROSSBAR A, which spans the full bay width at y -12.8..-11.2
-    # from the floor up to PCB_REAR_Z where the board rests on it. There is no
-    # gap over the bar, because the board is what sits on it. So the pocket's
-    # only exits were the open -Y end, which runs into the 0.84 mm between the
-    # board edge (y -22.01) and the plate edge (-22.85), and the +X wall.
+    # 12/13. (deleted 2026-10-27) the corner cable exit and the crossbar A
+    # cable slot: crossbar A is gone (step 4) and the cable leaves at floor
+    # level through the step-4b opening and the step-5a window.
+
+    # 14. PIR SOCKET ON A WING (2026-10-25, fourth layout, Task 9d).
+    # History: the pod lived on the front shell's +X wall from 2026-10-11
+    # (03_shell.py, up to commit 582091f); after the first test print it
+    # moved to a tower on the plate's wing, tilted 18 deg with a canted
+    # top (9b, same day); two user decisions then fixed the straight
+    # socket-in-a-box layout (9c, commit 71b7312): the PIR looks where the
+    # radar looks (pirTilt 0, maximum field overlap), and the plate only
+    # HOLDS the sensor while the shell carries the housing (its pod box,
+    # 03_shell.py step 5c, replaces the +X wall over the pod's width).
+    # After 9c's print the user wanted the gap round the lens closed and a
+    # part fitted from the FRONT instead of the back-side plug: 9d tried
+    # a bayonet bezel clamping the dome, 9e (same day) settled on a thin
+    # ring in the lens gap clocked to the lens tabs (03_shell.py step 8),
+    # so 9c's retaining plug (PirPlug) and its filament keeper pin are
+    # gone, the bore is BLIND at the wing top and snug on the base, and
+    # the +X snap pair moved into the wing.
     #
-    # Cut the extreme -Y corner out of that wall. It lines up with where the
-    # cable already goes, and it is the ONLY free stretch: clip B occupies
-    # y -20.5..-13.5, crossbar A butts into the wall at -12.8..-11.2, and the
-    # step-4b notch starts at -9.4, leaving only 0.7 mm and 1.8 mm gaps
-    # between them. Ends at y -20.7 so it stops 0.2 mm clear of clip B's
-    # raised span rather than sharing a face with it.
+    # Shape (case frame; the plate's occurrence is at identity):
+    #   wing    z -8..-2 (6 mm, coplanar with the plate's back), from the
+    #           plate's +X edge (x 20.97, fused to it) out to the box
+    #           cavity's +X wall less rimGapX (x 48.97), y +/-(pirBoxHalfY
+    #           - wingGap) = +/-13.62, so it sits in the shell's box like
+    #           the plate sits in the shell (the fit allowances are
+    #           measured, see ensure_params; the wing is 0.12 a side into
+    #           the box walls in the model). Blind snap pockets in its
+    #           +/-Y faces (14a') take the box's bumps.
+    #   boss    a straight cylinder r pirSocketR (7.7) at (pirCx, 0),
+    #           standing on the wing from z -2 up to pirSeatZ (14.0): the
+    #           sensor drops in from the FRONT, neck and can into the bore,
+    #           and its flange's underside (r 9.4) seats on the boss's top
+    #           rim; the lens's latch hook lips (r 9.6..10.7, down to
+    #           z 13.1) hang outside the boss. The lens ring and tabs are
+    #           in the shell's lens hole above, the ring's top flush with
+    #           the shell's face, with the bezel ring in the gap round it.
+    #   cuts    bore r pirBoreR along Z from above the boss top down to the
+    #           WING TOP (z -2) only: the pins (to case z 2.1) and the
+    #           decoupling cap standing on them (to about z -0.9) hang in
+    #           it with the floor 1.1 mm below; level wire hole dia
+    #           pirWireDia along -X from the bore at z pirWireZ, out of the
+    #           boss's side into the pod cavity.
+    #   holes   two more Technic holes in the wing at (24.95, +/-4), on the
+    #           8 mm grid, THROUGH the wing (a pin stands 2 mm proud into
+    #           the pod cavity, which is empty there).
     #
-    # Structurally free: the board's -Y end is already cantilevered over the
-    # connector pocket with no support nearer than crossbar A, and lateral
-    # retention still comes from ~40 mm of remaining wall plus all three
-    # clips. Deliberately NOT cut as a wider, shorter window under clip B -
-    # that would leave the clip backed by a 7 mm-span beam instead of a solid
-    # wall, softening it, and the user's complaint this round was that clips
-    # feel too weak.
-    CABLE_Y0, CABLE_Y1 = -23.0 * MM, -20.7 * MM
-    cx_in = rCx + bayW / 2                 # +X wall inner face, -3.70
+    # MUST come after step 6 (the plate-outline Intersect would trim the
+    # wing off) and after step 7 (whose chamfer counts the rear bore edges
+    # and expects six).
+    boreR, socketR = p(des, "pirBoreR"), p(des, "pirSocketR")
+    seatZ, pirCx = p(des, "pirSeatZ"), p(des, "pirCx")
+    boxHalfY = p(des, "pirBoxHalfY")
+    wireR, wireZ = p(des, "pirWireDia") / 2, p(des, "pirWireZ")
+    snapX, snapZ = p(des, "wingSnapX"), p(des, "wingSnapZ")
+    snap = p(des, "snapBump")
+    # Fusion hands angle parameters back in radians; the geometry below is
+    # only right for an upright axis, so refuse anything else rather than
+    # silently building a straight socket for a tilted sensor.
+    if abs(p(des, "pirTilt")) > 1e-9:
+        raise RuntimeError("pirTilt is %.3f, not 0: the straight socket (step 14) has no "
+                           "tilt; set it to 0 deg (the 9b tilted tower is gone)"
+                           % p(des, "pirTilt"))
+    xEdge = intW / 2 - rimGapX                   # plate's +X edge, 20.97
+    xBoxIn = pirCx + p(des, "pirBoxHalfX")       # box cavity's +X wall, 49
+    xWing1 = xBoxIn - rimGapX                    # wing's far end, 48.97
+    wingHalfY = boxHalfY - wingGap               # 15.62 (0.12 INTO the box walls, see wingGap)
+    WING_T = 6.0 * MM
+    zTop, zBack = intD + wall, -backT            # 16, -8
+    zWing = zBack + WING_T                       # -2: wing top = the bore floor
+    # the sensor in the socket (91_pir_fit.py places it the same way): its
+    # origin (metal base plane) at zTop - 8.4 (ring top on the face); pins
+    # end at sensor z -5.5 and the cap soldered standing on them (user
+    # photo, 2026-10-25: top about 8.5 mm above the base) at about -8.5
+    SENSOR_ORIGIN_Z = zTop - 8.4 * MM            # 7.6
+    PIN_TIP_Z = SENSOR_ORIGIN_Z - 5.5 * MM       # 2.1
+    CAP_BOTTOM_Z = SENSOR_ORIGIN_Z - 8.5 * MM    # -0.9
+
+    # sensor-driven guards (radii from the STEP probe, see ensure_params)
+    HOOK_LIP_R = 9.6 * MM                        # latch hook lips' inner radius
+    if socketR > HOOK_LIP_R - 0.03:
+        raise RuntimeError("pirSocketR %.2f is not 0.3 mm inside the latch hook lips (r 9.6)"
+                           % (socketR * 10))
+    if socketR < boreR + 0.15:
+        raise RuntimeError("pirSocketR %.2f leaves under 1.5 mm of boss wall round the "
+                           "r %.2f bore" % (socketR * 10, boreR * 10))
+    if not (zWing < seatZ < zTop):
+        raise RuntimeError("pirSeatZ %.2f is not between the wing top and the shell face"
+                           % (seatZ * 10))
+    if pirCx - socketR < intW / 2 + 0.3:
+        raise RuntimeError("socket boss reaches x %.2f, under 3 mm from the shell's old "
+                           "wall line (21)" % ((pirCx - socketR) * 10))
+    if pirCx + socketR > xWing1 - 0.1:
+        raise RuntimeError("socket boss runs past the wing's far end")
+    # the blind bore's floor (the wing top) must clear the cap on the pins
+    # by >= 1 mm, or the sensor would stand on the cap instead of seating
+    # its flange on the boss rim
+    if CAP_BOTTOM_Z - zWing < 0.1 - 1e-9:
+        raise RuntimeError("bore floor z %.1f is %.2f mm under the cap on the pins (z %.1f); "
+                           "need 1.0" % (zWing * 10, (CAP_BOTTOM_Z - zWing) * 10,
+                                         CAP_BOTTOM_Z * 10))
+
+    # 14a. wing, overlapping 0.5 mm into the plate so the Join merges by
+    # volume; the plate is solid there (the -X snap pockets are at the far
+    # edge; the jack is at y < -17 and the wing reaches +/-13.62 at the
+    # plate's edge, where the jack slot's +X wall at x 18.265 is 2.7 mm
+    # inboard).
     sk = comp.sketches.add(comp.xYConstructionPlane)
-    box(sk, cx_in - 0.1 * MM, cx_in + 1.6 * MM, CABLE_Y0, CABLE_Y1)
-    extrude(comp, sk.profiles.item(0), -0.01 * MM, 11.01 * MM,
+    box(sk, xEdge - 0.5 * MM, xWing1, -wingHalfY, wingHalfY)
+    extrude(comp, sk.profiles.item(0), zBack, zWing,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
+    # 14b. socket boss, overlapping 0.5 mm down into the wing
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    sk.sketchCurves.sketchCircles.addByCenterRadius(
+        adsk.core.Point3D.create(pirCx, 0.0, 0), socketR)
+    extrude(comp, sk.profiles.item(0), zWing - 0.5 * MM, seatZ,
+            adsk.fusion.FeatureOperations.JoinFeatureOperation,
+            participants=[plate_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("pir wing/boss did not merge with the plate: %d bodies"
+                           % comp.bRepBodies.count)
+    print("pir wing ok (x %.2f..%.2f, y +/-%.2f, z %.0f..%.0f); socket boss r %.2f "
+          "(bore r %.2f, wall %.2f) at (%.1f, 0), z %.0f..%.1f"
+          % (xEdge * 10, xWing1 * 10, wingHalfY * 10, zBack * 10, zWing * 10,
+             socketR * 10, boreR * 10, (socketR - boreR) * 10, pirCx * 10,
+             zWing * 10, seatZ * 10))
+
+    # 14a'. WING SNAP POCKETS (Task 9d): the same section as the plate's
+    # -X pockets (step 3) - 6.2 long, 1.4 tall, blind at both z ends, and
+    # deep enough to clear the bump (see POCKET_D below; 0.72 with the
+    # measured allowances) - cut into the wing's +/-Y faces, centred on (wingSnapX,
+    # wingSnapZ), for the bumps on the pod box's inner +/-Y walls
+    # (03_shell.py step 5d: 0.5 proud, 6 long, 1.0 tall). The lid comes
+    # down over the wing from the front, the box walls ride over the
+    # wing's edge and click in here. Guards: pocket inside the wing's x
+    # span with 1 mm to the plate edge and clear of the corner fillets,
+    # >= 1 mm of wing above and below it, and its floor outside the boss's
+    # foot fillet toe and the Technic counterbores.
+    # Depth: with the measured wingGap NEGATIVE (the wing is 0.12 a side
+    # into the box walls in the model) a 0.6 pocket like the plate's
+    # would put its floor (15.02) 0.02 INSIDE the bump's tip (15.0), so
+    # the depth is derived: the bump's proud amount, plus 0.1 of floor
+    # clearance, plus whatever the wing overlaps the wall by (0.72 here).
+    # Printed, the wing's face shrinks 0.12 to 15.5 and the cavity grows
+    # 0.1, so the bump overlaps the face line by about 0.4 (the
+    # retention) and the floor stays clear.
+    POCKET_D = snap + 0.01 + max(-wingGap, 0.0)
+    POCKET_HL, POCKET_HZ = 3.1 * MM, 0.6 * MM
+    if boxHalfY - snap < wingHalfY - POCKET_D + 0.01 - 1e-6:
+        raise RuntimeError("wing bump tip (y %.2f) is under 0.1 off the pocket floor (y %.2f)"
+                           % ((boxHalfY - snap) * 10, (wingHalfY - POCKET_D) * 10))
+    corner = p(des, "cornerFillet")
+    if not (xEdge + 0.1 <= snapX - POCKET_HL and snapX + POCKET_HL <= xWing1 - corner - 0.05):
+        raise RuntimeError("wing snap pocket x %.2f..%.2f is not inside the wing's straight "
+                           "+/-Y faces (x %.2f..%.2f)"
+                           % ((snapX - POCKET_HL) * 10, (snapX + POCKET_HL) * 10,
+                              (xEdge + 0.1) * 10, (xWing1 - corner - 0.05) * 10))
+    if not (zBack + 0.1 <= snapZ - POCKET_HZ and snapZ + POCKET_HZ <= zWing - 0.1):
+        raise RuntimeError("wing snap pocket z %.2f..%.2f leaves under 1 mm of wing above "
+                           "or below it" % ((snapZ - POCKET_HZ) * 10, (snapZ + POCKET_HZ) * 10))
+    if wingHalfY - POCKET_D < socketR + 0.1 + 0.1:
+        raise RuntimeError("wing snap pocket floor (y %.2f) is inside the boss foot fillet's "
+                           "toe (r %.2f) + 1 mm" % ((wingHalfY - POCKET_D) * 10, (socketR + 0.1) * 10))
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        # rect centred on the wing's face, 1.2 wide -> cuts 0.6 deep
+        box(sk, snapX - POCKET_HL, snapX + POCKET_HL,
+            sy * (wingHalfY - POCKET_D), sy * (wingHalfY + POCKET_D))
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    if profs.count != 2:
+        raise RuntimeError("expected 2 wing pocket profiles, found %d" % profs.count)
+    extrude(comp, profs, snapZ - POCKET_HZ, snapZ + POCKET_HZ,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("radar cable exit ok (+X bay wall notched y -22.85..%.2f, full "
-          "height, %.2f mm of wall removed)"
-          % (CABLE_Y1 * 10, (-20.7 - -22.85)))
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("wing snap pockets split the plate: %d bodies" % comp.bRepBodies.count)
+    print("wing snap pockets ok: x %.1f..%.1f, z %.1f..%.1f, %.1f deep into the wing's "
+          "+/-Y faces (y +/-%.2f), floor at y +/-%.2f"
+          % ((snapX - POCKET_HL) * 10, (snapX + POCKET_HL) * 10,
+             (snapZ - POCKET_HZ) * 10, (snapZ + POCKET_HZ) * 10, POCKET_D * 10,
+             wingHalfY * 10, (wingHalfY - POCKET_D) * 10))
 
-    # 13. Crossbar A cable slot (2026-09-10, user's proposal). Better route
-    # than step 12's corner notch: come up THROUGH the bar that seals the
-    # connector pocket, then use the open space under the radar board.
-    #
-    # Crossbar A spans the full bay width at y -12.8..-11.2 from the floor to
-    # PCB_REAR_Z, so slotting it opens the pocket into the rest of the bay.
-    # From there the wires run +X/+Y under the board (up to 10.46 mm of
-    # headroom) and cross the +X wall through the step-4b notch, which is
-    # open from z=postH to z=14 over |y|<9.4 - i.e. ABOVE the XIAO board,
-    # whose top face is at 4.20. That matters: it lands the wires on top of
-    # the board, where BOTH long edges are reachable. D6 sits on the +Y edge
-    # and D7 on the -Y edge, so any route that arrives from one side only
-    # would strand one of them.
-    #
-    # A 4.0 x 3.5 mm notch in the TOP of the bar, FLUSH AGAINST THE +X WALL.
-    # Three of the user's calls, in order (2026-09-10): it began as a
-    # full-height slot mid-bay, became a 3.5 mm tunnel at the base, then
-    # moved to the top.
-    #
-    # Top-opening is the one that prints with no support at all - nothing
-    # spans the gap, the bar simply stops at CBL_Z0 - whereas a base tunnel
-    # leaves a 4 mm bridge. It also suits the cable better: the connector's
-    # underside is at z 6.70, so wires leaving it stay at that height and run
-    # straight through instead of diving to the floor and climbing back.
-    #
-    # Cost, stated plainly: the notch takes 4.0 mm out of the bar's 15.6 mm
-    # bearing line on the PCB rear, leaving 11.6 mm on the -X side. The board
-    # is still carried at two y stations (this bar and crossbar B) and held
-    # down by all three clips and the lid, so the offset does not let it rock.
-    #
-    # Flush to the wall means the wires emerge already hugging the surface
-    # they run +Y along, to the step-4b notch, where they cross ABOVE the
-    # XIAO board - the only crossing that reaches both its long edges.
-    CBL_X1 = rCx + bayW / 2 + 0.1 * MM     # 0.1 into the wall: no shared face
-    CBL_X0 = CBL_X1 - 4.1 * MM
-    CBL_Z0 = PCB_REAR_Z - 3.5 * MM         # 6.96
-    cbl_y, cbl_w = XBARS[0]
-    sk = comp.sketches.add(comp.xYConstructionPlane)
-    box(sk, CBL_X0, CBL_X1,
-        cbl_y - cbl_w / 2 - 0.1 * MM, cbl_y + cbl_w / 2 + 0.1 * MM)
-    extrude(comp, sk.profiles.item(0), CBL_Z0, PCB_REAR_Z + 0.01 * MM,
+    # 14c. the cuts, one Combine restricted to the plate body:
+    #   bore   r boreR along Z from above the boss top down to the wing
+    #          top, z -2 (BLIND since Task 9d: no plug goes in from the
+    #          back any more; the bezel holds the sensor from the front).
+    #          The pin tips (z 2.1) and the cap on them (to z -0.9) hang
+    #          free above the floor.
+    #   wire   dia pirWireDia, level, along -X from the bore axis at
+    #          z pirWireZ, through the boss's -X wall and 1 mm past its
+    #          outer face into the pod cavity (air), at the level of the
+    #          pin tips / the cap on the pins, so the wires leave the pins
+    #          radially; the only way out of the blind bore.
+    # Guard: the wire hole must sit inside the bore's blind span, above
+    # the floor and below the seat.
+    if not (zWing + 0.05 < wireZ - wireR and wireZ + wireR < seatZ - 0.1):
+        raise RuntimeError("wire hole z %.2f..%.2f is not inside the bore's span z %.2f..%.2f"
+                           % ((wireZ - wireR) * 10, (wireZ + wireR) * 10,
+                              zWing * 10, seatZ * 10))
+    # (all parameters are read above: inside a base feature the design is
+    # in direct-modelling mode and userParameters raises)
+    tbm = adsk.fusion.TemporaryBRepManager.get()
+    base = comp.features.baseFeatures.add()
+    base.startEdit()
+    bore_cyl = tbm.createCylinderOrCone(
+        adsk.core.Point3D.create(pirCx, 0.0, zTop + 0.05), boreR,
+        adsk.core.Point3D.create(pirCx, 0.0, zWing), boreR)
+    wire_cyl = tbm.createCylinderOrCone(
+        adsk.core.Point3D.create(pirCx, 0.0, wireZ), wireR,
+        adsk.core.Point3D.create(pirCx - socketR - 0.1, 0.0, wireZ), wireR)
+    for b in (bore_cyl, wire_cyl):
+        comp.bRepBodies.add(b, base)
+    base.finishEdit()
+    # the proxies returned by bRepBodies.add() go stale when the edit
+    # closes (Combine fails with ALL_TOOL_BODY_REFERENCE_LOST); use the
+    # base feature's own body list instead
+    tools = [base.bodies.item(i) for i in range(base.bodies.count)]
+    if len(tools) != 2:
+        raise RuntimeError("expected 2 pir tool bodies, found %d" % len(tools))
+    ci = comp.features.combineFeatures.createInput(plate_body, collection(tools))
+    ci.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
+    ci.isKeepToolBodies = False
+    comp.features.combineFeatures.add(ci)
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("pir socket cuts split the plate: %d bodies" % comp.bRepBodies.count)
+    print("pir bore r=%.2f along Z at (%.1f, 0) from the boss top (z %.1f) BLIND to the "
+          "wing top (z %.1f); pin tips at z %.1f, cap on the pins to z %.1f, %.1f mm "
+          "above the floor; flange seat on the boss rim r %.2f..%.2f at z %.1f ok"
+          % (boreR * 10, pirCx * 10, seatZ * 10, zWing * 10, PIN_TIP_Z * 10,
+             CAP_BOTTOM_Z * 10, (CAP_BOTTOM_Z - zWing) * 10, boreR * 10, socketR * 10,
+             seatZ * 10))
+    print("pir wire hole dia %.1f level at z %.1f (rim z %.2f..%.2f) along -X from the "
+          "bore, out of the boss's side at x %.2f into the pod cavity ok"
+          % (wireR * 20, wireZ * 10, (wireZ - wireR) * 10, (wireZ + wireR) * 10,
+             (pirCx - socketR) * 10))
+    # (the 9c keeper pin cross-hole through the wing at (pirCx, -4.75) is
+    # gone with the plug: the wing is solid under the bore floor)
+
+    # 14c'. FOOT FILLET (2026-10-25, review): a 1.0 mm concave fillet where
+    # the boss meets the wing top, so a side knock on the 16 mm post does
+    # not crack it at the joint. Concave, on a vertical cylinder over a
+    # horizontal face, so it prints as ordinary layers. Its toe (r 8.7)
+    # stays 0.13 mm clear of the Technic holes' rims in plan (they are
+    # 1.13 from the boss, 14d) and well under the wire hole (z >= 2.5).
+    FOOT_R = 1.0 * MM
+    foot = [e for e in plate_body.edges
+            if isinstance(e.geometry, adsk.core.Circle3D)
+            and abs(e.geometry.radius - socketR) < 0.005
+            and abs(e.geometry.center.z - zWing) < 0.005
+            and abs(e.geometry.center.x - pirCx) < 0.005
+            and abs(e.geometry.center.y) < 0.005]
+    if len(foot) != 1:
+        raise RuntimeError("expected 1 boss foot edge (circle r %.2f at z %.1f), found %d"
+                           % (socketR * 10, zWing * 10, len(foot)))
+    fil = comp.features.filletFeatures
+    finp = fil.createInput()
+    try:
+        finp.edgeSetInputs.addConstantRadiusEdgeSet(
+            collection(foot), adsk.core.ValueInput.createByReal(FOOT_R), False)
+    except AttributeError:  # older API shape
+        finp.addConstantRadiusEdgeSet(
+            collection(foot), adsk.core.ValueInput.createByReal(FOOT_R), False)
+    fil.add(finp)
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("boss foot fillet split the plate: %d bodies" % comp.bRepBodies.count)
+    print("pir boss foot fillet ok (r %.1f mm, concave, on 1 edge; toe at r %.1f)"
+          % (FOOT_R * 10, (socketR + FOOT_R) * 10))
+
+    # 14d. two more Technic holes in the wing, on the step-7 grid (x = 0.95
+    # + 3*8 = 24.95, y +/-4), the same pattern as step 7: legoHole bore
+    # THROUGH the 6 mm wing (open into the pod cavity above it, where a pin
+    # stands 2 mm proud in empty space), legoCbDia x legoCbDepth
+    # counterbore on the back face, 0.3 mm entry chamfer. Clearances, all
+    # measured in plan between circles: the bore to the socket boss's foot
+    # (>= 0.6 mm, so a pin's proud end never rubs the boss: this is what
+    # moved pirCx from 34.5 to 35.5, 0.20 -> 1.13), the counterbore to the
+    # socket bore (>= 0.6 mm of wing; the bore is blind at the wing top
+    # since Task 9d, so in the wing itself only the counterbore matters,
+    # but the guard is kept as a plan-view rule).
+    wx = x1 + 3 * pitch                           # 24.95
+    wing_centers = [(wx, s * pitch / 2) for s in (-1, 1)]
+    dc = math.hypot(pirCx - wx, pitch / 2)        # hole centre to the axis
+    gap_boss = dc - socketR - holeD / 2
+    gap_bore = dc - boreR - cbD / 2
+    for label, gap in (("socket boss foot", gap_boss), ("socket bore", gap_bore)):
+        if gap < 0.06 - 1e-9:
+            raise RuntimeError("wing Technic holes at (%.2f, +/-%.0f) are %.2f mm from the "
+                               "%s (need 0.6): move pirCx" % (wx * 10, pitch / 2 * 10, gap * 10, label))
+    if wx - cbD / 2 <= xEdge + 0.05:
+        raise RuntimeError("wing Technic counterbores reach the plate's edge")
+
+    def wing_circles(radius):
+        sk = comp.sketches.add(comp.xYConstructionPlane)
+        for cx, cy in wing_centers:
+            sk.sketchCurves.sketchCircles.addByCenterRadius(
+                adsk.core.Point3D.create(cx, cy, 0), radius)
+        return collection([sk.profiles.item(i)
+                           for i in range(sk.profiles.count)])
+
+    extrude(comp, wing_circles(holeD / 2), -backT, zWing + 0.1 * MM,
             adsk.fusion.FeatureOperations.CutFeatureOperation,
             participants=[plate_body])
-    print("crossbar A cable notch ok (x %.2f..%.2f, z %.2f..%.2f, open at "
-          "the top - no bridge; %.1f mm of bearing line left)"
-          % (CBL_X0 * 10, CBL_X1 * 10, CBL_Z0 * 10, PCB_REAR_Z * 10,
-             (CBL_X0 - (rCx - bayW / 2)) * 10))
+    extrude(comp, wing_circles(cbD / 2), -backT, -backT + cbZ,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for e in plate_body.edges:
+            g = e.geometry
+            if (isinstance(g, adsk.core.Circle3D)
+                    and abs(g.radius - holeD / 2) < 0.005
+                    and abs(g.center.z - (-backT + cbZ)) < 0.005
+                    and g.center.x > xEdge):
+                edges.add(e)
+        if edges.count != 2:
+            raise RuntimeError("expected 2 wing bore edges, found %d"
+                               % edges.count)
+        ch = comp.features.chamferFeatures
+        chi = ch.createInput(edges, False)
+        chi.setToEqualDistance(adsk.core.ValueInput.createByReal(0.3 * MM))
+        ch.add(chi)
+        print("wing rear entry chamfers ok (0.3mm x 45deg on 2 edges)")
+    except Exception as exc:  # counterbore alone is acceptable
+        print("WING CHAMFER SKIPPED:", exc)
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("wing Technic holes split the plate: %d bodies"
+                           % comp.bRepBodies.count)
+    print("wing technic holes ok:",
+          [(round(cx / MM, 2), round(cy / MM, 2)) for cx, cy in wing_centers],
+          "through the %.0f mm wing; plan clearance to the socket boss %.2f mm, "
+          "counterbore to the bore %.2f mm"
+          % (WING_T * 10, gap_boss * 10, gap_bore * 10))
+
+    # 14d'. SOFTEN THE WING'S EDGES: the same treatment the shell gets in
+    # 03_shell.py steps 6a-6c, so the two parts match in the hand. After
+    # all the cuts, so the selectors see the final topology (the snap
+    # pockets in the +/-Y faces, 14a', touch neither the back rim at z -8
+    # nor the far corners). Fillet features act on the plate
+    # body's edges only, so they are participant-safe by construction. The
+    # boss keeps every edge sharp: the flange seats on its top rim.
+    EPS = 0.005                                   # 0.05 mm (cm)
+    corner = p(des, "cornerFillet")
+    soft = p(des, "softFillet")
+
+    def near(a, b):
+        return abs(a - b) < EPS
+
+    def mid(g):
+        return ((g.startPoint.x + g.endPoint.x) / 2,
+                (g.startPoint.y + g.endPoint.y) / 2,
+                (g.startPoint.z + g.endPoint.z) / 2)
+
+    def line_dir(g):
+        v = g.startPoint.vectorTo(g.endPoint)
+        v.normalize()
+        return v
+
+    def add_fillet(edges, radius, label):
+        fil = comp.features.filletFeatures
+        inp = fil.createInput()
+        rv = adsk.core.ValueInput.createByReal(radius)
+        try:
+            inp.edgeSetInputs.addConstantRadiusEdgeSet(collection(edges), rv, False)
+        except AttributeError:  # older API shape
+            inp.addConstantRadiusEdgeSet(collection(edges), rv, False)
+        feat = fil.add(inp)
+        if comp.bRepBodies.count != 1:
+            raise RuntimeError("%s split the plate: %d bodies" % (label, comp.bRepBodies.count))
+        return feat
+
+    # (i) vertical corner fillets, r cornerFillet, on the wing's two outer
+    # corners (x xWing1, y +/-wingHalfY), z -8..-2. The wing's -X end is
+    # fused into the plate; its concave junctions with the plate's +X edge
+    # stay sharp.
+    verts = []
+    for e in plate_body.edges:
+        g = e.geometry
+        if not isinstance(g, adsk.core.Line3D):
+            continue
+        d = line_dir(g)
+        if abs(abs(d.z) - 1) > 1e-6:
+            continue
+        mx, my, _ = mid(g)
+        if near(mx, xWing1) and near(abs(my), wingHalfY):
+            verts.append(e)
+    print("wing corner fillet edges found:", len(verts))
+    if len(verts) != 2:
+        raise RuntimeError("expected 2 wing vertical corner edges, found %d" % len(verts))
+    add_fillet(verts, corner, "wing corner fillet")
+    print("wing corner fillets ok (r=%.2f mm on 2 edges)" % (corner * 10))
+
+    # (ii) softFillet on the wing's back-rim outer edges at z -8: the part
+    # of the back face's boundary outside the plate's footprint, i.e. the
+    # +X edge (x 48.85), the two +-Y edges (y +/-13.35, x 20.85..46.35)
+    # and the two corner-fillet arcs between them = 5. The plate's own
+    # back perimeter stays sharp as it always was; the bore's exit circle
+    # and the counterbores are circles of other radii and are skipped.
+    rim = []
+    for e in plate_body.edges:
+        g = e.geometry
+        if isinstance(g, adsk.core.Line3D):
+            if not (near(g.startPoint.z, zBack) and near(g.endPoint.z, zBack)):
+                continue
+            mx, my, _ = mid(g)
+            if near(mx, xWing1) or (near(abs(my), wingHalfY) and mx > xEdge + EPS):
+                rim.append(e)
+        elif isinstance(g, (adsk.core.Arc3D, adsk.core.Circle3D)):
+            c = g.center
+            if (near(c.z, zBack) and near(g.radius, corner)
+                    and near(c.x, xWing1 - corner) and near(abs(c.y), wingHalfY - corner)):
+                rim.append(e)
+    print("wing back rim edges found:", len(rim))
+    if len(rim) != 5:
+        raise RuntimeError("expected 5 wing back rim edges (3 lines + 2 arcs), found %d"
+                           % len(rim))
+    add_fillet(rim, soft, "wing rim fillet")
+    print("wing rim fillet ok (r=%.2f mm on 5 edges)" % (soft * 10))
+
+    # 15. PLATE CORNER ROUNDING (2026-10-27). Each of the four outside
+    # corners is cut with a "square minus quarter disc" profile over the
+    # plate's whole height (z -8..11, so the -X fence wall's corner at
+    # x -20.65 is rounded too), radius plateCornerR. A cut rather than a
+    # fillet: the -X corners are shared by the plate and its 1.5 mm wall,
+    # and a fillet equal to the wall thickness is refused by the kernel.
+    # The corner pieces are inboard of nothing: the pins (|x| <= 19.35),
+    # the end bars (|x| <= 19.15) and the snap pockets (|y| = 12) all lie
+    # inside the |x| 19.47 / |y| 21.55 corner squares.
+    pcr = p(des, "plateCornerR")
+    ccr = p(des, "cavityCornerR")
+    if pcr <= ccr + 0.3 * MM - 1e-9:
+        raise RuntimeError("plateCornerR %.2f must exceed cavityCornerR %.2f by 0.3 mm"
+                           % (pcr * 10, ccr * 10))
+    xe, ye = intW / 2 - rimGapX, intH / 2 - rimGapY
+    cut_profiles = []
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cx, cy = sx * (xe - pcr), sy * (ye - pcr)        # arc centre
+            box(sk, min(cx, sx * xe), max(cx, sx * xe), min(cy, sy * ye), max(cy, sy * ye))
+            sk.sketchCurves.sketchCircles.addByCenterRadius(
+                adsk.core.Point3D.create(cx, cy, 0), pcr)
+    for i in range(sk.profiles.count):
+        pr = sk.profiles.item(i)
+        ap = pr.areaProperties()
+        c = ap.centroid
+        # the corner piece's centroid lies ~0.78 r out from the arc centre
+        # toward the corner; the quarter disc's only ~0.42 r
+        if abs(c.x) > xe - 0.4 * pcr and abs(c.y) > ye - 0.4 * pcr:
+            cut_profiles.append(pr)
+    if len(cut_profiles) != 4:
+        raise RuntimeError("expected 4 plate corner profiles, found %d" % len(cut_profiles))
+    extrude(comp, collection(cut_profiles), -backT - 0.01 * MM, 11 * MM + 0.01,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("corner rounding split the plate: %d bodies" % comp.bRepBodies.count)
+    print("plate corner rounding ok (r %.2f at (+/-%.2f, +/-%.2f), z -8..11; cavity corners r %.2f -> %.2f mm diagonal gap)"
+          % (pcr * 10, xe * 10, ye * 10, ccr * 10, ((pcr - ccr) * (2 ** 0.5 - 1)) * 10))
+
+    # 14f. WING SNAP TONGUES (2026-10-28, user's PLA print: "close to
+    # impossible to push past" the box's bumps). The wing sits wingGap
+    # (0.12) INTO the box walls by calibration and the bumps stand snapBump
+    # (0.5) proud, and nothing in that joint could flex: the box walls are
+    # 2 mm plates held on three sides. Put the compliance in the WING,
+    # where it is hidden inside the box: a slot behind each +/-Y face
+    # leaves a tongue TONGUE_T thick that carries the snap pocket, free at
+    # its +X end (END_CUT) and rooted at TONGUE_X0. 2.0 x 6 x 14.3 mm of
+    # PLA/PETG deflecting 0.4: strain ~0.6 %, about 5 N a side. Cut AFTER
+    # 14d' so the wing's edge-fillet selectors saw the plain wing.
+    TONGUE_T, SLOT_W = 2.0 * MM, 1.2 * MM
+    TONGUE_X0, TONGUE_X1, END_CUT = 31.0 * MM, 45.3 * MM, 1.0 * MM
+    ySlotIn = wingHalfY - TONGUE_T - SLOT_W              # 10.42
+    if ySlotIn < socketR + 1.0 * MM + 0.5 * MM:
+        raise RuntimeError("wing tongue slot (y %.2f) runs into the boss foot" % (ySlotIn * 10))
+    if not (TONGUE_X0 + 0.1 * MM <= snapX - 3.1 * MM and snapX + 3.1 * MM <= TONGUE_X1 - 0.1 * MM):
+        raise RuntimeError("wing snap pocket is not on the tongue")
+    if TONGUE_X1 + END_CUT > xWing1 - corner - 0.05 * MM:
+        raise RuntimeError("tongue end cut runs into the wing's corner fillet")
+    if POCKET_D > TONGUE_T - 0.6 * MM:
+        raise RuntimeError("snap pocket leaves under 0.6 mm of tongue")
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    for sy in (-1, 1):
+        box(sk, TONGUE_X0, TONGUE_X1 + END_CUT, sy * ySlotIn, sy * (ySlotIn + SLOT_W))   # slot
+        box(sk, TONGUE_X1, TONGUE_X1 + END_CUT, sy * ySlotIn, sy * (wingHalfY + 0.1 * MM))  # end cut
+    profs = collection([sk.profiles.item(i) for i in range(sk.profiles.count)])
+    extrude(comp, profs, zBack - 0.01 * MM, zWing + 0.01 * MM,
+            adsk.fusion.FeatureOperations.CutFeatureOperation,
+            participants=[plate_body])
+    if comp.bRepBodies.count != 1:
+        raise RuntimeError("wing tongue slots split the plate: %d bodies" % comp.bRepBodies.count)
+    print("wing snap tongues ok: %.1f thick, x %.1f..%.1f (root at -X, end cut to %.1f), "
+          "slot %.1f wide at y +/-%.2f..%.2f, through the wing"
+          % (TONGUE_T * 10, TONGUE_X0 * 10, TONGUE_X1 * 10, (TONGUE_X1 + END_CUT) * 10,
+             SLOT_W * 10, ySlotIn * 10, (ySlotIn + SLOT_W) * 10))
+
+    # 14e. (deleted, Task 9d) the PirPlug component: a slotted tube pressed
+    # into the bore from the back to hold the sensor's base down, backed
+    # by a filament keeper pin. The snug bore and the bezel ring on the
+    # shell (03_shell.py step 8) hold the sensor instead; the bore is blind.
 
     print("BackPlate bodies:", comp.bRepBodies.count)

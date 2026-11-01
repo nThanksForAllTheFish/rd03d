@@ -15,7 +15,7 @@ A 24 GHz radar in a 3D-printed case watches a staircase and turns the light on b
 | `docs/superpowers/` | The ten dated design specs and implementation plans the agent worked from, in the order they were written. |
 | `video/` | The pipeline that synthesised the project video: frame generator, narration, STEP-to-mesh converter, and the rendered figures used below. |
 
-Each of the first three directories has its own README with the details. The rest of this page is the quick start and the story.
+A PIR sensor joined the radar in October 2026: the design is `docs/superpowers/specs/2026-10-11-pir-companion-design.md` and the week of comparison numbers from the wall is `docs/2026-10-pir-companion-notes.md`. Each of the first three directories has its own README with the details. The rest of this page is the quick start and the story.
 
 ## Quick start
 
@@ -53,6 +53,7 @@ The host tests need nothing but a C compiler:
 cd rd03d_uart/tests
 cc -Wall -Wextra -o test_rd03d test_rd03d.c ../main/rd03d.c && ./test_rd03d
 cc -Wall -Wextra -o test_mqtt_throttle test_mqtt_throttle.c ../main/mqtt_throttle.c && ./test_mqtt_throttle
+cc -Wall -Wextra -o test_pir_gate test_pir_gate.c ../main/pir_gate.c && ./test_pir_gate
 ```
 
 ## A radar stair light, built with an AI co-engineer
@@ -115,6 +116,7 @@ Three cautions, briefly. First, the agent's confidence is uncorrelated with its 
 
 - Ai-Thinker RD-03D 24 GHz radar module
 - Seeed Studio XIAO ESP32-C6
+- Panasonic EKMC1603111 PIR motion sensor (the companion, since 2026-10)
 - USB-C receptacle breakout with 5.1 kΩ CC pull-downs, 100 µF capacitor
 - Raspberry Pi running Mosquitto and Node-RED
 - Tasmota-flashed relay or smart plug

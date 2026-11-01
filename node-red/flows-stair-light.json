@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Stair Light",
         "disabled": false,
-        "info": "Radar-driven stair lighting: rd03d MQTT events -> zone filter -> 60s hold -> Tasmota relay.\nEdit points: ZONE constants in the zone filter node; device topic in the change node."
+        "info": "Radar-driven stair lighting: rd03d MQTT events -> zone filter -> 60s hold -> Tasmota relay.\nEdit points: ZONE constants in the zone filter node; BRIDGE in the RF bridge node.\nPIR companion: rd03d/pir events enter through the source switch (edit SOURCE) and, with the in-zone radar events, feed the compare log, which appends to /data/stair_compare.csv."
     },
     {
         "id": "stairbroker1",
@@ -65,7 +65,7 @@
         "libs": [],
         "x": 330,
         "y": 120,
-        "wires": [["stairtrig1", "stairdbg1"]]
+        "wires": [["stairsrc1", "stairdbg1", "stairlog1"]]
     },
     {
         "id": "stairdbg1",
@@ -103,7 +103,23 @@
         "outputs": 1,
         "x": 550,
         "y": 120,
-        "wires": [["stairrbe1"]]
+        "wires": [["stairrbe1", "stairstate1"]]
+    },
+    {
+        "id": "stairstate1",
+        "type": "function",
+        "z": "stairtab1",
+        "name": "light state (PIR start-only)",
+        "func": "// Remembers whether the hold is running so the source switch can let\n// the PIR START the light but never EXTEND it. Fed by the trigger's\n// ON/OFF and by the manual-OFF reset. Emits nothing.\nif (msg.reset) { flow.set(\"lightOn\", false); return null; }\nflow.set(\"lightOn\", msg.payload === \"ON\");\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 180,
+        "wires": [[]]
     },
     {
         "id": "stairrbe1",
@@ -123,23 +139,16 @@
     },
     {
         "id": "stairmap1",
-        "type": "change",
+        "type": "function",
         "z": "stairtab1",
-        "name": "to Tasmota topic (EDIT DEVICE)",
-        "rules": [
-            {
-                "t": "set",
-                "p": "topic",
-                "pt": "msg",
-                "to": "cmnd/stairlight/POWER",
-                "tot": "str"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
+        "name": "to Sonoff RF bridge (EDIT DEVICE)",
+        "func": "// The stair light is a radio-controlled lamp driven through a Tasmota Sonoff\n// RF Bridge. RfKey1 is the learned ON code, RfKey2 the learned OFF code.\n// Edit BRIDGE if the bridge's Tasmota topic changes.\nconst BRIDGE = \"sonoffBridge\";\nmsg.topic = \"cmnd/\" + BRIDGE + (msg.payload === \"ON\" ? \"/RfKey1\" : \"/RfKey2\");\nmsg.payload = \"\";    // empty = send the learned code (this bridge answered 1 with \"Default sent\" and 4 with \"Saved\")\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 950,
         "y": 120,
         "wires": [["stairout1"]]
@@ -229,5 +238,102 @@
         "x": 330,
         "y": 320,
         "wires": []
+    },
+    {
+        "id": "stairpir1",
+        "type": "mqtt in",
+        "z": "stairtab1",
+        "name": "PIR events",
+        "topic": "rd03d/pir",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "stairbroker1",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 200,
+        "wires": [["stairsrc1", "stairlog1"]]
+    },
+    {
+        "id": "stairsrc1",
+        "type": "function",
+        "z": "stairtab1",
+        "name": "source switch (EDIT SOURCE)",
+        "func": "// Which sensor may turn the light on. Edit SOURCE:\n//   \"radar\"  - only in-zone radar events (today's behaviour)\n//   \"pir\"    - only PIR events\n//   \"either\" - whichever fires first (the PIR only starts the light, see below)\nconst SOURCE = \"radar\";\nconst isPir = msg.topic === \"rd03d/pir\";\n// PIR may start the light but not extend it: anything moving in its wide\n// cone past the radar zone would otherwise hold the light on. Once ON,\n// only in-zone radar targets keep it alive (light state node).\nif (isPir && flow.get(\"lightOn\")) return null;\nif (SOURCE === \"radar\" && isPir) return null;\nif (SOURCE === \"pir\" && !isPir) return null;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 60,
+        "wires": [["stairtrig1"]]
+    },
+    {
+        "id": "stairlog1",
+        "type": "function",
+        "z": "stairtab1",
+        "name": "compare log",
+        "func": "// One CSV line per trigger episode: which sensor fired first and the\n// delay to the other, plus the radar position the PIR event carried and\n// the one-way latency of the PIR event (needs SNTP on the node; t=0 means\n// unsynced and latency is left blank). A lone episode (the other sensor never\n// fired) is written, with the second-sensor and delay columns blank, when the\n// next episode begins.\nconst GAP_MS = 60000;              // a new episode starts after this much quiet\nconst now = Date.now();\nlet ep = context.get(\"ep\") || null;\nconst isPir = msg.topic === \"rd03d/pir\";\nlet d = {};\ntry { d = JSON.parse(msg.payload); } catch (e) { d = {}; }\nif (!ep || now - ep.last > GAP_MS) {\n    let pending = null;\n    if (ep && ep.other === null) {\n        pending = [new Date(ep.start).toISOString(), ep.first, \"\", \"\",\n                   ep.pirRadar, ep.pirLatency].join(\",\");\n    }\n    ep = { start: now, first: isPir ? \"pir\" : \"radar\", other: null, last: now,\n           pirRadar: \"\", pirLatency: \"\" };\n    if (pending) node.send(Object.assign({}, msg, { payload: pending }));\n}\nep.last = now;\nconst src = isPir ? \"pir\" : \"radar\";\nif (isPir && ep.pirRadar === \"\") {\n    ep.pirRadar = d.radar ? (d.radar.x + \" \" + d.radar.y) : \"none\";\n    ep.pirLatency = d.t ? String(now - d.t) : \"\";\n}\nlet line = null;\nif (ep.other === null && src !== ep.first) {\n    ep.other = src;\n    line = [new Date(ep.start).toISOString(), ep.first, src, now - ep.start,\n            ep.pirRadar, ep.pirLatency].join(\",\");\n}\ncontext.set(\"ep\", ep);\nif (!line) return null;\nmsg.payload = line;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 260,
+        "wires": [["stairfile1"]]
+    },
+    {
+        "id": "stairfile1",
+        "type": "file",
+        "z": "stairtab1",
+        "name": "stair_compare.csv",
+        "filename": "/data/stair_compare.csv",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 560,
+        "y": 260,
+        "wires": [[]]
+    },
+    {
+        "id": "stairrfin1",
+        "type": "mqtt in",
+        "z": "stairtab1",
+        "name": "bridge hears the remote",
+        "topic": "tele/sonoffBridge/RESULT",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "stairbroker1",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 420,
+        "wires": [["stairrf1"]]
+    },
+    {
+        "id": "stairrf1",
+        "type": "function",
+        "z": "stairtab1",
+        "name": "manual OFF resets the hold (EDIT DEVICE)",
+        "func": "// The bridge reports every RF code it hears, including the hand remote's.\n// A manual OFF (RfKey 2) desyncs the flow: its hold is still running, so the\n// next approach would send nothing. Reset the trigger and the rbe so a fresh\n// approach starts a new ON. A manual ON needs nothing.\nlet d;\ntry { d = JSON.parse(msg.payload); } catch (e) { return null; }\nconst rf = d && d.RfReceived;\nif (!rf || rf.RfKey !== 2) return null;\nreturn { reset: true, topic: \"manual-off\" };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 420,
+        "wires": [["stairtrig1", "stairrbe1", "stairstate1"]]
     }
 ]
